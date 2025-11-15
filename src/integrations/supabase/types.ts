@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      startup_analyses: {
+        Row: {
+          benchmarking: Json | null
+          created_at: string
+          follow_up_questions: Json | null
+          id: string
+          investment_thesis: string | null
+          memo: string
+          metadata: Json | null
+          pitch_text: string
+          red_flags: Json | null
+          scorecard: Json
+          startup_name: string | null
+        }
+        Insert: {
+          benchmarking?: Json | null
+          created_at?: string
+          follow_up_questions?: Json | null
+          id?: string
+          investment_thesis?: string | null
+          memo: string
+          metadata?: Json | null
+          pitch_text: string
+          red_flags?: Json | null
+          scorecard: Json
+          startup_name?: string | null
+        }
+        Update: {
+          benchmarking?: Json | null
+          created_at?: string
+          follow_up_questions?: Json | null
+          id?: string
+          investment_thesis?: string | null
+          memo?: string
+          metadata?: Json | null
+          pitch_text?: string
+          red_flags?: Json | null
+          scorecard?: Json
+          startup_name?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
