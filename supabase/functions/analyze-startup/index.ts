@@ -19,71 +19,21 @@ serve(async (req) => {
     let pitchText = "";
     const contentType = req.headers.get("content-type") || "";
 
-    // Handle PDF upload or text input
+    // Handle text input only (PDF parsing not supported)
     if (contentType.includes("multipart/form-data")) {
-      const formData = await req.formData();
-      const file = formData.get("file") as File;
-      
-      if (!file) {
-        throw new Error("No file uploaded");
-      }
-
-      // Read PDF as base64 and send to Gemini with vision capabilities
-      const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      
-      // Convert to base64 in chunks to avoid stack overflow
-      let base64 = '';
-      const chunkSize = 8192;
-      for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        const chunk = uint8Array.slice(i, i + chunkSize);
-        base64 += btoa(String.fromCharCode.apply(null, Array.from(chunk)));
-      }
-      
-      // Send PDF to Gemini for text extraction
-      const extractResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Extract all text content from this PDF document. Return ONLY the extracted text, nothing else."
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:application/pdf;base64,${base64}`
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: 4000,
+      return new Response(
+        JSON.stringify({ 
+          error: "PDF upload is not currently supported. Please copy and paste the text content of your pitch instead." 
         }),
-      });
-
-      if (!extractResponse.ok) {
-        throw new Error("Failed to extract text from PDF");
-      }
-
-      const extractData = await extractResponse.json();
-      pitchText = extractData.choices?.[0]?.message?.content || "";
-      
-      if (!pitchText) {
-        throw new Error("Could not extract text from PDF");
-      }
-    } else {
-      const body = await req.json();
-      pitchText = body.text || "";
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
+    
+    const body = await req.json();
+    pitchText = body.text || "";
 
     if (!pitchText) {
       throw new Error("No pitch text provided");
