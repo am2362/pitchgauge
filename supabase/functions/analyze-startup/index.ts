@@ -21,8 +21,6 @@ serve(async (req) => {
 
     // Handle PDF upload or text input
     if (contentType.includes("multipart/form-data")) {
-      // For PDF files, we'll extract text (simplified for demo)
-      // In production, you'd use a proper PDF parsing library
       const formData = await req.formData();
       const file = formData.get("file") as File;
       
@@ -30,8 +28,51 @@ serve(async (req) => {
         throw new Error("No file uploaded");
       }
 
-      // For demo purposes, we'll inform that PDF parsing is simplified
-      pitchText = `[PDF Upload Detected: ${file.name}]\n\nNote: In this demo, please use the text input for detailed analysis. PDF parsing requires additional server-side libraries.`;
+      // Read PDF as base64 and send to Gemini with vision capabilities
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const base64 = btoa(String.fromCharCode(...uint8Array));
+      
+      // Send PDF to Gemini for text extraction
+      const extractResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Extract all text content from this PDF document. Return ONLY the extracted text, nothing else."
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:application/pdf;base64,${base64}`
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 4000,
+        }),
+      });
+
+      if (!extractResponse.ok) {
+        throw new Error("Failed to extract text from PDF");
+      }
+
+      const extractData = await extractResponse.json();
+      pitchText = extractData.choices?.[0]?.message?.content || "";
+      
+      if (!pitchText) {
+        throw new Error("Could not extract text from PDF");
+      }
     } else {
       const body = await req.json();
       pitchText = body.text || "";
@@ -52,47 +93,30 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
+        max_tokens: 4000,
+        temperature: 0.7,
         messages: [
           {
             role: "system",
-            content: `You are a seasoned venture analyst AI with years of experience evaluating startups. Think step-by-step like a top-tier VC partner.
+            content: `CRITICAL: You MUST respond with ONLY valid JSON. NO markdown. NO code blocks. NO explanations. Start with { and end with }.
 
-When given a startup pitch, generate a comprehensive analysis with:
+You are a seasoned venture analyst AI. Analyze startups and return this EXACT JSON structure:
 
-1) STRUCTURED INVESTMENT MEMO with these sections:
-   - Problem: What problem does the startup solve?
-   - Solution: How does the product/service address this?
-   - Market: Target market size and opportunity
-   - Traction: Current metrics, customers, revenue
-   - Business Model: How they make money
-   - Risks: Key concerns and challenges
-   - Recommendation: Investment stance (Pass/Maybe/Invest)
+Analyze the startup pitch and return a JSON object with:
 
-2) VC SCORECARD with scores 0-10 AND detailed reasoning for each:
-   - Team: Experience and execution capability
-   - Market Size: TAM and growth potential
-   - Product: Quality and differentiation
-   - Traction: Current momentum and metrics
-   - Business Model: Revenue clarity and scalability
-   - Defensibility: Competitive moats and barriers
+1) "memo": Investment memo covering Problem, Solution, Market, Traction, Business Model, Risks, and Recommendation (Pass/Maybe/Invest)
 
-3) RED FLAGS DETECTOR - Identify 3-6 critical concerns with severity:
-   - "critical" (deal breakers like fraud, legal issues)
-   - "high" (major risks like saturated market, weak unit economics)
-   - "medium" (concerns like inexperienced team, unproven model)
+2) "scorecard": Scores 0-10 with reasoning for: team, marketSize, product, traction, businessModel, defensibility
 
-4) FOLLOW-UP QUESTIONS - Generate 6-8 intelligent due diligence questions categorized by:
-   - Team, Market, Product, Financials, Legal/Compliance
+3) "redFlags": Array of issues with severity ("critical"/"high"/"medium"), issue name, and explanation
 
-5) INVESTMENT THESIS - One compelling paragraph each:
-   - Bull Case: Why this could be a 10x return
-   - Bear Case: Why this might fail
+4) "followUpQuestions": Object with arrays for: team, market, product, financials, legal
 
-6) BENCHMARKING - Compare against industry standards:
-   - Overall percentile (e.g., "Top 15% of seed-stage startups")
-   - Stage-appropriate insights (Pre-seed/Seed/Series A context)
+5) "investmentThesis": Object with "bullCase" and "bearCase" paragraphs
 
-Return your response as a JSON object with this EXACT structure:
+6) "benchmarking": Object with "overallPercentile", "stageContext", and "comparisonNotes"
+
+EXACT JSON structure you MUST return:
 {
   "memo": "Full investment memo text with clear section headers",
   "scorecard": {
@@ -125,14 +149,13 @@ Return your response as a JSON object with this EXACT structure:
   }
 }
 
-Be brutally honest - use the full 0-10 range. Make insights specific and actionable.`
+Remember: Return ONLY the JSON object. No markdown, no code blocks, no extra text. Be brutally honest with scores (0-10 range).`
           },
           {
             role: "user",
             content: pitchText
           }
         ],
-        temperature: 0.7,
       }),
     });
 
@@ -159,15 +182,30 @@ Be brutally honest - use the full 0-10 range. Make insights specific and actiona
       throw new Error("No content in AI response");
     }
 
-    // Parse the JSON response from Gemini
+    // Parse the JSON response from Gemini with robust error handling
     let analysisResult;
     try {
-      // Remove markdown code blocks if present
-      const cleanContent = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      // Remove all possible markdown artifacts
+      let cleanContent = content
+        .replace(/```json\s*/gi, "")
+        .replace(/```\s*/g, "")
+        .replace(/^[^{]*/, "")  // Remove any text before first {
+        .replace(/[^}]*$/, "")  // Remove any text after last }
+        .trim();
+
+      // Validate it starts with JSON
+      if (!cleanContent.startsWith('{')) {
+        console.error("Response doesn't start with JSON. First 200 chars:", content.slice(0, 200));
+        throw new Error("AI returned non-JSON response. Please try again.");
+      }
+
       analysisResult = JSON.parse(cleanContent);
     } catch (parseError) {
-      console.error("Failed to parse AI response:", content);
-      throw new Error("Failed to parse AI response. Please try again.");
+      console.error("JSON parse error:", parseError);
+      console.error("Content length:", content.length);
+      console.error("First 500 chars:", content.slice(0, 500));
+      console.error("Last 500 chars:", content.slice(-500));
+      throw new Error("Failed to parse AI response. The response may have been truncated. Please try with a shorter pitch.");
     }
 
     // Validate the structure
