@@ -176,10 +176,29 @@ const Index = () => {
   };
 
   const handleAnalyze = async () => {
-    if (!pitchText && !pdfFile) {
+    // Validate input
+    if (!pitchText.trim() && !pdfFile) {
       toast({
-        title: "No input provided",
-        description: "Please provide a pitch text or upload a PDF",
+        title: "Error",
+        description: "Please enter pitch text or upload a PDF",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (pitchText.trim() && pitchText.trim().length < 50) {
+      toast({
+        title: "Pitch too short",
+        description: "Please provide at least 50 characters for a meaningful analysis",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (pdfFile && pdfFile.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload a PDF smaller than 5MB",
         variant: "destructive",
       });
       return;
@@ -217,10 +236,12 @@ const Index = () => {
         description: "Your comprehensive startup evaluation is ready",
       });
     } catch (error: any) {
+      const errorMessage = error.message || "Failed to analyze pitch. Please try again.";
       console.error("Analysis error:", error);
+      
       toast({
-        title: "Analysis failed",
-        description: error.message || "Please try again",
+        title: "Analysis Failed",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
