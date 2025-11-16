@@ -100,63 +100,47 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        max_tokens: 4000,
+        max_tokens: 8000,
         temperature: 0.7,
         messages: [
           {
             role: "system",
-            content: `CRITICAL: You MUST respond with ONLY valid JSON. NO markdown. NO code blocks. NO explanations. Start with { and end with }.
+            content: `CRITICAL: Return ONLY valid JSON. NO markdown. NO code blocks. Start with { and end with }.
 
-You are a seasoned venture analyst AI. Analyze startups and return this EXACT JSON structure:
+You are a venture analyst AI. Analyze the pitch and return this JSON structure:
 
-Analyze the startup pitch and return a JSON object with:
-
-1) "memo": Investment memo covering Problem, Solution, Market, Traction, Business Model, Risks, and Recommendation (Pass/Maybe/Invest)
-
-2) "scorecard": Scores 0-10 with reasoning for: team, marketSize, product, traction, businessModel, defensibility
-
-3) "redFlags": Array of issues with severity ("critical"/"high"/"medium"), issue name, and explanation
-
-4) "followUpQuestions": Object with arrays for: team, market, product, financials, legal
-
-5) "investmentThesis": Object with "bullCase" and "bearCase" paragraphs
-
-6) "benchmarking": Object with "overallPercentile", "stageContext", and "comparisonNotes"
-
-EXACT JSON structure you MUST return:
 {
-  "memo": "Full investment memo text with clear section headers",
+  "memo": "Investment memo with sections: Problem, Solution, Market, Traction, Business Model, Risks, Recommendation. Keep each section 2-3 sentences.",
   "scorecard": {
-    "team": { "score": 7, "reasoning": "Strong technical background but lacks go-to-market experience..." },
-    "marketSize": { "score": 8, "reasoning": "TAM of $50B growing at 15% CAGR..." },
-    "product": { "score": 6, "reasoning": "MVP shows promise but UX needs refinement..." },
-    "traction": { "score": 5, "reasoning": "100 early users engaged but no revenue yet..." },
-    "businessModel": { "score": 7, "reasoning": "Clear SaaS model with predictable revenue..." },
-    "defensibility": { "score": 6, "reasoning": "Network effects emerging but no IP protection..." }
+    "team": { "score": 0-10, "reasoning": "1-2 sentences" },
+    "marketSize": { "score": 0-10, "reasoning": "1-2 sentences" },
+    "product": { "score": 0-10, "reasoning": "1-2 sentences" },
+    "traction": { "score": 0-10, "reasoning": "1-2 sentences" },
+    "businessModel": { "score": 0-10, "reasoning": "1-2 sentences" },
+    "defensibility": { "score": 0-10, "reasoning": "1-2 sentences" }
   },
   "redFlags": [
-    { "severity": "high", "issue": "No clear differentiation from competitors", "explanation": "..." },
-    { "severity": "medium", "issue": "Burn rate unsustainable", "explanation": "..." }
+    { "severity": "critical|high|medium", "issue": "Brief title", "explanation": "1-2 sentences" }
   ],
   "followUpQuestions": {
-    "team": ["What is your customer acquisition cost?", "..."],
-    "market": ["Who are your top 3 competitors and how do you differ?", "..."],
-    "product": ["What is your product roadmap for next 12 months?", "..."],
-    "financials": ["What are your unit economics?", "..."],
-    "legal": ["Do you have any pending legal issues?", "..."]
+    "team": ["question 1", "question 2"],
+    "market": ["question 1", "question 2"],
+    "product": ["question 1", "question 2"],
+    "financials": ["question 1", "question 2"],
+    "legal": ["question 1", "question 2"]
   },
   "investmentThesis": {
-    "bullCase": "One paragraph explaining why this could be a massive success...",
-    "bearCase": "One paragraph explaining the main failure scenarios..."
+    "bullCase": "3-4 sentences max",
+    "bearCase": "3-4 sentences max"
   },
   "benchmarking": {
-    "overallPercentile": "Top 25% of seed-stage startups",
-    "stageContext": "For a seed-stage company, strong product-market fit indicators...",
-    "comparisonNotes": "Team score is above average for first-time founders..."
+    "overallPercentile": "e.g., Top 25% of seed-stage startups",
+    "stageContext": "1-2 sentences",
+    "comparisonNotes": "1-2 sentences"
   }
 }
 
-Remember: Return ONLY the JSON object. No markdown, no code blocks, no extra text. Be brutally honest with scores (0-10 range).`
+KEEP ALL TEXT CONCISE. Return ONLY JSON. Be honest with 0-10 scores.`
           },
           {
             role: "user",
