@@ -31,7 +31,14 @@ serve(async (req) => {
       // Read PDF as base64 and send to Gemini with vision capabilities
       const arrayBuffer = await file.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
-      const base64 = btoa(String.fromCharCode(...uint8Array));
+      
+      // Convert to base64 in chunks to avoid stack overflow
+      let base64 = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.slice(i, i + chunkSize);
+        base64 += btoa(String.fromCharCode.apply(null, Array.from(chunk)));
+      }
       
       // Send PDF to Gemini for text extraction
       const extractResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
