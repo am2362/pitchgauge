@@ -23,7 +23,7 @@ interface RedFlag {
 }
 
 interface AnalysisResult {
-  memo: string;
+  memo: string | Record<string, string>;
   scorecard: {
     team: ScoreItem;
     marketSize: ScoreItem;
@@ -221,7 +221,7 @@ const Index = () => {
         .insert([{
           user_id: user.id,
           pitch_text: pitchInput,
-          memo: analysisData.memo,
+          memo: typeof analysisData.memo === 'string' ? analysisData.memo : JSON.stringify(analysisData.memo),
           scorecard: analysisData.scorecard as any,
           red_flags: analysisData.redFlags as any,
           follow_up_questions: analysisData.followUpQuestions as any,
@@ -283,8 +283,17 @@ const Index = () => {
   };
 
   const viewHistoricalAnalysis = (item: HistoryItem) => {
+    let memoData: string | Record<string, string>;
+    try {
+      memoData = typeof item.memo === 'string' && item.memo.startsWith('{') 
+        ? JSON.parse(item.memo) 
+        : item.memo;
+    } catch {
+      memoData = item.memo;
+    }
+
     const analysisResult: AnalysisResult = {
-      memo: item.memo,
+      memo: memoData,
       scorecard: item.scorecard,
       redFlags: item.red_flags,
       followUpQuestions: item.follow_up_questions,
@@ -522,8 +531,19 @@ const Index = () => {
 
               <TabsContent value="memo">
                 <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <div className="whitespace-pre-wrap text-foreground leading-relaxed">
-                    {result.memo}
+                  <div className="space-y-4">
+                    {typeof result.memo === 'string' ? (
+                      <div className="whitespace-pre-wrap text-foreground leading-relaxed">
+                        {result.memo}
+                      </div>
+                    ) : (
+                      Object.entries(result.memo as Record<string, string>).map(([section, content]) => (
+                        <div key={section} className="mb-4">
+                          <h3 className="text-lg font-semibold mb-2 text-foreground">{section}</h3>
+                          <p className="text-sm text-muted-foreground leading-relaxed">{content}</p>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </TabsContent>
