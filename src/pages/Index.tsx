@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Loader2, FileText, BarChart, AlertTriangle, MessageSquare, TrendingUp, History, FileInput } from "lucide-react";
+import { Upload, Loader2, FileText, BarChart, AlertTriangle, MessageSquare, TrendingUp, History, FileInput, LogOut, GitCompare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { User, Session } from "@supabase/supabase-js";
 
 interface ScoreItem {
   score: number;
@@ -47,6 +49,18 @@ interface AnalysisResult {
     stageContext: string;
     comparisonNotes: string;
   };
+}
+
+interface HistoryItem {
+  id: string;
+  created_at: string;
+  pitch_text: string;
+  memo: string;
+  scorecard: any;
+  red_flags: any;
+  follow_up_questions: any;
+  investment_thesis: string;
+  benchmarking: any;
 }
 
 const SAMPLE_PITCHES = {
@@ -110,23 +124,44 @@ const Index = () => {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [analysisHistory, setAnalysisHistory] = useState<any[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check auth state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session) {
+        loadHistory();
+      }
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (!session) {
+        navigate("/auth");
+      } else {
+        loadHistory();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const loadHistory = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('startup_analyses')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (error) throw error;
-      setAnalysisHistory(data || []);
-      setShowHistory(true);
-    } catch (error) {
-      console.error('Failed to load history:', error);
+    const { data, error } = await supabase
+      .from('startup_analyses')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (!error && data) {
+      setHistory(data);
     }
   };
 
@@ -138,28 +173,53 @@ const Index = () => {
     });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type === "application/pdf") {
-      setPdfFile(file);
-      toast({
-        title: "PDF uploaded",
-        description: file.name,
-      });
-    } else {
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
       toast({
         title: "Invalid file",
         description: "Please upload a PDF file",
         variant: "destructive",
       });
+      return;
+    }
+
+    setPdfFile(file);
+    setIsAnalyzing(true);
+
+    try {
+      // Parse PDF using document parser
+      const { default: parseDocument } = await import("@/lib/document-parser");
+      const parsedContent = await parseDocument(file);
+      
+      setPitchText(parsedContent.text);
+      setPdfFile(null);
+      
+      toast({
+        title: "PDF parsed successfully",
+        description: "Text extracted from PDF. You can now analyze it.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "PDF parsing failed",
+        description: error.message || "Please try copying and pasting the text instead",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
   const saveAnalysis = async (analysisData: AnalysisResult, pitchInput: string) => {
+    if (!user) return;
+
     try {
       const { error } = await supabase
         .from('startup_analyses')
         .insert([{
+          user_id: user.id,
           pitch_text: pitchInput,
           memo: analysisData.memo,
           scorecard: analysisData.scorecard as any,
@@ -170,35 +230,26 @@ const Index = () => {
         }]);
       
       if (error) throw error;
+      await loadHistory();
     } catch (error) {
       console.error('Failed to save analysis:', error);
     }
   };
 
   const handleAnalyze = async () => {
-    // Validate input
-    if (!pitchText.trim() && !pdfFile) {
+    if (!pitchText.trim()) {
       toast({
         title: "Error",
-        description: "Please enter pitch text or upload a PDF",
+        description: "Please enter pitch text",
         variant: "destructive",
       });
       return;
     }
 
-    if (pitchText.trim() && pitchText.trim().length < 50) {
+    if (pitchText.trim().length < 50) {
       toast({
         title: "Pitch too short",
-        description: "Please provide at least 50 characters for a meaningful analysis",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (pdfFile && pdfFile.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload a PDF smaller than 5MB",
+        description: "Please provide at least 50 characters",
         variant: "destructive",
       });
       return;
@@ -208,40 +259,22 @@ const Index = () => {
     setResult(null);
 
     try {
-      let analysisInput = pitchText;
+      const { data, error } = await supabase.functions.invoke("analyze-startup", {
+        body: { text: pitchText },
+      });
 
-      if (pdfFile) {
-        const formData = new FormData();
-        formData.append("file", pdfFile);
-
-        const { data, error } = await supabase.functions.invoke("analyze-startup", {
-          body: formData,
-        });
-
-        if (error) throw error;
-        setResult(data);
-        await saveAnalysis(data, analysisInput);
-      } else {
-        const { data, error } = await supabase.functions.invoke("analyze-startup", {
-          body: { text: analysisInput },
-        });
-
-        if (error) throw error;
-        setResult(data);
-        await saveAnalysis(data, analysisInput);
-      }
+      if (error) throw error;
+      setResult(data);
+      await saveAnalysis(data, pitchText);
 
       toast({
         title: "Analysis complete",
         description: "Your comprehensive startup evaluation is ready",
       });
     } catch (error: any) {
-      const errorMessage = error.message || "Failed to analyze pitch. Please try again.";
-      console.error("Analysis error:", error);
-      
       toast({
         title: "Analysis Failed",
-        description: errorMessage,
+        description: error.message || "Please try again",
         variant: "destructive",
       });
     } finally {
@@ -249,22 +282,38 @@ const Index = () => {
     }
   };
 
-  const exportAnalysis = () => {
-    if (!result) return;
-    
-    const exportData = JSON.stringify(result, null, 2);
-    const blob = new Blob([exportData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `startup-analysis-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const viewHistoricalAnalysis = (item: HistoryItem) => {
+    const analysisResult: AnalysisResult = {
+      memo: item.memo,
+      scorecard: item.scorecard,
+      redFlags: item.red_flags,
+      followUpQuestions: item.follow_up_questions,
+      investmentThesis: item.investment_thesis ? JSON.parse(item.investment_thesis) : undefined,
+      benchmarking: item.benchmarking,
+    };
+    setResult(analysisResult);
+    setPitchText(item.pitch_text);
     
     toast({
-      title: "Analysis exported",
-      description: "Downloaded as JSON file",
+      title: "Analysis loaded",
+      description: `Viewing analysis from ${new Date(item.created_at).toLocaleDateString()}`,
     });
+  };
+
+  const exportAnalysis = () => {
+    if (!result) return;
+    const dataStr = JSON.stringify(result, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = `startup-analysis-${Date.now()}.json`;
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
   };
 
   const ScoreBar = ({ label, scoreItem }: { label: string; scoreItem: ScoreItem }) => {
@@ -303,20 +352,36 @@ const Index = () => {
     }
   };
 
+  if (!user) return null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
       <div className="container max-w-7xl mx-auto px-4 py-12">
         <header className="text-center mb-12 space-y-4">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Startup Evaluator Assistant
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Professional VC-grade analysis powered by AI. Get investment memos, scorecards, risk analysis, and actionable insights.
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-8 w-8 text-primary" />
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                VentureAI
+              </h1>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => navigate("/compare")}>
+                <GitCompare className="h-4 w-4 mr-2" />
+                Compare
+              </Button>
+              <Button variant="ghost" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
+          </div>
+          <p className="text-xl text-muted-foreground">
+            AI-Powered Comprehensive Startup Pitch Analysis
           </p>
         </header>
 
-        <div className="grid lg:grid-cols-2 gap-8 mb-8">
-          {/* Input Section */}
+        <div className="grid lg:grid-cols-2 gap-8">
           <Card className="p-8 bg-card border-border shadow-lg">
             <div className="flex items-center gap-3 mb-6">
               <FileText className="h-6 w-6 text-primary" />
@@ -330,30 +395,15 @@ const Index = () => {
                 </label>
                 
                 <div className="flex gap-2 mb-3 flex-wrap">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => loadTemplate('saas')}
-                    className="text-xs"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => loadTemplate('saas')} className="text-xs">
                     <FileInput className="h-3 w-3 mr-1" />
                     SaaS Example
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => loadTemplate('marketplace')}
-                    className="text-xs"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => loadTemplate('marketplace')} className="text-xs">
                     <FileInput className="h-3 w-3 mr-1" />
                     Marketplace Example
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => loadTemplate('hardware')}
-                    className="text-xs"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => loadTemplate('hardware')} className="text-xs">
                     <FileInput className="h-3 w-3 mr-1" />
                     Hardware Example
                   </Button>
@@ -369,25 +419,30 @@ const Index = () => {
 
               <Separator />
 
-              <div className="opacity-60">
+              <div>
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  PDF Upload (Currently Not Supported)
+                  Or Upload Pitch Deck (PDF)
                 </label>
-                <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg bg-secondary/10">
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer bg-secondary/20 hover:bg-secondary/40 transition-all">
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                     <p className="text-sm text-muted-foreground text-center px-4">
-                      PDF parsing temporarily unavailable. Please copy and paste your pitch text above.
+                      {pdfFile ? pdfFile.name : "Click to upload PDF pitch deck"}
                     </p>
                   </div>
-                </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                  />
+                </label>
               </div>
 
               <Button
                 onClick={handleAnalyze}
                 disabled={isAnalyzing || !pitchText.trim()}
                 className="w-full h-12 text-lg font-semibold"
-                size="lg"
               >
                 {isAnalyzing ? (
                   <>
@@ -401,221 +456,163 @@ const Index = () => {
                   </>
                 )}
               </Button>
-
-              <Button
-                onClick={loadHistory}
-                variant="outline"
-                className="w-full"
-              >
-                <History className="mr-2 h-4 w-4" />
-                View Analysis History
-              </Button>
             </div>
           </Card>
 
-          {/* Results Section */}
           <Card className="p-8 bg-card border-border shadow-lg">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <BarChart className="h-6 w-6 text-primary" />
-                <h2 className="text-2xl font-bold text-foreground">Analysis Results</h2>
-              </div>
-              {result && (
-                <Button variant="outline" size="sm" onClick={exportAnalysis}>
-                  Export JSON
-                </Button>
-              )}
+            <div className="flex items-center gap-3 mb-6">
+              <History className="h-6 w-6 text-primary" />
+              <h2 className="text-2xl font-bold text-foreground">Recent Analyses</h2>
             </div>
 
-            {!result && !isAnalyzing && (
-              <div className="text-center py-16 space-y-4">
-                <div className="w-24 h-24 mx-auto bg-secondary/20 rounded-full flex items-center justify-center">
-                  <FileText className="h-12 w-12 text-muted-foreground" />
-                </div>
-                <p className="text-muted-foreground text-lg">
-                  Enter a pitch or upload a PDF to get started
-                </p>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Our AI will generate a comprehensive VC analysis including investment memo, scorecard, red flags, and due diligence questions.
-                </p>
+            {history.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No analyses yet. Create your first one!</p>
+            ) : (
+              <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                {history.map((item) => (
+                  <Card
+                    key={item.id}
+                    className="p-4 cursor-pointer hover:bg-secondary/50 transition-all"
+                    onClick={() => viewHistoricalAnalysis(item)}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="text-sm font-medium line-clamp-2">{item.pitch_text.substring(0, 100)}...</p>
+                      <Badge variant="outline" className="ml-2 shrink-0">
+                        {new Date(item.created_at).toLocaleDateString()}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Click to view analysis
+                    </p>
+                  </Card>
+                ))}
               </div>
-            )}
-
-            {isAnalyzing && (
-              <div className="text-center py-16 space-y-4">
-                <Loader2 className="h-16 w-16 mx-auto text-primary animate-spin" />
-                <p className="text-lg font-medium text-foreground">Analyzing startup pitch...</p>
-                <p className="text-sm text-muted-foreground">
-                  Evaluating team, market, product, traction, and generating insights
-                </p>
-              </div>
-            )}
-
-            {result && (
-              <Tabs defaultValue="scorecard" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="scorecard">Scorecard</TabsTrigger>
-                  <TabsTrigger value="memo">Memo</TabsTrigger>
-                  <TabsTrigger value="risks">Risks</TabsTrigger>
-                  <TabsTrigger value="questions">Questions</TabsTrigger>
-                  <TabsTrigger value="thesis">Thesis</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="scorecard" className="space-y-6">
-                  {result.benchmarking && (
-                    <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
-                      <h3 className="font-semibold text-primary mb-2">Benchmark Analysis</h3>
-                      <p className="text-sm mb-1"><strong>Overall:</strong> {result.benchmarking.overallPercentile}</p>
-                      <p className="text-sm mb-1"><strong>Stage Context:</strong> {result.benchmarking.stageContext}</p>
-                      <p className="text-sm"><strong>Notes:</strong> {result.benchmarking.comparisonNotes}</p>
-                    </div>
-                  )}
-
-                  <div className="space-y-4">
-                    <ScoreBar label="Team" scoreItem={result.scorecard.team} />
-                    <ScoreBar label="Market Size" scoreItem={result.scorecard.marketSize} />
-                    <ScoreBar label="Product" scoreItem={result.scorecard.product} />
-                    <ScoreBar label="Traction" scoreItem={result.scorecard.traction} />
-                    <ScoreBar label="Business Model" scoreItem={result.scorecard.businessModel} />
-                    <ScoreBar label="Defensibility" scoreItem={result.scorecard.defensibility} />
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="memo" className="space-y-4">
-                  <div className="prose prose-sm max-w-none bg-background/50 p-6 rounded-lg border border-border">
-                    <div className="whitespace-pre-wrap text-foreground leading-relaxed">
-                      {result.memo}
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="risks" className="space-y-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <AlertTriangle className="h-5 w-5 text-destructive" />
-                    <h3 className="text-lg font-semibold">Red Flags & Risk Analysis</h3>
-                  </div>
-                  
-                  {result.redFlags && result.redFlags.length > 0 ? (
-                    <div className="space-y-3">
-                      {result.redFlags.map((flag, index) => (
-                        <div key={index} className="p-4 border border-border rounded-lg bg-card/50">
-                          <div className="flex items-start gap-3">
-                            <Badge variant={getSeverityColor(flag.severity) as any} className="mt-1">
-                              {flag.severity.toUpperCase()}
-                            </Badge>
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-foreground mb-1">{flag.issue}</h4>
-                              <p className="text-sm text-muted-foreground">{flag.explanation}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">No major red flags identified.</p>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="questions" className="space-y-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <MessageSquare className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold">Due Diligence Questions</h3>
-                  </div>
-                  
-                  {result.followUpQuestions && (
-                    <div className="space-y-6">
-                      {Object.entries(result.followUpQuestions).map(([category, questions]) => (
-                        <div key={category}>
-                          <h4 className="font-semibold text-foreground capitalize mb-3">{category}</h4>
-                          <ul className="space-y-2">
-                            {(questions as string[]).map((question, index) => (
-                              <li key={index} className="flex gap-3 text-sm text-muted-foreground">
-                                <span className="text-primary font-mono">Q{index + 1}:</span>
-                                <span>{question}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="thesis" className="space-y-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold">Investment Thesis</h3>
-                  </div>
-
-                  {result.investmentThesis && (
-                    <div className="space-y-6">
-                      <div className="p-6 bg-green-500/10 border border-green-500/20 rounded-lg">
-                        <h4 className="font-semibold text-green-600 dark:text-green-400 mb-3 flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4" />
-                          Bull Case
-                        </h4>
-                        <p className="text-foreground leading-relaxed">{result.investmentThesis.bullCase}</p>
-                      </div>
-
-                      <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-lg">
-                        <h4 className="font-semibold text-red-600 dark:text-red-400 mb-3 flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4" />
-                          Bear Case
-                        </h4>
-                        <p className="text-foreground leading-relaxed">{result.investmentThesis.bearCase}</p>
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
             )}
           </Card>
         </div>
 
-        {/* History Section */}
-        {showHistory && analysisHistory.length > 0 && (
-          <Card className="p-8 bg-card border-border shadow-lg">
-            <h3 className="text-xl font-bold mb-4">Recent Analyses</h3>
-            <div className="space-y-3">
-              {analysisHistory.map((analysis) => (
-                <div key={analysis.id} className="p-4 bg-secondary/20 rounded-lg border border-border">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {new Date(analysis.created_at).toLocaleString()}
-                      </p>
-                      <p className="text-sm text-foreground line-clamp-2">
-                        {analysis.pitch_text.substring(0, 150)}...
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const investmentThesis = analysis.investment_thesis 
-                          ? (typeof analysis.investment_thesis === 'string' 
-                              ? JSON.parse(analysis.investment_thesis) 
-                              : analysis.investment_thesis)
-                          : undefined;
-                        
-                        setResult({
-                          memo: analysis.memo,
-                          scorecard: analysis.scorecard,
-                          redFlags: analysis.red_flags,
-                          followUpQuestions: analysis.follow_up_questions,
-                          investmentThesis,
-                          benchmarking: analysis.benchmarking,
-                        });
-                        setPitchText(analysis.pitch_text);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                    >
-                      View
-                    </Button>
+        {result && (
+          <Card className="mt-8 p-8 bg-card border-border shadow-lg">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-3xl font-bold text-foreground">Analysis Results</h2>
+              <Button variant="outline" onClick={exportAnalysis}>
+                <FileText className="h-4 w-4 mr-2" />
+                Export JSON
+              </Button>
+            </div>
+
+            <Tabs defaultValue="scorecard" className="w-full">
+              <TabsList className="grid w-full grid-cols-6 mb-8">
+                <TabsTrigger value="scorecard">Scorecard</TabsTrigger>
+                <TabsTrigger value="memo">Memo</TabsTrigger>
+                <TabsTrigger value="risks">Red Flags</TabsTrigger>
+                <TabsTrigger value="questions">Questions</TabsTrigger>
+                <TabsTrigger value="thesis">Thesis</TabsTrigger>
+                <TabsTrigger value="benchmark">Benchmark</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="scorecard" className="space-y-6">
+                <ScoreBar label="Team Quality" scoreItem={result.scorecard.team} />
+                <ScoreBar label="Market Size" scoreItem={result.scorecard.marketSize} />
+                <ScoreBar label="Product" scoreItem={result.scorecard.product} />
+                <ScoreBar label="Traction" scoreItem={result.scorecard.traction} />
+                <ScoreBar label="Business Model" scoreItem={result.scorecard.businessModel} />
+                <ScoreBar label="Defensibility" scoreItem={result.scorecard.defensibility} />
+              </TabsContent>
+
+              <TabsContent value="memo">
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <div className="whitespace-pre-wrap text-foreground leading-relaxed">
+                    {result.memo}
                   </div>
                 </div>
-              ))}
-            </div>
+              </TabsContent>
+
+              <TabsContent value="risks" className="space-y-4">
+                {result.redFlags && result.redFlags.length > 0 ? (
+                  result.redFlags.map((flag, index) => (
+                    <Card key={index} className="p-5 border-l-4 border-l-destructive">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-1" />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-semibold text-foreground">{flag.issue}</h4>
+                            <Badge variant={getSeverityColor(flag.severity)}>
+                              {flag.severity}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {flag.explanation}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">No red flags identified</p>
+                )}
+              </TabsContent>
+
+              <TabsContent value="questions" className="space-y-6">
+                {result.followUpQuestions && (
+                  <>
+                    {Object.entries(result.followUpQuestions).map(([category, questions]) => (
+                      <div key={category}>
+                        <h3 className="text-lg font-semibold mb-3 capitalize text-foreground">
+                          {category}
+                        </h3>
+                        <ul className="space-y-2">
+                          {questions.map((q, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <MessageSquare className="h-4 w-4 text-primary shrink-0 mt-1" />
+                              <span className="text-sm text-muted-foreground">{q}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </TabsContent>
+
+              <TabsContent value="thesis" className="space-y-6">
+                {result.investmentThesis && (
+                  <>
+                    <Card className="p-6 bg-green-500/10 border-green-500/20">
+                      <h3 className="text-lg font-semibold mb-3 text-green-500">Bull Case</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {result.investmentThesis.bullCase}
+                      </p>
+                    </Card>
+                    <Card className="p-6 bg-red-500/10 border-red-500/20">
+                      <h3 className="text-lg font-semibold mb-3 text-red-500">Bear Case</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {result.investmentThesis.bearCase}
+                      </p>
+                    </Card>
+                  </>
+                )}
+              </TabsContent>
+
+              <TabsContent value="benchmark" className="space-y-4">
+                {result.benchmarking && (
+                  <>
+                    <Card className="p-6">
+                      <h3 className="text-lg font-semibold mb-2 text-foreground">Overall Percentile</h3>
+                      <p className="text-2xl font-bold text-primary">{result.benchmarking.overallPercentile}</p>
+                    </Card>
+                    <Card className="p-6">
+                      <h3 className="text-lg font-semibold mb-2 text-foreground">Stage Context</h3>
+                      <p className="text-muted-foreground leading-relaxed">{result.benchmarking.stageContext}</p>
+                    </Card>
+                    <Card className="p-6">
+                      <h3 className="text-lg font-semibold mb-2 text-foreground">Comparison Notes</h3>
+                      <p className="text-muted-foreground leading-relaxed">{result.benchmarking.comparisonNotes}</p>
+                    </Card>
+                  </>
+                )}
+              </TabsContent>
+            </Tabs>
           </Card>
         )}
       </div>
