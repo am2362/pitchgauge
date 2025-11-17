@@ -18,13 +18,12 @@ interface AnalysisResult {
   };
   redFlags?: Array<{ severity: string; issue: string; explanation: string }>;
   followUpQuestions?: Record<string, string[]>;
+  investmentThesis?: { bullCase: string; bearCase: string };
   benchmarking?: {
     overallPercentile: string;
     stageContext: string;
     comparisonNotes: string;
   };
-  investmentThesis?: { bullCase: string; bearCase: string };
-  benchmarking?: Record<string, any>;
   startupName?: string;
 }
 
