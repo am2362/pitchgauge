@@ -96,7 +96,7 @@ export default function Compare() {
   };
 
   const updatePitchText = (id: number, text: string) => {
-    setPitches(pitches.map(p => p.id === id ? { ...p, text } : p));
+    setPitches(currentPitches => currentPitches.map(p => p.id === id ? { ...p, text } : p));
   };
 
   const analyzePitch = async (id: number) => {
@@ -110,7 +110,7 @@ export default function Compare() {
       return;
     }
 
-    setPitches(pitches.map(p => p.id === id ? { ...p, loading: true } : p));
+    setPitches(currentPitches => currentPitches.map(p => p.id === id ? { ...p, loading: true } : p));
 
     try {
       const { data, error } = await supabase.functions.invoke("analyze-startup", {
@@ -119,14 +119,14 @@ export default function Compare() {
 
       if (error) throw error;
 
-      setPitches(pitches.map(p => p.id === id ? { ...p, analysis: data, loading: false } : p));
+      setPitches(currentPitches => currentPitches.map(p => p.id === id ? { ...p, analysis: data, loading: false } : p));
 
       toast({
         title: "Analysis Complete",
         description: `${pitch.name} analysis ready`,
       });
     } catch (error: any) {
-      setPitches(pitches.map(p => p.id === id ? { ...p, loading: false } : p));
+      setPitches(currentPitches => currentPitches.map(p => p.id === id ? { ...p, loading: false } : p));
       toast({
         title: "Analysis Failed",
         description: error.message || "Please try again",
