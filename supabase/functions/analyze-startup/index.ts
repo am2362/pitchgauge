@@ -118,69 +118,72 @@ CRITICAL: Keep ALL text ultra-concise. Each sentence must be under 100 chars. Re
     console.log("Gemini response received");
 
     // Extract the content from Gemini's response
-    const content = data.choices?.[0]?.message?.content;
+    const content = data.choices?.[0]?.message?.content as string | undefined;
     if (!content) {
       throw new Error("No content in AI response");
     }
 
     // Parse the JSON response from Gemini with robust error handling
-    let analysisResult;
+    let analysisResult: any;
     try {
-      // Remove all possible markdown artifacts
-      let cleanContent = content
+      // Remove markdown fences and trim
+      let text = content
         .replace(/```json\s*/gi, "")
         .replace(/```\s*/g, "")
-        .replace(/^[^{]*/, "")  // Remove any text before first {
         .trim();
 
-      // Find the last complete closing brace to handle truncation
-      const lastBrace = cleanContent.lastIndexOf('}');
-      if (lastBrace !== -1) {
-        cleanContent = cleanContent.substring(0, lastBrace + 1);
-      }
-
-      // Validate it starts with JSON
-      if (!cleanContent.startsWith('{')) {
-        console.error("Response doesn't start with JSON. First 200 chars:", content.slice(0, 200));
-        throw new Error("AI returned non-JSON response. Please try again.");
-      }
-
-      console.log("Attempting to parse JSON, length:", cleanContent.length);
-      analysisResult = JSON.parse(cleanContent);
-    } catch (parseError) {
-      console.error("JSON parse error:", parseError);
-      console.error("Content length:", content.length);
-      console.error("First 500 chars:", content.slice(0, 500));
-      console.error("Last 500 chars:", content.slice(-500));
-      
-      // Try to parse up to the error position if available
-      if (parseError instanceof SyntaxError && parseError.message.includes('position')) {
-        const match = parseError.message.match(/position (\d+)/);
-        if (match) {
-          const errorPos = parseInt(match[1]);
-          console.log("Attempting recovery by truncating at error position:", errorPos);
-          try {
-            let truncated = content.slice(0, errorPos);
-            // Try to close any open braces
-            const openBraces = (truncated.match(/{/g) || []).length;
-            const closeBraces = (truncated.match(/}/g) || []).length;
-            truncated += '}'.repeat(Math.max(0, openBraces - closeBraces));
-            analysisResult = JSON.parse(truncated);
-            console.log("Recovery successful!");
-          } catch (recoveryError) {
-            throw new Error("AI response was incomplete. Please try analyzing again or use a shorter pitch.");
-          }
+      // Find the first balanced JSON object { ... }
+      const start = text.indexOf('{');
+      if (start === -1) throw new Error('No JSON object found');
+      let depth = 0;
+      let end = -1;
+      for (let i = start; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '{') depth++;
+        else if (ch === '}') {
+          depth--;
+          if (depth === 0) { end = i; break; }
         }
       }
-      
-      if (!analysisResult) {
-        throw new Error("Failed to parse AI response. Please try analyzing again.");
+      if (end === -1) end = text.lastIndexOf('}');
+      let jsonCandidate = text.slice(start, end + 1);
+
+      // Sanitize common JSON issues
+      jsonCandidate = jsonCandidate
+        // smart quotes
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'")
+        // trailing commas
+        .replace(/,\s*([}\]])/g, '$1')
+        // stray control chars
+        .replace(/[\u0000-\u001F]/g, ' ')
+        .trim();
+
+      console.log('Attempting to parse JSON, length:', jsonCandidate.length);
+      analysisResult = JSON.parse(jsonCandidate);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Content length:', content.length);
+      console.error('First 500 chars:', content.slice(0, 500));
+      console.error('Last 500 chars:', content.slice(-500));
+      throw new Error('Failed to parse AI response. The response may have been truncated. Please try with a shorter pitch.');
+    }
+
+    // Normalize structure for frontend compatibility
+    if (analysisResult?.scorecard) {
+      const sc = analysisResult.scorecard;
+      if (!sc.productDifferentiation && sc.product) {
+        sc.productDifferentiation = sc.product;
+        delete sc.product;
+      }
+      if (!sc.competitiveLandscape && sc.defensibility) {
+        sc.competitiveLandscape = sc.defensibility;
+        delete sc.defensibility;
       }
     }
 
-    // Validate the structure
     if (!analysisResult.memo || !analysisResult.scorecard) {
-      throw new Error("Invalid response structure from AI");
+      throw new Error('Invalid response structure from AI');
     }
 
     return new Response(JSON.stringify(analysisResult), {
