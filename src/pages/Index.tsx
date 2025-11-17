@@ -296,9 +296,20 @@ const Index = () => {
       memoData = item.memo;
     }
 
+    // Normalize scorecard to handle both old and new field names
+    const scorecard = item.scorecard as any;
+    const normalizedScorecard = {
+      team: scorecard.team || { score: 0, reasoning: 'N/A' },
+      marketSize: scorecard.marketSize || { score: 0, reasoning: 'N/A' },
+      traction: scorecard.traction || { score: 0, reasoning: 'N/A' },
+      productDifferentiation: scorecard.productDifferentiation || scorecard.product || { score: 0, reasoning: 'N/A' },
+      businessModel: scorecard.businessModel || { score: 0, reasoning: 'N/A' },
+      competitiveLandscape: scorecard.competitiveLandscape || scorecard.defensibility || { score: 0, reasoning: 'N/A' },
+    };
+
     const analysisResult: AnalysisResult = {
       memo: memoData,
-      scorecard: item.scorecard,
+      scorecard: normalizedScorecard,
       redFlags: item.red_flags,
       followUpQuestions: item.follow_up_questions,
       investmentThesis: item.investment_thesis ? JSON.parse(item.investment_thesis) : undefined,
@@ -330,6 +341,19 @@ const Index = () => {
   };
 
   const ScoreBar = ({ label, scoreItem }: { label: string; scoreItem: ScoreItem }) => {
+    // Safety check for undefined scoreItem
+    if (!scoreItem || typeof scoreItem.score !== 'number') {
+      return (
+        <div className="space-y-3 p-4 bg-card/50 rounded-lg border border-border/50">
+          <div className="flex justify-between items-center">
+            <span className="font-semibold text-foreground">{label}</span>
+            <span className="text-lg font-bold text-muted-foreground">N/A</span>
+          </div>
+          <p className="text-sm text-muted-foreground">No data available</p>
+        </div>
+      );
+    }
+
     const getScoreColor = (score: number) => {
       if (score >= 8) return "from-green-500 to-emerald-500";
       if (score >= 6) return "from-blue-500 to-cyan-500";
