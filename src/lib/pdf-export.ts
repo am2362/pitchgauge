@@ -1,0 +1,230 @@
+import jsPDF from 'jspdf';
+
+interface ScoreItem {
+  score: number;
+  reasoning: string;
+  detailedExplanation?: string;
+}
+
+interface AnalysisResult {
+  memo: string | Record<string, string>;
+  scorecard: {
+    team: ScoreItem;
+    marketSize: ScoreItem;
+    traction: ScoreItem;
+    productDifferentiation: ScoreItem;
+    businessModel: ScoreItem;
+    competitiveLandscape: ScoreItem;
+  };
+  redFlags?: Array<{ severity: string; issue: string; explanation: string }>;
+  followUpQuestions?: Record<string, string[]>;
+  benchmarking?: {
+    overallPercentile: string;
+    stageContext: string;
+    comparisonNotes: string;
+  };
+  investmentThesis?: { bullCase: string; bearCase: string };
+  benchmarking?: Record<string, any>;
+  startupName?: string;
+}
+
+interface ComparisonData {
+  startupNames: string[];
+  analyses: AnalysisResult[];
+  comparisonInsights?: {
+    rankings: Array<{ startupName: string; rank: number; reasoning: string }>;
+    comparativeInsights: {
+      strengths: Record<string, string>;
+      weaknesses: Record<string, string>;
+      relativePerspective: string;
+    };
+    investmentRecommendation: string;
+  };
+}
+
+export const exportAnalysisToPDF = (analysis: AnalysisResult, startupName: string) => {
+  const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const margin = 20;
+  let yPosition = 20;
+
+  const addText = (text: string, fontSize: number = 10, isBold: boolean = false) => {
+    if (yPosition > 270) {
+      pdf.addPage();
+      yPosition = 20;
+    }
+    pdf.setFontSize(fontSize);
+    pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+    const lines = pdf.splitTextToSize(text, pageWidth - 2 * margin);
+    pdf.text(lines, margin, yPosition);
+    yPosition += lines.length * fontSize * 0.5 + 5;
+  };
+
+  const addSection = (title: string, content: string) => {
+    addText(title, 14, true);
+    addText(content, 10, false);
+    yPosition += 5;
+  };
+
+  // Header
+  addText(`Startup Analysis: ${startupName}`, 18, true);
+  addText(`Generated: ${new Date().toLocaleDateString()}`, 10, false);
+  yPosition += 10;
+
+  // Executive Summary
+  addSection('Executive Summary', 
+    typeof analysis.memo === 'string' 
+      ? analysis.memo 
+      : Object.entries(analysis.memo).map(([k, v]) => `${k}: ${v}`).join('\n\n')
+  );
+
+  // Scorecard
+  addText('Scorecard Analysis', 16, true);
+  yPosition += 5;
+
+  const categories = {
+    team: 'Team',
+    marketSize: 'Market Size',
+    traction: 'Traction',
+    productDifferentiation: 'Product Differentiation',
+    businessModel: 'Business Model',
+    competitiveLandscape: 'Competitive Landscape'
+  };
+
+  Object.entries(categories).forEach(([key, label]) => {
+    const item = analysis.scorecard[key as keyof typeof analysis.scorecard];
+    addText(`${label}: ${item.score}/10`, 12, true);
+    addText(`Reasoning: ${item.reasoning}`, 10, false);
+    if (item.detailedExplanation) {
+      addText(`Details: ${item.detailedExplanation}`, 10, false);
+    }
+    yPosition += 3;
+  });
+
+  // Red Flags
+  if (analysis.redFlags && analysis.redFlags.length > 0) {
+    addText('Red Flags', 16, true);
+    analysis.redFlags.forEach((flag, idx) => {
+      addText(`${idx + 1}. [${flag.severity.toUpperCase()}] ${flag.issue}`, 11, true);
+      addText(flag.explanation, 10, false);
+    });
+  }
+
+  // Follow-up Questions
+  if (analysis.followUpQuestions) {
+    addText('Follow-up Questions', 16, true);
+    Object.entries(analysis.followUpQuestions).forEach(([category, questions]) => {
+      if (Array.isArray(questions)) {
+        addText(`${category.charAt(0).toUpperCase() + category.slice(1)}:`, 11, true);
+        questions.forEach((q, idx) => {
+          addText(`${idx + 1}. ${q}`, 10, false);
+        });
+      }
+    });
+  }
+
+  // Investment Thesis
+  if (analysis.investmentThesis) {
+    addSection('Bull Case', analysis.investmentThesis.bullCase);
+    addSection('Bear Case', analysis.investmentThesis.bearCase);
+  }
+
+  // Save PDF
+  pdf.save(`${startupName.replace(/\s+/g, '_')}_Analysis_${Date.now()}.pdf`);
+};
+
+export const exportComparisonToPDF = (comparisonData: ComparisonData) => {
+  const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const margin = 20;
+  let yPosition = 20;
+
+  const addText = (text: string, fontSize: number = 10, isBold: boolean = false) => {
+    if (yPosition > 270) {
+      pdf.addPage();
+      yPosition = 20;
+    }
+    pdf.setFontSize(fontSize);
+    pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+    const lines = pdf.splitTextToSize(text, pageWidth - 2 * margin);
+    pdf.text(lines, margin, yPosition);
+    yPosition += lines.length * fontSize * 0.5 + 5;
+  };
+
+  // Header
+  addText(`Startup Comparison Analysis`, 18, true);
+  addText(`Comparing: ${comparisonData.startupNames.join(' vs ')}`, 12, false);
+  addText(`Generated: ${new Date().toLocaleDateString()}`, 10, false);
+  yPosition += 10;
+
+  // Rankings
+  if (comparisonData.comparisonInsights?.rankings) {
+    addText('Investment Rankings', 16, true);
+    comparisonData.comparisonInsights.rankings.forEach((ranking) => {
+      addText(`#${ranking.rank}: ${ranking.startupName}`, 12, true);
+      addText(ranking.reasoning, 10, false);
+      yPosition += 3;
+    });
+  }
+
+  // Comparative Insights
+  if (comparisonData.comparisonInsights?.comparativeInsights) {
+    const insights = comparisonData.comparisonInsights.comparativeInsights;
+    
+    addText('Relative Perspective', 14, true);
+    addText(insights.relativePerspective, 10, false);
+    yPosition += 5;
+
+    addText('Strengths by Startup', 14, true);
+    Object.entries(insights.strengths).forEach(([startup, strength]) => {
+      addText(`${startup}:`, 11, true);
+      addText(strength, 10, false);
+    });
+    yPosition += 5;
+
+    addText('Weaknesses by Startup', 14, true);
+    Object.entries(insights.weaknesses).forEach(([startup, weakness]) => {
+      addText(`${startup}:`, 11, true);
+      addText(weakness, 10, false);
+    });
+  }
+
+  // Investment Recommendation
+  if (comparisonData.comparisonInsights?.investmentRecommendation) {
+    yPosition += 5;
+    addText('Investment Recommendation', 16, true);
+    addText(comparisonData.comparisonInsights.investmentRecommendation, 10, false);
+  }
+
+  // Individual Analyses Summary
+  pdf.addPage();
+  yPosition = 20;
+  addText('Individual Analysis Summaries', 16, true);
+  
+  comparisonData.analyses.forEach((analysis, idx) => {
+    const name = comparisonData.startupNames[idx] || `Startup ${idx + 1}`;
+    addText(name, 14, true);
+    
+    // Scores - handle both scorecard formats
+    const scorecard = analysis.scorecard as any;
+    const scoreValues = [
+      scorecard.team?.score || 0,
+      scorecard.marketSize?.score || 0,
+      scorecard.product?.score || scorecard.productDifferentiation?.score || 0,
+      scorecard.traction?.score || 0,
+      scorecard.businessModel?.score || 0,
+      scorecard.defensibility?.score || scorecard.competitiveLandscape?.score || 0,
+    ];
+    
+    const avgScore = scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length;
+    
+    addText(`Average Score: ${avgScore.toFixed(1)}/10`, 11, false);
+    
+    if (analysis.redFlags && analysis.redFlags.length > 0) {
+      addText(`Red Flags: ${analysis.redFlags.length}`, 11, false);
+    }
+    yPosition += 5;
+  });
+
+  pdf.save(`Comparison_${comparisonData.startupNames.join('_vs_')}_${Date.now()}.pdf`);
+};

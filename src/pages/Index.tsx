@@ -4,16 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Loader2, FileText, BarChart, AlertTriangle, MessageSquare, TrendingUp, History, FileInput, LogOut, GitCompare } from "lucide-react";
+import { Upload, Loader2, FileText, BarChart, AlertTriangle, MessageSquare, TrendingUp, History, FileInput, LogOut, GitCompare, FileDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { User, Session } from "@supabase/supabase-js";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
+import { exportAnalysisToPDF } from "@/lib/pdf-export";
 
 interface ScoreItem {
   score: number;
   reasoning: string;
+  detailedExplanation?: string;
 }
 
 interface RedFlag {
@@ -27,10 +31,10 @@ interface AnalysisResult {
   scorecard: {
     team: ScoreItem;
     marketSize: ScoreItem;
-    product: ScoreItem;
     traction: ScoreItem;
+    productDifferentiation: ScoreItem;
     businessModel: ScoreItem;
-    defensibility: ScoreItem;
+    competitiveLandscape: ScoreItem;
   };
   redFlags?: RedFlag[];
   followUpQuestions?: {
@@ -504,10 +508,16 @@ const Index = () => {
           <Card className="mt-8 p-8 bg-card border-border shadow-lg">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-3xl font-bold text-foreground">Analysis Results</h2>
-              <Button variant="outline" onClick={exportAnalysis}>
-                <FileText className="h-4 w-4 mr-2" />
-                Export JSON
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={exportAnalysis}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export JSON
+                </Button>
+                <Button variant="outline" onClick={() => exportAnalysisToPDF(result, "Startup")}>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export PDF
+                </Button>
+              </div>
             </div>
 
             <Tabs defaultValue="scorecard" className="w-full">
@@ -523,10 +533,10 @@ const Index = () => {
               <TabsContent value="scorecard" className="space-y-6">
                 <ScoreBar label="Team Quality" scoreItem={result.scorecard.team} />
                 <ScoreBar label="Market Size" scoreItem={result.scorecard.marketSize} />
-                <ScoreBar label="Product" scoreItem={result.scorecard.product} />
+                <ScoreBar label="Product Differentiation" scoreItem={result.scorecard.productDifferentiation} />
                 <ScoreBar label="Traction" scoreItem={result.scorecard.traction} />
                 <ScoreBar label="Business Model" scoreItem={result.scorecard.businessModel} />
-                <ScoreBar label="Defensibility" scoreItem={result.scorecard.defensibility} />
+                <ScoreBar label="Competitive Landscape" scoreItem={result.scorecard.competitiveLandscape} />
               </TabsContent>
 
               <TabsContent value="memo">

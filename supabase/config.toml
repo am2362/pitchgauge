@@ -2,3 +2,6 @@ project_id = "wmednfcnjnlrtcoolkbu"
 
 [functions.analyze-startup]
 verify_jwt = false
+
+[functions.compare-startups]
+verify_jwt = false

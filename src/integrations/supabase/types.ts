@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      comparison_analyses: {
+        Row: {
+          analyses: Json
+          comparison_insights: Json | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          pitches: Json
+          startup_names: string[]
+          user_id: string
+        }
+        Insert: {
+          analyses: Json
+          comparison_insights?: Json | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          pitches: Json
+          startup_names: string[]
+          user_id: string
+        }
+        Update: {
+          analyses?: Json
+          comparison_insights?: Json | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          pitches?: Json
+          startup_names?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
