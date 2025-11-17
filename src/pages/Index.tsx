@@ -407,6 +407,10 @@ const Index = () => {
                 <GitCompare className="h-4 w-4 mr-2" />
                 Compare
               </Button>
+              <Button variant="outline" onClick={() => navigate("/history")}>
+                <History className="h-4 w-4 mr-2" />
+                History
+              </Button>
               <Button variant="ghost" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout

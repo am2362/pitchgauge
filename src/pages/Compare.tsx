@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@supabase/supabase-js";
-import { ArrowLeft, Loader2, TrendingUp, Plus, X, FileDown, Save } from "lucide-react";
+import { ArrowLeft, Loader2, TrendingUp, Plus, X, FileDown, Save, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -295,6 +295,10 @@ export default function Compare() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button onClick={() => navigate("/history")} variant="outline">
+              <History className="h-4 w-4 mr-2" />
+              History
+            </Button>
             <Button onClick={addPitch} variant="outline">
               <Plus className="h-4 w-4 mr-2" />
               Add Startup
