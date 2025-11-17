@@ -50,7 +50,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        max_tokens: 8000,
+        max_tokens: 16000,
         temperature: 0.7,
         messages: [
           {
@@ -60,37 +60,37 @@ serve(async (req) => {
 You are a venture analyst AI. Analyze the pitch and return this JSON structure:
 
 {
-  "memo": "Investment memo with sections: Problem, Solution, Market, Traction, Business Model, Risks, Recommendation. Keep each section 2-3 sentences.",
+  "memo": "Investment memo with sections: Problem, Solution, Market, Traction, Business Model, Risks. Keep each section 2 sentences MAX.",
   "scorecard": {
-    "team": { "score": 0-10, "reasoning": "1-2 sentences", "detailedExplanation": "3-4 sentences with specific examples from the pitch. What was evaluated, why the score, what would improve it." },
-    "marketSize": { "score": 0-10, "reasoning": "1-2 sentences", "detailedExplanation": "3-4 sentences with specific market data and TAM analysis." },
-    "product": { "score": 0-10, "reasoning": "1-2 sentences", "detailedExplanation": "3-4 sentences about differentiation, technology, and competitive advantage." },
-    "traction": { "score": 0-10, "reasoning": "1-2 sentences", "detailedExplanation": "3-4 sentences with specific metrics, growth rates, and milestones." },
-    "businessModel": { "score": 0-10, "reasoning": "1-2 sentences", "detailedExplanation": "3-4 sentences about monetization, unit economics, and scalability." },
-    "defensibility": { "score": 0-10, "reasoning": "1-2 sentences", "detailedExplanation": "3-4 sentences about moats, IP, network effects, and barriers to entry." }
+    "team": { "score": 0-10, "reasoning": "1 sentence", "detailedExplanation": "2 sentences with specifics from pitch" },
+    "marketSize": { "score": 0-10, "reasoning": "1 sentence", "detailedExplanation": "2 sentences with market data" },
+    "traction": { "score": 0-10, "reasoning": "1 sentence", "detailedExplanation": "2 sentences with metrics" },
+    "productDifferentiation": { "score": 0-10, "reasoning": "1 sentence", "detailedExplanation": "2 sentences about differentiation" },
+    "businessModel": { "score": 0-10, "reasoning": "1 sentence", "detailedExplanation": "2 sentences about monetization" },
+    "competitiveLandscape": { "score": 0-10, "reasoning": "1 sentence", "detailedExplanation": "2 sentences about moats" }
   },
   "redFlags": [
-    { "severity": "critical|high|medium", "issue": "Brief title", "explanation": "1-2 sentences" }
+    { "severity": "critical|high|medium", "issue": "Brief title", "explanation": "1 sentence" }
   ],
   "followUpQuestions": {
     "team": ["question 1", "question 2"],
     "market": ["question 1", "question 2"],
     "product": ["question 1", "question 2"],
     "financials": ["question 1", "question 2"],
-    "legal": ["question 1", "question 2"]
+    "legal": ["question 1"]
   },
   "investmentThesis": {
-    "bullCase": "3-4 sentences max",
-    "bearCase": "3-4 sentences max"
+    "bullCase": "2-3 sentences",
+    "bearCase": "2-3 sentences"
   },
   "benchmarking": {
-    "overallPercentile": "e.g., Top 25% of seed-stage startups",
-    "stageContext": "1-2 sentences",
-    "comparisonNotes": "1-2 sentences"
+    "overallPercentile": "e.g., Top 25%",
+    "stageContext": "1 sentence",
+    "comparisonNotes": "1 sentence"
   }
 }
 
-KEEP ALL TEXT CONCISE. Return ONLY JSON. Be honest with 0-10 scores.`
+CRITICAL: Keep ALL text ultra-concise. Each sentence must be under 100 chars. Return ONLY JSON.`
           },
           {
             role: "user",
@@ -131,8 +131,13 @@ KEEP ALL TEXT CONCISE. Return ONLY JSON. Be honest with 0-10 scores.`
         .replace(/```json\s*/gi, "")
         .replace(/```\s*/g, "")
         .replace(/^[^{]*/, "")  // Remove any text before first {
-        .replace(/[^}]*$/, "")  // Remove any text after last }
         .trim();
+
+      // Find the last complete closing brace to handle truncation
+      const lastBrace = cleanContent.lastIndexOf('}');
+      if (lastBrace !== -1) {
+        cleanContent = cleanContent.substring(0, lastBrace + 1);
+      }
 
       // Validate it starts with JSON
       if (!cleanContent.startsWith('{')) {
@@ -140,13 +145,37 @@ KEEP ALL TEXT CONCISE. Return ONLY JSON. Be honest with 0-10 scores.`
         throw new Error("AI returned non-JSON response. Please try again.");
       }
 
+      console.log("Attempting to parse JSON, length:", cleanContent.length);
       analysisResult = JSON.parse(cleanContent);
     } catch (parseError) {
       console.error("JSON parse error:", parseError);
       console.error("Content length:", content.length);
       console.error("First 500 chars:", content.slice(0, 500));
       console.error("Last 500 chars:", content.slice(-500));
-      throw new Error("Failed to parse AI response. The response may have been truncated. Please try with a shorter pitch.");
+      
+      // Try to parse up to the error position if available
+      if (parseError instanceof SyntaxError && parseError.message.includes('position')) {
+        const match = parseError.message.match(/position (\d+)/);
+        if (match) {
+          const errorPos = parseInt(match[1]);
+          console.log("Attempting recovery by truncating at error position:", errorPos);
+          try {
+            let truncated = content.slice(0, errorPos);
+            // Try to close any open braces
+            const openBraces = (truncated.match(/{/g) || []).length;
+            const closeBraces = (truncated.match(/}/g) || []).length;
+            truncated += '}'.repeat(Math.max(0, openBraces - closeBraces));
+            analysisResult = JSON.parse(truncated);
+            console.log("Recovery successful!");
+          } catch (recoveryError) {
+            throw new Error("AI response was incomplete. Please try analyzing again or use a shorter pitch.");
+          }
+        }
+      }
+      
+      if (!analysisResult) {
+        throw new Error("Failed to parse AI response. Please try analyzing again.");
+      }
     }
 
     // Validate the structure
