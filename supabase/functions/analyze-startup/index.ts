@@ -62,12 +62,12 @@ You are a venture analyst AI. Analyze the pitch and return this JSON structure:
 {
   "memo": "Investment memo with sections: Problem, Solution, Market, Traction, Business Model, Risks, Recommendation. Keep each section 2-3 sentences.",
   "scorecard": {
-    "team": { "score": 0-10, "reasoning": "1-2 sentences" },
-    "marketSize": { "score": 0-10, "reasoning": "1-2 sentences" },
-    "product": { "score": 0-10, "reasoning": "1-2 sentences" },
-    "traction": { "score": 0-10, "reasoning": "1-2 sentences" },
-    "businessModel": { "score": 0-10, "reasoning": "1-2 sentences" },
-    "defensibility": { "score": 0-10, "reasoning": "1-2 sentences" }
+    "team": { "score": 0-10, "reasoning": "1-2 sentences", "detailedExplanation": "3-4 sentences with specific examples from the pitch. What was evaluated, why the score, what would improve it." },
+    "marketSize": { "score": 0-10, "reasoning": "1-2 sentences", "detailedExplanation": "3-4 sentences with specific market data and TAM analysis." },
+    "product": { "score": 0-10, "reasoning": "1-2 sentences", "detailedExplanation": "3-4 sentences about differentiation, technology, and competitive advantage." },
+    "traction": { "score": 0-10, "reasoning": "1-2 sentences", "detailedExplanation": "3-4 sentences with specific metrics, growth rates, and milestones." },
+    "businessModel": { "score": 0-10, "reasoning": "1-2 sentences", "detailedExplanation": "3-4 sentences about monetization, unit economics, and scalability." },
+    "defensibility": { "score": 0-10, "reasoning": "1-2 sentences", "detailedExplanation": "3-4 sentences about moats, IP, network effects, and barriers to entry." }
   },
   "redFlags": [
     { "severity": "critical|high|medium", "issue": "Brief title", "explanation": "1-2 sentences" }

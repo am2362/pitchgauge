@@ -6,22 +6,26 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@supabase/supabase-js";
-import { ArrowLeft, Loader2, TrendingUp, Plus, X } from "lucide-react";
+import { ArrowLeft, Loader2, TrendingUp, Plus, X, FileDown, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
+import { exportComparisonToPDF } from "@/lib/pdf-export";
 
 interface ScoreItem {
   score: number;
   reasoning: string;
+  detailedExplanation?: string;
 }
 
 interface Scorecard {
   team: ScoreItem;
   marketSize: ScoreItem;
-  product: ScoreItem;
   traction: ScoreItem;
+  productDifferentiation: ScoreItem;
   businessModel: ScoreItem;
-  defensibility: ScoreItem;
+  competitiveLandscape: ScoreItem;
 }
 
 interface AnalysisResult {
@@ -47,6 +51,9 @@ export default function Compare() {
     { id: 1, name: "Startup A", text: "", analysis: null, loading: false },
     { id: 2, name: "Startup B", text: "", analysis: null, loading: false },
   ]);
+  const [comparisonInsights, setComparisonInsights] = useState<any>(null);
+  const [isGeneratingComparison, setIsGeneratingComparison] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -134,6 +141,91 @@ export default function Compare() {
         await analyzePitch(pitch.id);
       }
     }
+    
+    // After all analyses complete, generate comparison insights
+    const analyzed = pitches.filter(p => p.analysis);
+    if (analyzed.length >= 2) {
+      await generateComparisonInsights();
+    }
+  };
+
+  const generateComparisonInsights = async () => {
+    const analyzed = pitches.filter(p => p.analysis);
+    if (analyzed.length < 2) return;
+
+    setIsGeneratingComparison(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("compare-startups", {
+        body: {
+          analyses: analyzed.map(p => p.analysis),
+          startupNames: analyzed.map(p => p.name),
+        },
+      });
+
+      if (error) throw error;
+
+      setComparisonInsights(data);
+      toast({
+        title: "Comparison Complete",
+        description: "AI-powered comparative analysis generated",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Comparison Failed",
+        description: error.message || "Could not generate comparison",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingComparison(false);
+    }
+  };
+
+  const saveComparison = async () => {
+    const analyzed = pitches.filter(p => p.analysis);
+    if (analyzed.length < 2 || !user) return;
+
+    setIsSaving(true);
+    try {
+      const comparisonData: any = {
+        startup_names: analyzed.map(p => p.name),
+        pitches: analyzed.map(p => p.text),
+        analyses: analyzed.map(p => p.analysis),
+        comparison_insights: comparisonInsights,
+      };
+
+      const { error } = await supabase.from("comparison_analyses").insert([comparisonData]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Saved",
+        description: "Comparison saved to your history",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Save Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleExportPDF = () => {
+    const analyzed = pitches.filter(p => p.analysis);
+    if (analyzed.length < 2) return;
+
+    exportComparisonToPDF({
+      startupNames: analyzed.map(p => p.name),
+      analyses: analyzed.map(p => p.analysis!),
+      comparisonInsights,
+    });
+
+    toast({
+      title: "PDF Exported",
+      description: "Comparison report downloaded",
+    });
   };
 
   const getScoreColor = (score: number) => {
@@ -143,7 +235,7 @@ export default function Compare() {
     return "text-red-500";
   };
 
-  const scorecardKeys: Array<keyof Scorecard> = ['team', 'marketSize', 'product', 'traction', 'businessModel', 'defensibility'];
+  const scorecardKeys: Array<keyof Scorecard> = ['team', 'marketSize', 'traction', 'productDifferentiation', 'businessModel', 'competitiveLandscape'];
 
   const getComparison = () => {
     const analyzed = pitches.filter(p => p.analysis);
@@ -191,8 +283,20 @@ export default function Compare() {
                 Add Startup
               </Button>
             )}
-            <Button onClick={analyzeAll} disabled={pitches.some(p => p.loading)}>
-              {pitches.some(p => p.loading) ? (
+            {allAnalyzed && pitches.some(p => p.analysis) && (
+              <>
+                <Button onClick={saveComparison} disabled={isSaving} variant="outline">
+                  {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                  Save
+                </Button>
+                <Button onClick={handleExportPDF} variant="outline">
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export PDF
+                </Button>
+              </>
+            )}
+            <Button onClick={analyzeAll} disabled={pitches.some(p => p.loading) || isGeneratingComparison}>
+              {pitches.some(p => p.loading) || isGeneratingComparison ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Analyzing...</>
               ) : (
                 "Analyze All"
@@ -201,17 +305,69 @@ export default function Compare() {
           </div>
         </div>
 
-        {comparisons && comparisons.length > 0 && (
+        {comparisonInsights && (
+          <Card className="p-6 mb-6 bg-accent/10 border-accent">
+            <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              AI-Powered Comparative Analysis
+            </h3>
+            
+            {comparisonInsights.rankings && (
+              <div className="mb-4">
+                <h4 className="font-semibold mb-2">Investment Rankings</h4>
+                <div className="space-y-2">
+                  {comparisonInsights.rankings.map((ranking: any) => (
+                    <div key={ranking.startupName} className="flex items-start gap-2">
+                      <Badge variant="outline" className="mt-1">#{ranking.rank}</Badge>
+                      <div>
+                        <p className="font-medium">{ranking.startupName}</p>
+                        <p className="text-sm text-muted-foreground">{ranking.reasoning}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {comparisonInsights.comparativeInsights?.relativePerspective && (
+              <div className="mb-4">
+                <h4 className="font-semibold mb-2">Overall Perspective</h4>
+                <p className="text-sm text-muted-foreground">{comparisonInsights.comparativeInsights.relativePerspective}</p>
+              </div>
+            )}
+
+            {comparisonInsights.investmentRecommendation && (
+              <div>
+                <h4 className="font-semibold mb-2">Investment Recommendation</h4>
+                <p className="text-sm text-muted-foreground">{comparisonInsights.investmentRecommendation}</p>
+              </div>
+            )}
+          </Card>
+        )}
+        
+        {comparisons && comparisons.length > 0 && !comparisonInsights && (
           <Card className="p-6 mb-6 bg-accent/10 border-accent">
             <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Comparative Insights
+              Quick Insights
             </h3>
             <ul className="space-y-2">
               {comparisons.map((comp, idx) => (
                 <li key={idx} className="text-sm text-muted-foreground">• {comp}</li>
               ))}
             </ul>
+            <Button 
+              onClick={generateComparisonInsights} 
+              disabled={isGeneratingComparison}
+              className="mt-4"
+              size="sm"
+            >
+              {isGeneratingComparison ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating AI Analysis...</>
+              ) : (
+                "Generate AI Comparison"
+              )}
+            </Button>
           </Card>
         )}
 
@@ -258,17 +414,34 @@ export default function Compare() {
                 <tbody>
                   {scorecardKeys.map(key => (
                     <tr key={key} className="border-b hover:bg-secondary/20">
-                      <td className="p-3 font-medium capitalize">
+                       <td className="p-3 font-medium capitalize align-top">
                         {key.replace(/([A-Z])/g, ' $1').trim()}
                       </td>
                       {pitches.filter(p => p.analysis).map(pitch => {
-                        const score = pitch.analysis!.scorecard[key].score;
+                        const scoreItem = pitch.analysis!.scorecard[key];
+                        const score = scoreItem.score;
                         const maxScore = Math.max(...pitches.filter(p => p.analysis).map(p => p.analysis!.scorecard[key].score));
                         return (
-                          <td key={pitch.id} className="p-3 text-center">
-                            <span className={`text-lg font-bold ${getScoreColor(score)} ${score === maxScore ? 'underline' : ''}`}>
-                              {score}/10
-                            </span>
+                          <td key={pitch.id} className="p-3 align-top">
+                            <div className="space-y-1">
+                              <div className="text-center">
+                                <span className={`text-lg font-bold ${getScoreColor(score)} ${score === maxScore ? 'underline' : ''}`}>
+                                  {score}/10
+                                </span>
+                              </div>
+                              {scoreItem.detailedExplanation && (
+                                <Collapsible>
+                                  <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mx-auto">
+                                    Details <ChevronDown className="h-3 w-3" />
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent className="text-xs text-muted-foreground mt-2">
+                                    <p className="text-left">{scoreItem.reasoning}</p>
+                                    <Separator className="my-2" />
+                                    <p className="text-left">{scoreItem.detailedExplanation}</p>
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              )}
+                            </div>
                           </td>
                         );
                       })}
