@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { exportComparisonToPDF } from "@/lib/pdf-export";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ScoreItem {
   score: number;
@@ -54,6 +55,7 @@ export default function Compare() {
   const [comparisonInsights, setComparisonInsights] = useState<any>(null);
   const [isGeneratingComparison, setIsGeneratingComparison] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showComparisonDialog, setShowComparisonDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -134,17 +136,33 @@ export default function Compare() {
   };
 
   const analyzeAll = async () => {
-    for (const pitch of pitches) {
-      if (pitch.text.trim() && !pitch.analysis) {
-        await analyzePitch(pitch.id);
-      }
-    }
+    const toAnalyze = pitches.filter(p => p.text.trim() && !p.analysis);
     
-    // After all analyses complete, generate comparison insights
-    const analyzed = pitches.filter(p => p.analysis);
-    if (analyzed.length >= 2) {
-      await generateComparisonInsights();
+    if (toAnalyze.length === 0) {
+      // All already analyzed, just generate comparison
+      const analyzed = pitches.filter(p => p.analysis);
+      if (analyzed.length >= 2) {
+        await generateComparisonInsights();
+      }
+      return;
     }
+
+    // Analyze each pitch sequentially
+    for (const pitch of toAnalyze) {
+      await analyzePitch(pitch.id);
+    }
+
+    // Wait for state to settle
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Check how many are now analyzed and trigger comparison
+    setPitches(currentPitches => {
+      const analyzed = currentPitches.filter(p => p.analysis);
+      if (analyzed.length >= 2) {
+        setTimeout(() => generateComparisonInsights(), 100);
+      }
+      return currentPitches;
+    });
   };
 
   const generateComparisonInsights = async () => {
@@ -163,9 +181,10 @@ export default function Compare() {
       if (error) throw error;
 
       setComparisonInsights(data);
+      setShowComparisonDialog(true);
       toast({
         title: "Comparison Complete",
-        description: "AI-powered comparative analysis generated",
+        description: "View full results in the dialog",
       });
     } catch (error: any) {
       toast({
@@ -333,11 +352,18 @@ export default function Compare() {
             )}
 
             {comparisonInsights.investmentRecommendation && (
-              <div>
+              <div className="mb-4">
                 <h4 className="font-semibold mb-2">Investment Recommendation</h4>
                 <p className="text-sm text-muted-foreground">{comparisonInsights.investmentRecommendation}</p>
               </div>
             )}
+
+            <div className="flex justify-center mt-4">
+              <Button onClick={() => setShowComparisonDialog(true)} size="lg">
+                <TrendingUp className="h-5 w-5 mr-2" />
+                View Full Comparison Results
+              </Button>
+            </div>
           </Card>
         )}
         
@@ -448,6 +474,185 @@ export default function Compare() {
             </div>
           </Card>
         )}
+
+        {/* Comparison Results Dialog */}
+        <Dialog open={showComparisonDialog} onOpenChange={setShowComparisonDialog}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl flex items-center gap-2">
+                <TrendingUp className="h-6 w-6" />
+                Startup Comparison Results
+              </DialogTitle>
+              <DialogDescription>
+                AI-powered comparative analysis of {pitches.filter(p => p.analysis).length} startups
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Investment Rankings Section */}
+              {comparisonInsights?.rankings && (
+                <div>
+                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                    🏆 Investment Rankings
+                  </h3>
+                  <div className="space-y-3">
+                    {comparisonInsights.rankings.map((ranking: any) => (
+                      <div key={ranking.startupName} className="flex items-start gap-3 p-3 bg-secondary/20 rounded-lg">
+                        <Badge variant={ranking.rank === 1 ? "default" : "outline"} className="mt-1 text-lg">
+                          #{ranking.rank}
+                        </Badge>
+                        <div className="flex-1">
+                          <p className="font-semibold text-base">{ranking.startupName}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{ranking.reasoning}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Overall Perspective Section */}
+              {comparisonInsights?.comparativeInsights?.relativePerspective && (
+                <div>
+                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                    🔍 Overall Perspective
+                  </h3>
+                  <div className="p-4 bg-accent/10 rounded-lg border border-accent">
+                    <p className="text-sm leading-relaxed">
+                      {comparisonInsights.comparativeInsights.relativePerspective}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Investment Recommendation Section */}
+              {comparisonInsights?.investmentRecommendation && (
+                <div>
+                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                    💡 Investment Recommendation
+                  </h3>
+                  <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <p className="text-sm leading-relaxed">
+                      {comparisonInsights.investmentRecommendation}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Detailed Comparison Table */}
+              {pitches.filter(p => p.analysis).length >= 2 && (
+                <div>
+                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                    📊 Detailed Score Comparison
+                  </h3>
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="w-full">
+                      <thead className="bg-secondary/30">
+                        <tr className="border-b">
+                          <th className="text-left p-3 font-semibold sticky left-0 bg-secondary/30">Metric</th>
+                          {pitches.filter(p => p.analysis).map(pitch => (
+                            <th key={pitch.id} className="text-center p-3 font-semibold min-w-[200px]">
+                              {pitch.name}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {scorecardKeys.map(key => (
+                          <tr key={key} className="border-b hover:bg-secondary/10">
+                            <td className="p-3 font-medium capitalize align-top sticky left-0 bg-background">
+                              {key.replace(/([A-Z])/g, ' $1').trim()}
+                            </td>
+                            {pitches.filter(p => p.analysis).map(pitch => {
+                              const scoreItem = pitch.analysis!.scorecard[key];
+                              const score = scoreItem.score;
+                              const maxScore = Math.max(...pitches.filter(p => p.analysis).map(p => p.analysis!.scorecard[key].score));
+                              return (
+                                <td key={pitch.id} className="p-3 align-top">
+                                  <div className="space-y-2">
+                                    <div className="text-center">
+                                      <span className={`text-xl font-bold ${getScoreColor(score)} ${score === maxScore ? 'underline decoration-2' : ''}`}>
+                                        {score}/10
+                                      </span>
+                                    </div>
+                                    {scoreItem.reasoning && (
+                                      <p className="text-xs text-muted-foreground text-left">
+                                        {scoreItem.reasoning}
+                                      </p>
+                                    )}
+                                    {scoreItem.detailedExplanation && (
+                                      <Collapsible>
+                                        <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                                          More details <ChevronDown className="h-3 w-3" />
+                                        </CollapsibleTrigger>
+                                        <CollapsibleContent className="text-xs text-muted-foreground mt-2 text-left">
+                                          {scoreItem.detailedExplanation}
+                                        </CollapsibleContent>
+                                      </Collapsible>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Comparative Strengths & Weaknesses */}
+              {comparisonInsights?.comparativeInsights?.strengths && (
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 text-green-600 dark:text-green-400">
+                      ✅ Key Strengths
+                    </h3>
+                    <div className="space-y-2">
+                      {Object.entries(comparisonInsights.comparativeInsights.strengths).map(([name, strength]: [string, any]) => (
+                        <div key={name} className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                          <p className="font-medium text-sm">{name}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{strength}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 text-red-600 dark:text-red-400">
+                      ⚠️ Key Weaknesses
+                    </h3>
+                    <div className="space-y-2">
+                      {Object.entries(comparisonInsights.comparativeInsights.weaknesses).map(([name, weakness]: [string, any]) => (
+                        <div key={name} className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                          <p className="font-medium text-sm">{name}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{weakness}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="flex gap-2 mt-6">
+              <Button onClick={handleExportPDF} variant="outline">
+                <FileDown className="h-4 w-4 mr-2" />
+                Export as PDF
+              </Button>
+              <Button onClick={saveComparison} disabled={isSaving}>
+                {isSaving ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
+                ) : (
+                  <><Save className="h-4 w-4 mr-2" />Save to History</>
+                )}
+              </Button>
+              <Button onClick={() => setShowComparisonDialog(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
