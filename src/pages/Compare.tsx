@@ -204,6 +204,7 @@ export default function Compare() {
     setIsSaving(true);
     try {
       const comparisonData: any = {
+        user_id: user.id,
         startup_names: analyzed.map(p => p.name),
         pitches: analyzed.map(p => p.text),
         analyses: analyzed.map(p => p.analysis),
