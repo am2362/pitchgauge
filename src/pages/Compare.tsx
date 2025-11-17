@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,13 +6,15 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@supabase/supabase-js";
-import { ArrowLeft, Loader2, TrendingUp, Plus, X, FileDown, Save, History } from "lucide-react";
+import { ArrowLeft, Loader2, TrendingUp, Plus, X, FileDown, Save, History, Upload, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { exportComparisonToPDF } from "@/lib/pdf-export";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { parseExcelFile, createExcelTemplate, ParsedStartupData } from "@/lib/excel-parser";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface ScoreItem {
   score: number;
@@ -56,6 +58,10 @@ export default function Compare() {
   const [isGeneratingComparison, setIsGeneratingComparison] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showComparisonDialog, setShowComparisonDialog] = useState(false);
+  const [showExcelPreview, setShowExcelPreview] = useState(false);
+  const [excelPreviewData, setExcelPreviewData] = useState<ParsedStartupData[]>([]);
+  const [isProcessingExcel, setIsProcessingExcel] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -97,6 +103,92 @@ export default function Compare() {
 
   const updatePitchText = (id: number, text: string) => {
     setPitches(currentPitches => currentPitches.map(p => p.id === id ? { ...p, text } : p));
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingExcel(true);
+
+    try {
+      const result = await parseExcelFile(file);
+
+      // Show errors
+      if (result.errors.length > 0) {
+        toast({
+          title: "Error parsing Excel file",
+          description: result.errors.join(". "),
+          variant: "destructive",
+        });
+        setIsProcessingExcel(false);
+        return;
+      }
+
+      // Show warnings
+      if (result.warnings.length > 0) {
+        toast({
+          title: "Import Warnings",
+          description: result.warnings.join(". "),
+        });
+      }
+
+      // Show preview dialog
+      setExcelPreviewData(result.data);
+      setShowExcelPreview(true);
+
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process Excel file",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingExcel(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleImportStartups = (replaceAll: boolean) => {
+    if (replaceAll) {
+      // Replace all pitches
+      setPitches(excelPreviewData.map((data, index) => ({
+        id: index + 1,
+        name: data.name,
+        text: data.pitch,
+        analysis: null,
+        loading: false
+      })));
+    } else {
+      // Add to existing
+      const newPitches = excelPreviewData.map((data, index) => ({
+        id: pitches.length + index + 1,
+        name: data.name,
+        text: data.pitch,
+        analysis: null,
+        loading: false
+      }));
+      setPitches([...pitches, ...newPitches]);
+    }
+
+    setShowExcelPreview(false);
+    setExcelPreviewData([]);
+
+    toast({
+      title: "Success",
+      description: `${excelPreviewData.length} startup${excelPreviewData.length > 1 ? 's' : ''} imported successfully`,
+    });
+  };
+
+  const handleDownloadTemplate = () => {
+    createExcelTemplate();
+    toast({
+      title: "Template Downloaded",
+      description: "Excel template downloaded successfully",
+    });
   };
 
   const analyzePitch = async (id: number) => {
@@ -299,6 +391,28 @@ export default function Compare() {
               <History className="h-4 w-4 mr-2" />
               History
             </Button>
+            <Button onClick={handleDownloadTemplate} variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Template
+            </Button>
+            <Button 
+              onClick={() => fileInputRef.current?.click()} 
+              variant="outline"
+              disabled={isProcessingExcel}
+            >
+              {isProcessingExcel ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
+              ) : (
+                <><Upload className="h-4 w-4 mr-2" />Upload Excel</>
+              )}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
             <Button onClick={addPitch} variant="outline">
               <Plus className="h-4 w-4 mr-2" />
               Add Startup
@@ -654,6 +768,62 @@ export default function Compare() {
               </Button>
               <Button onClick={() => setShowComparisonDialog(false)}>
                 Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Excel Preview Dialog */}
+        <Dialog open={showExcelPreview} onOpenChange={setShowExcelPreview}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Preview Excel Import</DialogTitle>
+              <DialogDescription>
+                Found {excelPreviewData.length} startup{excelPreviewData.length !== 1 ? 's' : ''}. Review and confirm import.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">Startup Name</TableHead>
+                    <TableHead>Pitch Preview</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {excelPreviewData.map((data, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{data.name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {data.pitch.length > 150 
+                          ? `${data.pitch.substring(0, 150)}...` 
+                          : data.pitch}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <DialogFooter className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowExcelPreview(false);
+                  setExcelPreviewData([]);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="secondary" 
+                onClick={() => handleImportStartups(false)}
+              >
+                Add to Existing
+              </Button>
+              <Button onClick={() => handleImportStartups(true)}>
+                Replace All
               </Button>
             </DialogFooter>
           </DialogContent>
