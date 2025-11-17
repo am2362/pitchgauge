@@ -78,15 +78,13 @@ export default function Compare() {
   }, [navigate]);
 
   const addPitch = () => {
-    if (pitches.length < 3) {
-      setPitches([...pitches, {
-        id: pitches.length + 1,
-        name: `Startup ${String.fromCharCode(65 + pitches.length)}`,
-        text: "",
-        analysis: null,
-        loading: false
-      }]);
-    }
+    setPitches([...pitches, {
+      id: pitches.length + 1,
+      name: `Startup ${String.fromCharCode(65 + pitches.length)}`,
+      text: "",
+      analysis: null,
+      loading: false
+    }]);
   };
 
   const removePitch = (id: number) => {
@@ -277,12 +275,10 @@ export default function Compare() {
             </div>
           </div>
           <div className="flex gap-2">
-            {pitches.length < 3 && (
-              <Button onClick={addPitch} variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Startup
-              </Button>
-            )}
+            <Button onClick={addPitch} variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Startup
+            </Button>
             {allAnalyzed && pitches.some(p => p.analysis) && (
               <>
                 <Button onClick={saveComparison} disabled={isSaving} variant="outline">
