@@ -166,7 +166,37 @@ CRITICAL: Keep ALL text ultra-concise. Each sentence must be under 100 chars. Re
       console.error('Content length:', content.length);
       console.error('First 500 chars:', content.slice(0, 500));
       console.error('Last 500 chars:', content.slice(-500));
-      throw new Error('Failed to parse AI response. The response may have been truncated. Please try with a shorter pitch.');
+
+      // Fallback: ask AI to repair JSON strictly
+      try {
+        const repairResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: "You fix malformed JSON. Return STRICT valid JSON only. No markdown, no commentary." },
+              { role: "user", content: `Repair this to strict JSON following this shape (keys must match):\n{\n  memo: string | { Problem: string; Solution: string; Market: string; Traction: string; Business Model: string; Risks: string },\n  scorecard: { team: {score:number, reasoning:string, detailedExplanation?:string}, marketSize: {score:number, reasoning:string, detailedExplanation?:string}, traction: {score:number, reasoning:string, detailedExplanation?:string}, productDifferentiation: {score:number, reasoning:string, detailedExplanation?:string}, businessModel: {score:number, reasoning:string, detailedExplanation?:string}, competitiveLandscape: {score:number, reasoning:string, detailedExplanation?:string} },\n  redFlags: Array<{ severity: 'critical'|'high'|'medium', issue: string, explanation: string }>,\n  followUpQuestions: { team:string[]; market:string[]; product:string[]; financials:string[]; legal:string[] },\n  investmentThesis: { bullCase:string; bearCase:string },\n  benchmarking: { overallPercentile:string; stageContext:string; comparisonNotes:string }\n}\n\nInput to repair:\n${content}` }
+            ]
+          })
+        });
+
+        if (repairResp.ok) {
+          const r = await repairResp.json();
+          const repaired = (r.choices?.[0]?.message?.content || "").replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+          console.log("Trying repaired JSON parse, length:", repaired.length);
+          analysisResult = JSON.parse(repaired);
+        }
+      } catch (repairError) {
+        console.error('Repair attempt failed:', repairError);
+      }
+
+      if (!analysisResult) {
+        throw new Error('Failed to parse AI response. The response may have been truncated. Please try with a shorter pitch.');
+      }
     }
 
     // Normalize structure for frontend compatibility
