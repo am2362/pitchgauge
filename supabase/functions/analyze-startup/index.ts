@@ -51,47 +51,64 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         max_tokens: 16000,
-        temperature: 0.7,
+        temperature: 0,
+        top_p: 1,
         messages: [
           {
             role: "system",
-            content: `CRITICAL: Return ONLY valid JSON. NO markdown. NO code blocks. Start with { and end with }.
+            content: `You are a deterministic startup pitch analysis engine. Your output MUST be consistent for the same input pitch.
 
-You are a venture analyst AI. Analyze the pitch and return this JSON structure:
+CRITICAL: Return ONLY valid JSON. NO markdown. NO code blocks. Start with { and end with }.
+
+SYSTEM RULES:
+- Be factual and consistent
+- Do NOT introduce randomness or creativity
+- Do NOT add emojis, bullets, or unnecessary formatting
+- Maintain the same evaluation criteria for all pitches
+
+Return this exact JSON structure:
 
 {
-  "startupName": "REQUIRED: Extract the company/startup name from the pitch. Look for it in the first few lines or title. If not found explicitly, infer from context. Return null only if impossible to determine.",
-  "memo": "Investment memo with sections: Problem, Solution, Market, Traction, Business Model, Risks. Keep each section 2 sentences MAX.",
+  "startupName": "REQUIRED: Extract company name from pitch. Look in first few lines. Infer from context if needed. Return null only if impossible.",
+  "memo": "Format as:\n\nTeam Quality\nX/10\n[one factual sentence]\n\nMarket Size\nX/10\n[one factual sentence]\n\nProduct Differentiation\nX/10\n[one factual sentence]\n\nTraction\nX/10\n[one factual sentence]\n\nBusiness Model\nX/10\n[one factual sentence]\n\nCompetitive Landscape\nX/10\n[one factual sentence]",
   "scorecard": {
-    "team": { "score": 0-10, "reasoning": "1 sentence", "detailedExplanation": "2 sentences with specifics from pitch" },
-    "marketSize": { "score": 0-10, "reasoning": "1 sentence", "detailedExplanation": "2 sentences with market data" },
-    "traction": { "score": 0-10, "reasoning": "1 sentence", "detailedExplanation": "2 sentences with metrics" },
-    "productDifferentiation": { "score": 0-10, "reasoning": "1 sentence", "detailedExplanation": "2 sentences about differentiation" },
-    "businessModel": { "score": 0-10, "reasoning": "1 sentence", "detailedExplanation": "2 sentences about monetization" },
-    "competitiveLandscape": { "score": 0-10, "reasoning": "1 sentence", "detailedExplanation": "2 sentences about moats" }
+    "team": { "score": 1-10, "reasoning": "1 factual sentence", "detailedExplanation": "2 factual sentences" },
+    "marketSize": { "score": 1-10, "reasoning": "1 factual sentence", "detailedExplanation": "2 factual sentences" },
+    "traction": { "score": 1-10, "reasoning": "1 factual sentence", "detailedExplanation": "2 factual sentences" },
+    "productDifferentiation": { "score": 1-10, "reasoning": "1 factual sentence", "detailedExplanation": "2 factual sentences" },
+    "businessModel": { "score": 1-10, "reasoning": "1 factual sentence", "detailedExplanation": "2 factual sentences" },
+    "competitiveLandscape": { "score": 1-10, "reasoning": "1 factual sentence", "detailedExplanation": "2 factual sentences" }
   },
   "redFlags": [
-    { "severity": "critical|high|medium", "issue": "Brief title", "explanation": "1 sentence" }
+    { "severity": "critical|high|medium", "issue": "Brief title", "explanation": "1 factual sentence" }
   ],
   "followUpQuestions": {
-    "team": ["question 1", "question 2"],
-    "market": ["question 1", "question 2"],
-    "product": ["question 1", "question 2"],
-    "financials": ["question 1", "question 2"],
-    "legal": ["question 1"]
+    "team": ["factual question 1", "factual question 2"],
+    "market": ["factual question 1", "factual question 2"],
+    "product": ["factual question 1", "factual question 2"],
+    "financials": ["factual question 1", "factual question 2"],
+    "legal": ["factual question 1"]
   },
   "investmentThesis": {
-    "bullCase": "2-3 sentences",
-    "bearCase": "2-3 sentences"
+    "bullCase": "2-3 factual sentences",
+    "bearCase": "2-3 factual sentences"
   },
   "benchmarking": {
     "overallPercentile": "e.g., Top 25%",
-    "stageContext": "1 sentence",
-    "comparisonNotes": "1 sentence"
+    "stageContext": "1 factual sentence",
+    "comparisonNotes": "1 factual sentence"
   }
 }
 
-CRITICAL: Keep ALL text ultra-concise. Each sentence must be under 100 chars. Return ONLY JSON.`
+SCORING CRITERIA (use consistently):
+- Team Quality: founder experience, domain expertise, execution capability
+- Market Size: TAM/SAM/SOM, growth potential, market dynamics
+- Product Differentiation: unique value proposition, innovation, technical moats
+- Traction: revenue, users, growth metrics, customer validation
+- Business Model: revenue streams, unit economics, scalability
+- Competitive Landscape: market positioning, barriers to entry, competitive advantages
+
+Round all scores to nearest integer (1-10). Be consistent and factual.`
           },
           {
             role: "user",
