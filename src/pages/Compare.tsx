@@ -33,6 +33,7 @@ interface Scorecard {
 }
 
 interface AnalysisResult {
+  startupName?: string;
   memo: string;
   scorecard: Scorecard;
   redFlags?: Array<{ severity: string; issue: string; explanation: string }>;
@@ -147,7 +148,7 @@ export default function Compare() {
     
     return (
       <span 
-        className="cursor-pointer hover:bg-secondary/20 rounded px-2 py-1 inline-flex items-center gap-1"
+        className="cursor-pointer hover:bg-secondary/30 transition-colors rounded px-2 py-1 inline-flex items-center gap-1 border border-transparent hover:border-secondary"
         onClick={() => {
           setEditingNameId(pitch.id);
           setTempName(pitch.name);
@@ -155,7 +156,7 @@ export default function Compare() {
         title="Click to edit name"
       >
         {pitch.name}
-        <Edit className="h-3 w-3 opacity-50" />
+        <Edit className="h-3 w-3 opacity-70 hover:opacity-100" />
       </span>
     );
   };
@@ -672,6 +673,9 @@ export default function Compare() {
               <DialogDescription>
                 AI-powered comparative analysis of {pitches.filter(p => p.analysis).length} startups
               </DialogDescription>
+              <p className="text-sm text-muted-foreground mt-2">
+                💡 Tip: Click any startup name to edit it
+              </p>
             </DialogHeader>
 
             <div className="space-y-6">
