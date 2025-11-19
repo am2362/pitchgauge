@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      bulk_analyses: {
+        Row: {
+          batch_name: string
+          comparison_report: Json | null
+          completed_startups: number
+          created_at: string
+          id: string
+          metadata: Json | null
+          results: Json | null
+          status: string
+          total_startups: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          batch_name: string
+          comparison_report?: Json | null
+          completed_startups?: number
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          results?: Json | null
+          status?: string
+          total_startups: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          batch_name?: string
+          comparison_report?: Json | null
+          completed_startups?: number
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          results?: Json | null
+          status?: string
+          total_startups?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       comparison_analyses: {
         Row: {
           analyses: Json
