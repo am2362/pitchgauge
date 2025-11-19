@@ -187,10 +187,23 @@ export default function History() {
     });
 
   const filteredAnalyses = analyses
-    .filter(a => 
-      searchTerm === "" || 
-      (a.startup_name && a.startup_name.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
+    .filter(a => {
+      if (searchTerm === "") return true;
+      
+      const searchLower = searchTerm.toLowerCase();
+      
+      // Search in startup name
+      const nameMatch = a.startup_name && a.startup_name.toLowerCase().includes(searchLower);
+      
+      // Search in pitch text
+      const pitchMatch = a.pitch_text && a.pitch_text.toLowerCase().includes(searchLower);
+      
+      // Search in memo (handle both string and object formats)
+      const memoText = typeof a.memo === 'string' ? a.memo : JSON.stringify(a.memo);
+      const memoMatch = memoText && memoText.toLowerCase().includes(searchLower);
+      
+      return nameMatch || pitchMatch || memoMatch;
+    })
     .sort((a, b) => {
       if (sortBy === "date") {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
