@@ -120,6 +120,46 @@ export default function Compare() {
     }
   };
 
+  const renderEditableName = (pitch: PitchSlot) => {
+    if (editingNameId === pitch.id) {
+      return (
+        <Input
+          value={tempName}
+          onChange={(e) => setTempName(e.target.value)}
+          onBlur={() => {
+            updatePitchName(pitch.id, tempName);
+            setEditingNameId(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              updatePitchName(pitch.id, tempName);
+              setEditingNameId(null);
+            }
+            if (e.key === 'Escape') {
+              setEditingNameId(null);
+            }
+          }}
+          className="w-full text-center inline-block max-w-[200px]"
+          autoFocus
+        />
+      );
+    }
+    
+    return (
+      <span 
+        className="cursor-pointer hover:bg-secondary/20 rounded px-2 py-1 inline-flex items-center gap-1"
+        onClick={() => {
+          setEditingNameId(pitch.id);
+          setTempName(pitch.name);
+        }}
+        title="Click to edit name"
+      >
+        {pitch.name}
+        <Edit className="h-3 w-3 opacity-50" />
+      </span>
+    );
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -648,9 +688,12 @@ export default function Compare() {
                           #{ranking.rank}
                         </Badge>
                         <div className="flex-1">
-                          <p className="font-semibold text-base">
-                            {pitches.find(p => p.name === ranking.startupName)?.name || ranking.startupName}
-                          </p>
+                          <div className="font-semibold text-base">
+                            {(() => {
+                              const pitch = pitches.find(p => p.name === ranking.startupName);
+                              return pitch ? renderEditableName(pitch) : ranking.startupName;
+                            })()}
+                          </div>
                           <p className="text-sm text-muted-foreground mt-1">{ranking.reasoning}</p>
                         </div>
                       </div>
@@ -791,9 +834,12 @@ export default function Compare() {
                     <div className="space-y-2">
                       {Object.entries(comparisonInsights.comparativeInsights.strengths).map(([name, strength]: [string, any]) => (
                         <div key={name} className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                          <p className="font-medium text-sm">
-                            {pitches.find(p => p.name === name)?.name || name}
-                          </p>
+                          <div className="font-medium text-sm">
+                            {(() => {
+                              const pitch = pitches.find(p => p.name === name);
+                              return pitch ? renderEditableName(pitch) : name;
+                            })()}
+                          </div>
                           <p className="text-xs text-muted-foreground mt-1">{strength}</p>
                         </div>
                       ))}
@@ -806,9 +852,12 @@ export default function Compare() {
                     <div className="space-y-2">
                       {Object.entries(comparisonInsights.comparativeInsights.weaknesses).map(([name, weakness]: [string, any]) => (
                         <div key={name} className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                          <p className="font-medium text-sm">
-                            {pitches.find(p => p.name === name)?.name || name}
-                          </p>
+                          <div className="font-medium text-sm">
+                            {(() => {
+                              const pitch = pitches.find(p => p.name === name);
+                              return pitch ? renderEditableName(pitch) : name;
+                            })()}
+                          </div>
                           <p className="text-xs text-muted-foreground mt-1">{weakness}</p>
                         </div>
                       ))}

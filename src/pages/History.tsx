@@ -176,7 +176,7 @@ export default function History() {
   const filteredComparisons = comparisons
     .filter(c => 
       searchTerm === "" || 
-      c.startup_names.some(name => name.toLowerCase().includes(searchTerm.toLowerCase()))
+      c.startup_names.some(name => name && name.toLowerCase().includes(searchTerm.toLowerCase()))
     )
     .sort((a, b) => {
       if (sortBy === "date") {
