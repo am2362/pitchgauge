@@ -20,7 +20,7 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    const { batchId, startups, batchSize = 5 } = await req.json();
+    const { batchId, startups, batchSize = 2 } = await req.json();
 
     if (!Array.isArray(startups) || startups.length === 0) {
       throw new Error('Invalid startups array');
@@ -85,7 +85,7 @@ serve(async (req) => {
 
       // Add delay between batches to avoid rate limiting
       if (i + batchSize < startups.length) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
 
@@ -115,7 +115,7 @@ serve(async (req) => {
   }
 });
 
-async function analyzeStartup(name: string, pitch: string, apiKey: string): Promise<any> {
+async function analyzeStartup(name: string, pitch: string, apiKey: string, retryCount = 0): Promise<any> {
   const systemPrompt = `You are analyzing a startup pitch. Extract structured information and be objective, concise, and deterministic.
 
 EXTRACT:
@@ -183,6 +183,16 @@ Return ONLY valid JSON with this structure:
 
   if (!response.ok) {
     const errorText = await response.text();
+    
+    // Handle rate limiting with exponential backoff
+    if (response.status === 429 && retryCount < 3) {
+      const delays = [10000, 30000, 60000]; // 10s, 30s, 60s
+      const delay = delays[retryCount];
+      console.log(`Rate limited. Retrying ${name} in ${delay/1000}s (attempt ${retryCount + 1}/3)`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return analyzeStartup(name, pitch, apiKey, retryCount + 1);
+    }
+    
     throw new Error(`AI Gateway error: ${response.status} - ${errorText}`);
   }
 
