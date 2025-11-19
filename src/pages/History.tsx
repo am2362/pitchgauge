@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@supabase/supabase-js";
-import { ArrowLeft, Trash2, Edit, FileDown, Loader2, Search, Filter } from "lucide-react";
+import { ArrowLeft, Trash2, Edit, FileDown, Loader2, Search, Filter, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { exportAnalysisToPDF, exportComparisonToPDF } from "@/lib/pdf-export";
@@ -233,8 +233,18 @@ export default function History() {
                 placeholder="Search by startup name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 pr-10"
               />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
             <Select value={sortBy} onValueChange={(value: "date" | "name") => setSortBy(value)}>
               <SelectTrigger className="w-[180px]">
@@ -247,6 +257,11 @@ export default function History() {
               </SelectContent>
             </Select>
           </div>
+          {searchTerm && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Showing {filteredComparisons.length} comparison{filteredComparisons.length !== 1 ? 's' : ''} and {filteredAnalyses.length} analysis{filteredAnalyses.length !== 1 ? 'es' : ''} matching "{searchTerm}"
+            </p>
+          )}
         </Card>
 
         {loading ? (
@@ -267,7 +282,14 @@ export default function History() {
             <TabsContent value="comparisons" className="space-y-4">
               {filteredComparisons.length === 0 ? (
                 <Card className="p-8 text-center">
-                  <p className="text-muted-foreground">No saved comparisons found</p>
+                  <p className="text-muted-foreground">
+                    {searchTerm ? `No comparisons found matching "${searchTerm}"` : "No saved comparisons found"}
+                  </p>
+                  {searchTerm && (
+                    <Button variant="outline" onClick={() => setSearchTerm("")} className="mt-4">
+                      Clear Search
+                    </Button>
+                  )}
                 </Card>
               ) : (
                 filteredComparisons.map((comparison) => (
@@ -327,7 +349,14 @@ export default function History() {
             <TabsContent value="analyses" className="space-y-4">
               {filteredAnalyses.length === 0 ? (
                 <Card className="p-8 text-center">
-                  <p className="text-muted-foreground">No saved analyses found</p>
+                  <p className="text-muted-foreground">
+                    {searchTerm ? `No analyses found matching "${searchTerm}"` : "No saved analyses found"}
+                  </p>
+                  {searchTerm && (
+                    <Button variant="outline" onClick={() => setSearchTerm("")} className="mt-4">
+                      Clear Search
+                    </Button>
+                  )}
                 </Card>
               ) : (
                 filteredAnalyses.map((analysis) => (
