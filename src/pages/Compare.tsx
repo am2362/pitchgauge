@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@supabase/supabase-js";
-import { ArrowLeft, Loader2, TrendingUp, Plus, X, FileDown, Save, History, Upload, Download } from "lucide-react";
+import { ArrowLeft, Loader2, TrendingUp, Plus, X, FileDown, Save, History, Upload, Download, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -15,6 +15,7 @@ import { exportComparisonToPDF } from "@/lib/pdf-export";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { parseExcelFile, createExcelTemplate, ParsedStartupData } from "@/lib/excel-parser";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 
 interface ScoreItem {
   score: number;
@@ -61,6 +62,8 @@ export default function Compare() {
   const [showExcelPreview, setShowExcelPreview] = useState(false);
   const [excelPreviewData, setExcelPreviewData] = useState<ParsedStartupData[]>([]);
   const [isProcessingExcel, setIsProcessingExcel] = useState(false);
+  const [editingNameId, setEditingNameId] = useState<number | null>(null);
+  const [tempName, setTempName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -103,6 +106,18 @@ export default function Compare() {
 
   const updatePitchText = (id: number, text: string) => {
     setPitches(currentPitches => currentPitches.map(p => p.id === id ? { ...p, text } : p));
+  };
+
+  const updatePitchName = (id: number, newName: string) => {
+    if (newName.trim()) {
+      setPitches(currentPitches => 
+        currentPitches.map(p => p.id === id ? { ...p, name: newName.trim() } : p)
+      );
+      toast({
+        title: "Name Updated",
+        description: "Startup name has been changed",
+      });
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -228,19 +243,31 @@ export default function Compare() {
   };
 
   const analyzeAll = async () => {
-    const toAnalyze = pitches.filter(p => p.text.trim() && !p.analysis);
+    // Re-analyze ALL pitches that have text, regardless of existing analysis
+    const toAnalyze = pitches.filter(p => p.text.trim());
     
     if (toAnalyze.length === 0) {
-      // All already analyzed, just generate comparison
-      const analyzed = pitches.filter(p => p.analysis);
-      if (analyzed.length >= 2) {
-        await generateComparisonInsights();
-      }
+      toast({
+        title: "No Pitches to Analyze",
+        description: "Please add pitch text before analyzing",
+        variant: "destructive",
+      });
       return;
     }
 
+    // Clear existing analyses first
+    setPitches(currentPitches => currentPitches.map(p => 
+      p.text.trim() ? { ...p, analysis: null } : p
+    ));
+
+    toast({
+      title: "Re-analyzing All Pitches",
+      description: `Analyzing ${toAnalyze.length} startup${toAnalyze.length !== 1 ? 's' : ''}...`,
+    });
+
     // Analyze each pitch sequentially
-    for (const pitch of toAnalyze) {
+    for (let i = 0; i < toAnalyze.length; i++) {
+      const pitch = toAnalyze[i];
       await analyzePitch(pitch.id);
     }
 
@@ -621,7 +648,9 @@ export default function Compare() {
                           #{ranking.rank}
                         </Badge>
                         <div className="flex-1">
-                          <p className="font-semibold text-base">{ranking.startupName}</p>
+                          <p className="font-semibold text-base">
+                            {pitches.find(p => p.name === ranking.startupName)?.name || ranking.startupName}
+                          </p>
                           <p className="text-sm text-muted-foreground mt-1">{ranking.reasoning}</p>
                         </div>
                       </div>
@@ -671,7 +700,38 @@ export default function Compare() {
                           <th className="text-left p-3 font-semibold sticky left-0 bg-secondary/30">Metric</th>
                           {pitches.filter(p => p.analysis).map(pitch => (
                             <th key={pitch.id} className="text-center p-3 font-semibold min-w-[200px]">
-                              {pitch.name}
+                              {editingNameId === pitch.id ? (
+                                <Input
+                                  value={tempName}
+                                  onChange={(e) => setTempName(e.target.value)}
+                                  onBlur={() => {
+                                    updatePitchName(pitch.id, tempName);
+                                    setEditingNameId(null);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      updatePitchName(pitch.id, tempName);
+                                      setEditingNameId(null);
+                                    }
+                                    if (e.key === 'Escape') {
+                                      setEditingNameId(null);
+                                    }
+                                  }}
+                                  className="w-full text-center"
+                                  autoFocus
+                                />
+                              ) : (
+                                <div 
+                                  className="cursor-pointer hover:bg-secondary/20 rounded px-2 py-1 flex items-center justify-center gap-1"
+                                  onClick={() => {
+                                    setEditingNameId(pitch.id);
+                                    setTempName(pitch.name);
+                                  }}
+                                >
+                                  {pitch.name}
+                                  <Edit className="h-3 w-3 opacity-50" />
+                                </div>
+                              )}
                             </th>
                           ))}
                         </tr>
@@ -731,7 +791,9 @@ export default function Compare() {
                     <div className="space-y-2">
                       {Object.entries(comparisonInsights.comparativeInsights.strengths).map(([name, strength]: [string, any]) => (
                         <div key={name} className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                          <p className="font-medium text-sm">{name}</p>
+                          <p className="font-medium text-sm">
+                            {pitches.find(p => p.name === name)?.name || name}
+                          </p>
                           <p className="text-xs text-muted-foreground mt-1">{strength}</p>
                         </div>
                       ))}
@@ -744,7 +806,9 @@ export default function Compare() {
                     <div className="space-y-2">
                       {Object.entries(comparisonInsights.comparativeInsights.weaknesses).map(([name, weakness]: [string, any]) => (
                         <div key={name} className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                          <p className="font-medium text-sm">{name}</p>
+                          <p className="font-medium text-sm">
+                            {pitches.find(p => p.name === name)?.name || name}
+                          </p>
                           <p className="text-xs text-muted-foreground mt-1">{weakness}</p>
                         </div>
                       ))}
