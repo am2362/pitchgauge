@@ -12,15 +12,19 @@ serve(async (req) => {
   }
 
   try {
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    const useGeminiDirect = !!GEMINI_API_KEY;
+    
+    if (!useGeminiDirect && !LOVABLE_API_KEY) {
+      throw new Error('Neither GEMINI_API_KEY nor LOVABLE_API_KEY is configured');
     }
 
-    const { batchId, startups, batchSize = 2 } = await req.json();
+    // Higher batch size and faster processing with direct Gemini API
+    const { batchId, startups, batchSize = useGeminiDirect ? 5 : 2 } = await req.json();
 
     if (!Array.isArray(startups) || startups.length === 0) {
       throw new Error('Invalid startups array');
@@ -38,7 +42,12 @@ serve(async (req) => {
 
       const batchPromises = batch.map(async (startup: { name: string; pitch: string }) => {
         try {
-          const result = await analyzeStartup(startup.name, startup.pitch, LOVABLE_API_KEY);
+          const result = await analyzeStartup(
+            startup.name, 
+            startup.pitch, 
+            useGeminiDirect ? GEMINI_API_KEY! : LOVABLE_API_KEY!,
+            useGeminiDirect
+          );
           return result;
         } catch (error) {
           console.error(`Error analyzing ${startup.name}:`, error);
@@ -83,9 +92,9 @@ serve(async (req) => {
           .eq('id', batchId);
       }
 
-      // Add delay between batches to avoid rate limiting
+      // Add delay between batches - shorter delay with direct Gemini API
       if (i + batchSize < startups.length) {
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, useGeminiDirect ? 2000 : 5000));
       }
     }
 
@@ -115,7 +124,7 @@ serve(async (req) => {
   }
 });
 
-async function analyzeStartup(name: string, pitch: string, apiKey: string, retryCount = 0): Promise<any> {
+async function analyzeStartup(name: string, pitch: string, apiKey: string, useGeminiDirect = false, retryCount = 0): Promise<any> {
   const systemPrompt = `You are analyzing a startup pitch. Extract structured information and be objective, concise, and deterministic.
 
 EXTRACT:
@@ -164,22 +173,46 @@ Return ONLY valid JSON with this structure:
   "summary": "1-3 sentence summary"
 }`;
 
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Startup Name: ${name}\n\nPitch:\n${pitch}` }
-      ],
-      temperature: 0,
-      top_p: 1
-    }),
-  });
+  let response;
+  
+  if (useGeminiDirect) {
+    // Direct Google Gemini API call
+    const prompt = `${systemPrompt}\n\nStartup Name: ${name}\n\nPitch:\n${pitch}`;
+    
+    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          temperature: 0,
+          topP: 1,
+        }
+      }),
+    });
+  } else {
+    // Lovable AI Gateway (fallback)
+    response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Startup Name: ${name}\n\nPitch:\n${pitch}` }
+        ],
+        temperature: 0,
+        top_p: 1
+      }),
+    });
+  }
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -190,16 +223,24 @@ Return ONLY valid JSON with this structure:
       const delay = delays[retryCount];
       console.log(`Rate limited. Retrying ${name} in ${delay/1000}s (attempt ${retryCount + 1}/3)`);
       await new Promise(resolve => setTimeout(resolve, delay));
-      return analyzeStartup(name, pitch, apiKey, retryCount + 1);
+      return analyzeStartup(name, pitch, apiKey, useGeminiDirect, retryCount + 1);
     }
     
     throw new Error(`AI Gateway error: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
-  const content = data.choices?.[0]?.message?.content;
+  
+  // Parse response based on API type
+  let content: string;
+  if (useGeminiDirect) {
+    content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  } else {
+    content = data.choices?.[0]?.message?.content;
+  }
 
   if (!content) {
+    console.error('AI response data:', JSON.stringify(data));
     throw new Error('No content in AI response');
   }
 
