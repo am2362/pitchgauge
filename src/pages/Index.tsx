@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Loader2, FileText, BarChart, AlertTriangle, MessageSquare, TrendingUp, History, FileInput, LogOut, GitCompare, FileDown } from "lucide-react";
@@ -27,6 +28,7 @@ interface RedFlag {
 }
 
 interface AnalysisResult {
+  startupName?: string;
   memo: string | Record<string, string>;
   scorecard: {
     team: ScoreItem;
@@ -125,6 +127,7 @@ Seeking: $500K pre-seed for manufacturing and product certification.`
 
 const Index = () => {
   const [pitchText, setPitchText] = useState("");
+  const [startupName, setStartupName] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -133,6 +136,15 @@ const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Extract startup name from pitch text (first line if it looks like a name)
+  const extractStartupName = (pitchText: string): string | null => {
+    const firstLine = pitchText.trim().split('\n')[0].trim();
+    if (firstLine.length > 0 && firstLine.length < 100 && !firstLine.includes(':')) {
+      return firstLine;
+    }
+    return null;
+  };
 
   useEffect(() => {
     // Check auth state
@@ -170,7 +182,9 @@ const Index = () => {
   };
 
   const loadTemplate = (template: keyof typeof SAMPLE_PITCHES) => {
-    setPitchText(SAMPLE_PITCHES[template]);
+    const pitchText = SAMPLE_PITCHES[template];
+    setPitchText(pitchText);
+    setStartupName(extractStartupName(pitchText) || "");
     toast({
       title: "Template loaded",
       description: "Sample pitch has been loaded. Click 'Generate Analysis' to evaluate it.",
@@ -224,6 +238,7 @@ const Index = () => {
         .from('startup_analyses')
         .insert([{
           user_id: user.id,
+          startup_name: analysisData.startupName || startupName.trim() || extractStartupName(pitchInput),
           pitch_text: pitchInput,
           memo: typeof analysisData.memo === 'string' ? analysisData.memo : JSON.stringify(analysisData.memo),
           scorecard: analysisData.scorecard as any,
@@ -270,6 +285,7 @@ const Index = () => {
       if (error) throw error;
       setResult(data);
       await saveAnalysis(data, pitchText);
+      setStartupName("");
 
       toast({
         title: "Analysis complete",
@@ -430,6 +446,18 @@ const Index = () => {
             </div>
 
             <div className="space-y-6">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Startup Name (Optional)
+                </label>
+                <Input
+                  placeholder="e.g., EduConnect, QuickFix..."
+                  value={startupName}
+                  onChange={(e) => setStartupName(e.target.value)}
+                  className="w-full mb-4"
+                />
+              </div>
+
               <div>
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">
                   Paste Startup Pitch or Load Template

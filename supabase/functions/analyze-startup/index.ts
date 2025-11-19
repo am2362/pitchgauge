@@ -60,6 +60,7 @@ serve(async (req) => {
 You are a venture analyst AI. Analyze the pitch and return this JSON structure:
 
 {
+  "startupName": "Extract the company/startup name from the pitch. Usually the first line or mentioned early. Return null if not found.",
   "memo": "Investment memo with sections: Problem, Solution, Market, Traction, Business Model, Risks. Keep each section 2 sentences MAX.",
   "scorecard": {
     "team": { "score": 0-10, "reasoning": "1 sentence", "detailedExplanation": "2 sentences with specifics from pitch" },
