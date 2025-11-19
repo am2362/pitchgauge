@@ -79,6 +79,12 @@ export default function BulkAnalysis() {
               description: `Successfully analyzed ${totalCount} startups.`
             });
           }
+          
+          // Auto-generate comparison report if it doesn't exist
+          if (data.results && !data.comparison_report) {
+            await generateComparison(batchId);
+          }
+          
           loadHistory();
         }
       }
