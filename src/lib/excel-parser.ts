@@ -11,8 +11,8 @@ export interface ExcelParseResult {
   warnings: string[];
 }
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const MAX_STARTUPS = 10;
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_STARTUPS = 1000;
 
 export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
   const result: ExcelParseResult = {
@@ -149,4 +149,27 @@ export function createExcelTemplate(): void {
 
   // Download
   XLSX.writeFile(workbook, 'startup_comparison_template.xlsx');
+}
+
+export function createBulkAnalysisTemplate(): void {
+  // Create sample data with instructions
+  const data = [
+    ['Startup Name', 'Written Pitch'],
+    ['Example Startup 1', 'Provide a detailed pitch describing the startup\'s product/service, target market, team background, traction metrics, funding history, and business model. Be as comprehensive as possible.'],
+    ['Example Startup 2', 'Include information about the problem being solved, unique value proposition, competitive advantages, revenue model, growth metrics, and any notable achievements or partnerships.'],
+  ];
+
+  // Create workbook
+  const worksheet = XLSX.utils.aoa_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Bulk Analysis');
+
+  // Set column widths
+  worksheet['!cols'] = [
+    { wch: 25 },  // Startup Name column
+    { wch: 120 }  // Written Pitch column (wider for detailed pitches)
+  ];
+
+  // Download
+  XLSX.writeFile(workbook, 'bulk_startup_analysis_template.xlsx');
 }

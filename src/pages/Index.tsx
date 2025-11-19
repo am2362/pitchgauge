@@ -432,6 +432,10 @@ const Index = () => {
                 <History className="h-4 w-4 mr-2" />
                 History
               </Button>
+              <Button variant="outline" onClick={() => navigate("/bulk-analysis")}>
+                <BarChart className="h-4 w-4 mr-2" />
+                Bulk Analysis
+              </Button>
               <Button variant="ghost" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
