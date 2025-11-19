@@ -61,10 +61,24 @@ export default function BulkAnalysis() {
         setCurrentAnalysis(data as unknown as BulkAnalysis);
         
         if (data.status === 'completed') {
-          toast({
-            title: "Analysis Complete",
-            description: `Successfully analyzed ${data.total_startups} startups.`
-          });
+          const results = data.results as any[] || [];
+          const successfulCount = results.filter((r: any) => 
+            !(r.scores?.overall === 0 && r.summary === "Failed to analyze this startup")
+          ).length;
+          const totalCount = results.length;
+          
+          if (successfulCount < totalCount) {
+            toast({
+              title: "Analysis Complete",
+              description: `Successfully analyzed ${successfulCount} out of ${totalCount} startups. ${totalCount - successfulCount} failed due to rate limits.`,
+              variant: "default"
+            });
+          } else {
+            toast({
+              title: "Analysis Complete",
+              description: `Successfully analyzed ${totalCount} startups.`
+            });
+          }
           loadHistory();
         }
       }
@@ -108,7 +122,7 @@ export default function BulkAnalysis() {
         body: {
           batchId: batch.id,
           startups: startups,
-          batchSize: 5
+          batchSize: 2
         }
       });
 
@@ -134,8 +148,22 @@ export default function BulkAnalysis() {
 
       if (!batch?.results) return;
 
+      // Filter out failed analyses before generating comparison
+      const successfulResults = (batch.results as any[]).filter((r: any) => 
+        !(r.scores?.overall === 0 && r.summary === "Failed to analyze this startup")
+      );
+
+      if (successfulResults.length === 0) {
+        toast({
+          title: "No Successful Analyses",
+          description: "All analyses failed. Cannot generate comparison report.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('generate-bulk-comparison', {
-        body: { results: batch.results }
+        body: { results: successfulResults }
       });
 
       if (error) throw error;
