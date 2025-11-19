@@ -189,13 +189,15 @@ export default function History() {
   const filteredAnalyses = analyses
     .filter(a => 
       searchTerm === "" || 
-      a.startup_name.toLowerCase().includes(searchTerm.toLowerCase())
+      (a.startup_name && a.startup_name.toLowerCase().includes(searchTerm.toLowerCase()))
     )
     .sort((a, b) => {
       if (sortBy === "date") {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       } else {
-        return a.startup_name.localeCompare(b.startup_name);
+        const nameA = a.startup_name || "";
+        const nameB = b.startup_name || "";
+        return nameA.localeCompare(nameB);
       }
     });
 
@@ -364,7 +366,7 @@ export default function History() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-lg font-semibold">{analysis.startup_name}</h3>
+                          <h3 className="text-lg font-semibold">{analysis.startup_name || "Unnamed Startup"}</h3>
                           <Badge variant="outline">
                             Score: {getAverageScore(analysis.scorecard)}/10
                           </Badge>
