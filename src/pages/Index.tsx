@@ -234,11 +234,14 @@ const Index = () => {
     if (!user) return;
 
     try {
+      const startupNameToSave = analysisData.startupName || startupName.trim() || extractStartupName(pitchInput) || null;
+      console.log('Saving with startup_name:', startupNameToSave);
+      
       const { error } = await supabase
         .from('startup_analyses')
         .insert([{
           user_id: user.id,
-          startup_name: analysisData.startupName || startupName.trim() || extractStartupName(pitchInput),
+          startup_name: startupNameToSave,
           pitch_text: pitchInput,
           memo: typeof analysisData.memo === 'string' ? analysisData.memo : JSON.stringify(analysisData.memo),
           scorecard: analysisData.scorecard as any,
@@ -283,6 +286,8 @@ const Index = () => {
       });
 
       if (error) throw error;
+      console.log('AI Response:', data);
+      console.log('Startup Name from AI:', data.startupName);
       setResult(data);
       await saveAnalysis(data, pitchText);
       setStartupName("");

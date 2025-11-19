@@ -148,7 +148,7 @@ export default function Compare() {
     
     return (
       <span 
-        className="cursor-pointer hover:bg-secondary/30 transition-colors rounded px-2 py-1 inline-flex items-center gap-1 border border-transparent hover:border-secondary"
+        className="cursor-pointer hover:bg-secondary/30 transition-colors rounded px-2 py-1 inline-flex items-center gap-1 border border-transparent hover:border-secondary text-xl font-bold"
         onClick={() => {
           setEditingNameId(pitch.id);
           setTempName(pitch.name);
@@ -582,14 +582,16 @@ export default function Compare() {
 
         <div className="grid gap-6 mb-6">
           {pitches.map((pitch) => (
-            <Card key={pitch.id} className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">{pitch.name}</h2>
-                {pitches.length > 2 && (
-                  <Button variant="ghost" size="icon" onClick={() => removePitch(pitch.id)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
+        <Card key={pitch.id} className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              {renderEditableName(pitch)}
+            </div>
+            {pitches.length > 2 && (
+              <Button variant="ghost" size="icon" onClick={() => removePitch(pitch.id)}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
               </div>
               <Textarea
                 value={pitch.text}
