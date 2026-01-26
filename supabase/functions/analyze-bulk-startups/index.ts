@@ -50,11 +50,49 @@ serve(async (req) => {
       throw new Error('Neither GEMINI_API_KEY nor LOVABLE_API_KEY is configured');
     }
 
+    // Input validation constants
+    const MAX_STARTUPS = 100;
+    const MAX_PITCH_LENGTH = 50000; // ~50KB per pitch
+    const MAX_NAME_LENGTH = 200;
+    
     // Higher batch size and faster processing with direct Gemini API
     const { batchId, startups, batchSize = useGeminiDirect ? 5 : 2 } = await req.json();
 
     if (!Array.isArray(startups) || startups.length === 0) {
-      throw new Error('Invalid startups array');
+      return new Response(
+        JSON.stringify({ error: 'Invalid or empty startups array' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (startups.length > MAX_STARTUPS) {
+      return new Response(
+        JSON.stringify({ error: `Maximum ${MAX_STARTUPS} startups per batch allowed` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate each startup entry
+    for (let i = 0; i < startups.length; i++) {
+      const startup = startups[i];
+      if (!startup || typeof startup !== 'object') {
+        return new Response(
+          JSON.stringify({ error: `Invalid startup data at index ${i}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!startup.name || typeof startup.name !== 'string' || startup.name.length > MAX_NAME_LENGTH) {
+        return new Response(
+          JSON.stringify({ error: `Invalid or missing startup name at index ${i}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!startup.pitch || typeof startup.pitch !== 'string' || startup.pitch.length > MAX_PITCH_LENGTH) {
+        return new Response(
+          JSON.stringify({ error: `Invalid or too long pitch text for startup "${startup.name}"` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Verify batch ownership before processing

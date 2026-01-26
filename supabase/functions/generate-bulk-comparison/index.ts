@@ -48,8 +48,30 @@ serve(async (req) => {
 
     const { results } = await req.json();
 
+    // Input validation
+    const MAX_RESULTS = 200;
     if (!Array.isArray(results) || results.length === 0) {
-      throw new Error('Invalid results array');
+      return new Response(
+        JSON.stringify({ error: 'Invalid or empty results array' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (results.length > MAX_RESULTS) {
+      return new Response(
+        JSON.stringify({ error: `Maximum ${MAX_RESULTS} results can be processed at once` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Validate each result has required structure
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (!result?.startupName || !result?.scores || typeof result.scores.overall !== 'number') {
+        return new Response(
+          JSON.stringify({ error: `Invalid result structure at index ${i}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     console.log(`Generating comparison report for ${results.length} startups`);
