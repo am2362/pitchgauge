@@ -65,8 +65,16 @@ serve(async (req) => {
     const body = await req.json();
     pitchText = body.text || "";
 
+    // Input validation
+    const MAX_PITCH_LENGTH = 50000; // ~50KB limit
     if (!pitchText) {
       throw new Error("No pitch text provided");
+    }
+    if (pitchText.length > MAX_PITCH_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Pitch text exceeds maximum length of ${MAX_PITCH_LENGTH} characters` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     console.log("Analyzing startup pitch with Gemini...");

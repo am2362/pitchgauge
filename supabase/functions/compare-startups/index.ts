@@ -45,6 +45,44 @@ serve(async (req) => {
 
     const { analyses, startupNames } = await req.json();
 
+    // Input validation
+    const MAX_STARTUPS_TO_COMPARE = 10;
+    if (!Array.isArray(analyses) || !Array.isArray(startupNames)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid analyses or startupNames format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (analyses.length === 0 || startupNames.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'At least one startup required for comparison' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (analyses.length > MAX_STARTUPS_TO_COMPARE || startupNames.length > MAX_STARTUPS_TO_COMPARE) {
+      return new Response(
+        JSON.stringify({ error: `Maximum ${MAX_STARTUPS_TO_COMPARE} startups can be compared at once` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (analyses.length !== startupNames.length) {
+      return new Response(
+        JSON.stringify({ error: 'Mismatch between analyses and startupNames count' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Validate each analysis has required scorecard structure
+    for (let i = 0; i < analyses.length; i++) {
+      const analysis = analyses[i];
+      if (!analysis?.scorecard?.team || !analysis?.scorecard?.marketSize) {
+        return new Response(
+          JSON.stringify({ error: `Invalid analysis structure for startup at index ${i}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
