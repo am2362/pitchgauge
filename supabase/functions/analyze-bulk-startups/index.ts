@@ -15,7 +15,34 @@ serve(async (req) => {
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    // Authentication check
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify user using anon key (respects RLS)
+    const supabaseAuth = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log(`Authenticated user: ${userId}`);
 
     const useGeminiDirect = !!GEMINI_API_KEY;
     
@@ -30,9 +57,27 @@ serve(async (req) => {
       throw new Error('Invalid startups array');
     }
 
+    // Verify batch ownership before processing
+    if (batchId) {
+      const { data: batch, error: batchError } = await supabaseAuth
+        .from('bulk_analyses')
+        .select('id, user_id')
+        .eq('id', batchId)
+        .eq('user_id', userId)
+        .single();
+
+      if (batchError || !batch) {
+        return new Response(
+          JSON.stringify({ error: 'Batch not found or unauthorized' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     console.log(`Processing ${startups.length} startups in batches of ${batchSize}`);
 
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+    // Use SERVICE_ROLE_KEY only after ownership verification
+    const supabaseAdmin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     const allResults: any[] = [];
 
     // Process in batches to avoid rate limits
@@ -81,9 +126,9 @@ serve(async (req) => {
       const batchResults = await Promise.all(batchPromises);
       allResults.push(...batchResults);
 
-      // Update progress in database
+      // Update progress in database (ownership already verified)
       if (batchId) {
-        await supabase
+        await supabaseAdmin
           .from('bulk_analyses')
           .update({
             completed_startups: allResults.length,
@@ -98,9 +143,9 @@ serve(async (req) => {
       }
     }
 
-    // Mark as completed
+    // Mark as completed (ownership already verified)
     if (batchId) {
-      await supabase
+      await supabaseAdmin
         .from('bulk_analyses')
         .update({
           status: 'completed',
