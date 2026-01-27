@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs/dist/exceljs.min.js';
 
 export interface ParsedStartupData {
   name: string;
@@ -14,6 +14,19 @@ export interface ExcelParseResult {
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const MAX_STARTUPS = 1000;
 
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+function downloadXlsx(buffer: ArrayBuffer, filename: string) {
+  const blob = new Blob([buffer], { type: XLSX_MIME });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  // Let the browser start the download before revoking.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
   const result: ExcelParseResult = {
     data: [],
@@ -22,19 +35,11 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
   };
 
   // Validate file type
-  const validTypes = [
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-excel',
-    '.xlsx',
-    '.xls'
-  ];
-  
-  const isValidType = validTypes.some(type => 
-    file.type === type || file.name.toLowerCase().endsWith(type)
-  );
+  const isValidType =
+    file.type === XLSX_MIME || file.name.toLowerCase().endsWith('.xlsx');
 
   if (!isValidType) {
-    result.errors.push('Invalid file type. Please upload an Excel file (.xlsx or .xls)');
+    result.errors.push('Invalid file type. Please upload an Excel file (.xlsx)');
     return result;
   }
 
@@ -47,48 +52,43 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
   try {
     // Read file
     const arrayBuffer = await file.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
 
     // Get first sheet
-    const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) {
+    const firstWorksheet = workbook.worksheets[0];
+    if (!firstWorksheet) {
       result.errors.push('No sheets found in Excel file');
       return result;
     }
 
-    const worksheet = workbook.Sheets[firstSheetName];
-    
-    // Convert to JSON
-    const jsonData = XLSX.utils.sheet_to_json<any>(worksheet, { header: 1 });
-
-    if (jsonData.length === 0) {
+    const totalRows = firstWorksheet.rowCount;
+    if (totalRows === 0) {
       result.errors.push('Excel file is empty');
       return result;
     }
 
     // Parse data (skip header row if it exists)
-    const startRow = jsonData[0]?.[0]?.toString().toLowerCase().includes('name') ? 1 : 0;
+    const firstCellText = firstWorksheet.getRow(1).getCell(1).text?.toString().toLowerCase() ?? '';
+    const startRow = firstCellText.includes('name') ? 2 : 1; // ExcelJS is 1-indexed
     const nameMap = new Map<string, number>();
 
-    for (let i = startRow; i < jsonData.length; i++) {
-      const row = jsonData[i];
-      
-      // Skip empty rows
-      if (!row || row.length === 0) continue;
+    for (let rowNumber = startRow; rowNumber <= totalRows; rowNumber++) {
+      const row = firstWorksheet.getRow(rowNumber);
 
-      const name = row[0]?.toString().trim();
-      const pitch = row[1]?.toString().trim();
+      const name = row.getCell(1).text?.toString().trim();
+      const pitch = row.getCell(2).text?.toString().trim();
 
       // Skip if either column is missing
       if (!name && !pitch) continue;
 
       if (!name) {
-        result.warnings.push(`Row ${i + 1}: Missing startup name`);
+        result.warnings.push(`Row ${rowNumber}: Missing startup name`);
         continue;
       }
 
       if (!pitch) {
-        result.warnings.push(`Row ${i + 1}: Missing pitch text for "${name}"`);
+        result.warnings.push(`Row ${rowNumber}: Missing pitch text for "${name}"`);
         continue;
       }
 
@@ -117,8 +117,8 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
     }
 
     // Add info about multiple sheets
-    if (workbook.SheetNames.length > 1) {
-      result.warnings.push(`File contains ${workbook.SheetNames.length} sheets. Only first sheet "${firstSheetName}" was imported.`);
+    if (workbook.worksheets.length > 1) {
+      result.warnings.push(`File contains ${workbook.worksheets.length} sheets. Only the first sheet was imported.`);
     }
 
   } catch (error) {
@@ -128,7 +128,7 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
   return result;
 }
 
-export function createExcelTemplate(): void {
+export async function createExcelTemplate(): Promise<void> {
   // Create sample data
   const data = [
     ['Startup Name', 'Pitch'],
@@ -136,22 +136,19 @@ export function createExcelTemplate(): void {
     ['FinanceApp', 'Our platform enables small businesses to manage their finances with AI-driven insights. We provide real-time cash flow analysis, automated expense categorization, and predictive financial modeling to help businesses make better financial decisions.'],
   ];
 
-  // Create workbook
-  const worksheet = XLSX.utils.aoa_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Startups');
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Startups');
 
-  // Set column widths
-  worksheet['!cols'] = [
-    { wch: 20 },  // Startup Name column
-    { wch: 100 }  // Pitch column
-  ];
+  data.forEach((row) => worksheet.addRow(row));
 
-  // Download
-  XLSX.writeFile(workbook, 'startup_comparison_template.xlsx');
+  worksheet.getColumn(1).width = 20;
+  worksheet.getColumn(2).width = 100;
+
+  const buffer = (await workbook.xlsx.writeBuffer()) as ArrayBuffer;
+  downloadXlsx(buffer, 'startup_comparison_template.xlsx');
 }
 
-export function createBulkAnalysisTemplate(): void {
+export async function createBulkAnalysisTemplate(): Promise<void> {
   // Create sample data with instructions
   const data = [
     ['Startup Name', 'Written Pitch'],
@@ -159,17 +156,14 @@ export function createBulkAnalysisTemplate(): void {
     ['Example Startup 2', 'Include information about the problem being solved, unique value proposition, competitive advantages, revenue model, growth metrics, and any notable achievements or partnerships.'],
   ];
 
-  // Create workbook
-  const worksheet = XLSX.utils.aoa_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Bulk Analysis');
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Bulk Analysis');
 
-  // Set column widths
-  worksheet['!cols'] = [
-    { wch: 25 },  // Startup Name column
-    { wch: 120 }  // Written Pitch column (wider for detailed pitches)
-  ];
+  data.forEach((row) => worksheet.addRow(row));
 
-  // Download
-  XLSX.writeFile(workbook, 'bulk_startup_analysis_template.xlsx');
+  worksheet.getColumn(1).width = 25;
+  worksheet.getColumn(2).width = 120;
+
+  const buffer = (await workbook.xlsx.writeBuffer()) as ArrayBuffer;
+  downloadXlsx(buffer, 'bulk_startup_analysis_template.xlsx');
 }

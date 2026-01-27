@@ -239,12 +239,20 @@ export default function Compare() {
     });
   };
 
-  const handleDownloadTemplate = () => {
-    createExcelTemplate();
-    toast({
-      title: "Template Downloaded",
-      description: "Excel template downloaded successfully",
-    });
+  const handleDownloadTemplate = async () => {
+    try {
+      await createExcelTemplate();
+      toast({
+        title: "Template Downloaded",
+        description: "Excel template downloaded successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: error instanceof Error ? error.message : "Could not generate the template",
+        variant: "destructive",
+      });
+    }
   };
 
   const analyzePitch = async (id: number) => {
@@ -477,7 +485,7 @@ export default function Compare() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xlsx,.xls"
+               accept=".xlsx"
               onChange={handleFileUpload}
               className="hidden"
             />
