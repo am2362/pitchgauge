@@ -193,13 +193,21 @@ export default function BulkAnalysis() {
     }
   };
 
-  const handleExport = (batch: BulkAnalysis) => {
+  const handleExport = async (batch: BulkAnalysis) => {
     if (!batch.results) return;
-    exportBulkAnalysisToExcel(batch.results, batch.comparison_report, batch.batch_name);
-    toast({
-      title: "Export Complete",
-      description: "Excel file has been downloaded."
-    });
+    try {
+      await exportBulkAnalysisToExcel(batch.results, batch.comparison_report, batch.batch_name);
+      toast({
+        title: "Export Complete",
+        description: "Excel file has been downloaded."
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Could not export Excel file",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleDelete = async (batchId: string) => {

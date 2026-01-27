@@ -13,12 +13,20 @@ export function BulkUploadCard({ onUploadComplete }: BulkUploadCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleDownloadTemplate = () => {
-    createBulkAnalysisTemplate();
-    toast({
-      title: "Template Downloaded",
-      description: "Open the Excel file and add your startup pitches."
-    });
+  const handleDownloadTemplate = async () => {
+    try {
+      await createBulkAnalysisTemplate();
+      toast({
+        title: "Template Downloaded",
+        description: "Open the Excel file and add your startup pitches."
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: error instanceof Error ? error.message : "Could not generate the template",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleFileUpload = async (file: File) => {
@@ -114,7 +122,7 @@ export function BulkUploadCard({ onUploadComplete }: BulkUploadCardProps) {
             <input
               id="file-upload"
               type="file"
-              accept=".xlsx,.xls"
+                accept=".xlsx"
               className="hidden"
               onChange={handleFileSelect}
               disabled={isProcessing}

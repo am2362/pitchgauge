@@ -1,46 +1,57 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs/dist/exceljs.min.js';
 import { BulkAnalysisResult, ComparisonReport } from '@/types/bulk-analysis';
 
-interface CellStyle {
-  fill?: {
-    fgColor: { rgb: string };
-  };
-  font?: {
-    color: { rgb: string };
-    bold?: boolean;
-  };
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+function toArgb(rgb: string) {
+  // ExcelJS uses ARGB (alpha + rgb)
+  const cleaned = rgb.replace('#', '').toUpperCase();
+  return cleaned.length === 6 ? `FF${cleaned}` : cleaned;
 }
 
-export function exportBulkAnalysisToExcel(
+function downloadXlsx(buffer: ArrayBuffer, filename: string) {
+  const blob = new Blob([buffer], { type: XLSX_MIME });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export async function exportBulkAnalysisToExcel(
   results: BulkAnalysisResult[],
   comparisonReport: ComparisonReport | null,
   batchName: string
-): void {
-  // Create workbook
-  const workbook = XLSX.utils.book_new();
+): Promise<void> {
+  const workbook = new ExcelJS.Workbook();
 
   // Sheet 1: Detailed Results
-  const resultsData = [
-    [
-      'Startup Name',
-      'Sector',
-      'Tags',
-      'Team Score',
-      'Product Score',
-      'Market Score',
-      'Traction Score',
-      'Funding Score',
-      'Business Model Score',
-      'Overall Score',
-      'Summary',
-      'Team Metrics',
-      'Product Metrics',
-      'Market Metrics',
-      'Traction Metrics',
-      'Funding Metrics',
-      'Business Model Metrics'
-    ],
-    ...results.map(r => [
+  const resultsSheet = workbook.addWorksheet('Detailed Results');
+
+  const header = [
+    'Startup Name',
+    'Sector',
+    'Tags',
+    'Team Score',
+    'Product Score',
+    'Market Score',
+    'Traction Score',
+    'Funding Score',
+    'Business Model Score',
+    'Overall Score',
+    'Summary',
+    'Team Metrics',
+    'Product Metrics',
+    'Market Metrics',
+    'Traction Metrics',
+    'Funding Metrics',
+    'Business Model Metrics'
+  ];
+
+  resultsSheet.addRow(header);
+  results.forEach((r) => {
+    resultsSheet.addRow([
       r.startupName,
       r.sector,
       r.tags.join(', '),
@@ -58,24 +69,26 @@ export function exportBulkAnalysisToExcel(
       r.metrics.traction,
       r.metrics.funding,
       r.metrics.businessModel
-    ])
-  ];
+    ]);
+  });
 
-  const resultsSheet = XLSX.utils.aoa_to_sheet(resultsData);
+  // Set column widths
+  const widths = [20, 15, 30, 12, 13, 13, 14, 13, 18, 13, 60, 40, 40, 40, 40, 40, 40];
+  widths.forEach((w, idx) => {
+    resultsSheet.getColumn(idx + 1).width = w;
+  });
 
-  // Apply color coding to score columns (columns D-J: indices 3-9)
-  const scoreColumns = [3, 4, 5, 6, 7, 8, 9]; // Team, Product, Market, Traction, Funding, BizModel, Overall
-  
-  for (let row = 1; row < resultsData.length; row++) {
-    scoreColumns.forEach(col => {
-      const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-      const score = resultsData[row][col] as number;
-      
-      if (!resultsSheet[cellAddress]) return;
-      
+  // Apply color coding to score columns (Team..Overall => columns 4-10)
+  const scoreColumns = [4, 5, 6, 7, 8, 9, 10];
+  for (let rowNumber = 2; rowNumber <= resultsSheet.rowCount; rowNumber++) {
+    scoreColumns.forEach((colNumber) => {
+      const cell = resultsSheet.getRow(rowNumber).getCell(colNumber);
+      const score = Number(cell.value ?? 0);
+      if (!Number.isFinite(score)) return;
+
       let fillColor = 'FFFFFF';
       let fontColor = '000000';
-      
+
       if (score >= 8) {
         fillColor = '166534'; // Dark Green
         fontColor = 'FFFFFF';
@@ -89,128 +102,85 @@ export function exportBulkAnalysisToExcel(
         fillColor = 'DC2626'; // Red
         fontColor = 'FFFFFF';
       }
-      
-      resultsSheet[cellAddress].s = {
-        fill: { fgColor: { rgb: fillColor } },
-        font: { color: { rgb: fontColor }, bold: true }
+
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: toArgb(fillColor) }
+      };
+      cell.font = {
+        ...(cell.font ?? {}),
+        color: { argb: toArgb(fontColor) },
+        bold: true
       };
     });
   }
 
-  // Set column widths
-  resultsSheet['!cols'] = [
-    { wch: 20 },  // Startup Name
-    { wch: 15 },  // Sector
-    { wch: 30 },  // Tags
-    { wch: 12 },  // Team Score
-    { wch: 13 },  // Product Score
-    { wch: 13 },  // Market Score
-    { wch: 14 },  // Traction Score
-    { wch: 13 },  // Funding Score
-    { wch: 18 },  // Business Model Score
-    { wch: 13 },  // Overall Score
-    { wch: 60 },  // Summary
-    { wch: 40 },  // Team Metrics
-    { wch: 40 },  // Product Metrics
-    { wch: 40 },  // Market Metrics
-    { wch: 40 },  // Traction Metrics
-    { wch: 40 },  // Funding Metrics
-    { wch: 40 }   // Business Model Metrics
-  ];
-
-  XLSX.utils.book_append_sheet(workbook, resultsSheet, 'Detailed Results');
-
   // Sheet 2: Investment Rankings (if comparison report exists)
   if (comparisonReport?.investmentRankings) {
-    const rankingsData = [
-      ['Rank', 'Startup Name', 'Overall Score', 'Top Strengths', 'Recommendation'],
-      ...comparisonReport.investmentRankings.map(r => [
+    const rankingsSheet = workbook.addWorksheet('Investment Rankings');
+    rankingsSheet.addRow(['Rank', 'Startup Name', 'Overall Score', 'Top Strengths', 'Recommendation']);
+
+    comparisonReport.investmentRankings.forEach((r) => {
+      rankingsSheet.addRow([
         r.rank,
         r.startupName,
         r.overallScore,
         r.topStrengths.join('; '),
         r.recommendation
-      ])
-    ];
+      ]);
+    });
 
-    const rankingsSheet = XLSX.utils.aoa_to_sheet(rankingsData);
-    rankingsSheet['!cols'] = [
-      { wch: 8 },   // Rank
-      { wch: 20 },  // Startup Name
-      { wch: 13 },  // Overall Score
-      { wch: 50 },  // Top Strengths
-      { wch: 40 }   // Recommendation
-    ];
-
-    XLSX.utils.book_append_sheet(workbook, rankingsSheet, 'Investment Rankings');
+    [8, 20, 13, 50, 40].forEach((w, idx) => {
+      rankingsSheet.getColumn(idx + 1).width = w;
+    });
   }
 
   // Sheet 3: Score Comparison
   if (comparisonReport?.scoreComparison) {
-    const comparisonSheet = XLSX.utils.aoa_to_sheet([
-      comparisonReport.scoreComparison.headers,
-      ...comparisonReport.scoreComparison.rows
-    ]);
+    const comparisonSheet = workbook.addWorksheet('Score Comparison');
+    comparisonSheet.addRow(comparisonReport.scoreComparison.headers);
+    comparisonReport.scoreComparison.rows.forEach((r) => comparisonSheet.addRow(r));
 
-    comparisonSheet['!cols'] = [
-      { wch: 20 },  // Startup name
-      ...Array(7).fill({ wch: 12 })  // Score columns
-    ];
-
-    XLSX.utils.book_append_sheet(workbook, comparisonSheet, 'Score Comparison');
+    comparisonSheet.getColumn(1).width = 20;
+    for (let i = 2; i <= 8; i++) comparisonSheet.getColumn(i).width = 12;
   }
 
   // Sheet 4: Sector Breakdown
   if (comparisonReport?.sectorBreakdown) {
-    const sectorData = [
-      ['Sector', 'Number of Startups'],
-      ...Object.entries(comparisonReport.sectorBreakdown).map(([sector, count]) => [sector, count])
-    ];
+    const sectorSheet = workbook.addWorksheet('Sector Breakdown');
+    sectorSheet.addRow(['Sector', 'Number of Startups']);
+    Object.entries(comparisonReport.sectorBreakdown).forEach(([sector, count]) => {
+      sectorSheet.addRow([sector, count]);
+    });
 
-    const sectorSheet = XLSX.utils.aoa_to_sheet(sectorData);
-    sectorSheet['!cols'] = [
-      { wch: 20 },  // Sector
-      { wch: 20 }   // Count
-    ];
-
-    XLSX.utils.book_append_sheet(workbook, sectorSheet, 'Sector Breakdown');
+    sectorSheet.getColumn(1).width = 20;
+    sectorSheet.getColumn(2).width = 20;
   }
 
   // Sheet 5: Strengths & Weaknesses
   if (comparisonReport?.strengthsAndWeaknesses) {
-    const swData = [
-      ['Startup Name', 'Strengths', 'Weaknesses'],
-      ...Object.entries(comparisonReport.strengthsAndWeaknesses).map(([name, data]) => [
-        name,
-        data.strengths.join('; '),
-        data.weaknesses.join('; ')
-      ])
-    ];
+    const swSheet = workbook.addWorksheet('Strengths & Weaknesses');
+    swSheet.addRow(['Startup Name', 'Strengths', 'Weaknesses']);
+    Object.entries(comparisonReport.strengthsAndWeaknesses).forEach(([name, data]) => {
+      swSheet.addRow([name, data.strengths.join('; '), data.weaknesses.join('; ')]);
+    });
 
-    const swSheet = XLSX.utils.aoa_to_sheet(swData);
-    swSheet['!cols'] = [
-      { wch: 20 },  // Startup Name
-      { wch: 60 },  // Strengths
-      { wch: 60 }   // Weaknesses
-    ];
-
-    XLSX.utils.book_append_sheet(workbook, swSheet, 'Strengths & Weaknesses');
+    swSheet.getColumn(1).width = 20;
+    swSheet.getColumn(2).width = 60;
+    swSheet.getColumn(3).width = 60;
   }
 
   // Sheet 6: Summary
   if (comparisonReport?.overallRecommendation) {
-    const summaryData = [
-      ['Overall Recommendation'],
-      [comparisonReport.overallRecommendation]
-    ];
-
-    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-    summarySheet['!cols'] = [{ wch: 100 }];
-
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+    const summarySheet = workbook.addWorksheet('Summary');
+    summarySheet.addRow(['Overall Recommendation']);
+    summarySheet.addRow([comparisonReport.overallRecommendation]);
+    summarySheet.getColumn(1).width = 100;
   }
 
   // Download file
   const fileName = `${batchName.replace(/[^a-z0-9]/gi, '_')}_analysis_${new Date().toISOString().split('T')[0]}.xlsx`;
-  XLSX.writeFile(workbook, fileName);
+  const buffer = (await workbook.xlsx.writeBuffer()) as ArrayBuffer;
+  downloadXlsx(buffer, fileName);
 }
