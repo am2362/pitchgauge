@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { validatePitchInput, sanitizeErrorMessage } from '../_shared/validation.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,10 +44,10 @@ serve(async (req) => {
     console.log(`Authenticated user: ${userId}`);
 
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      console.error("LOVABLE_API_KEY is not configured");
+      throw new Error("Service configuration error");
     }
 
-    let pitchText = "";
     const contentType = req.headers.get("content-type") || "";
 
     // Handle text input only (PDF parsing not supported)
@@ -62,21 +63,18 @@ serve(async (req) => {
       );
     }
     
+    // Parse and validate input using schema validation
     const body = await req.json();
-    pitchText = body.text || "";
-
-    // Input validation
-    const MAX_PITCH_LENGTH = 50000; // ~50KB limit
-    if (!pitchText) {
-      throw new Error("No pitch text provided");
-    }
-    if (pitchText.length > MAX_PITCH_LENGTH) {
+    const validation = validatePitchInput(body, 50000);
+    
+    if (!validation.success) {
       return new Response(
-        JSON.stringify({ error: `Pitch text exceeds maximum length of ${MAX_PITCH_LENGTH} characters` }),
+        JSON.stringify({ error: validation.error }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    const { text: pitchText } = validation.data!;
     console.log("Analyzing startup pitch with Gemini...");
 
     // Call Lovable AI Gateway with Gemini
@@ -158,20 +156,26 @@ Round all scores to nearest integer (1-10). Be consistent and factual.`
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
+      console.error("AI API error:", response.status, errorText);
       
       if (response.status === 429) {
-        throw new Error("Rate limit exceeded. Please try again in a moment.");
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
       if (response.status === 402) {
-        throw new Error("AI usage limit reached. Please add credits to continue.");
+        return new Response(
+          JSON.stringify({ error: 'AI usage limit reached. Please try again later.' }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
       
-      throw new Error(`AI Gateway error: ${response.status}`);
+      throw new Error("AI service error");
     }
 
     const data = await response.json();
-    console.log("Gemini response received");
+    console.log("AI response received");
 
     // Extract the content from Gemini's response
     const content = data.choices?.[0]?.message?.content as string | undefined;
@@ -219,9 +223,6 @@ Round all scores to nearest integer (1-10). Be consistent and factual.`
       analysisResult = JSON.parse(jsonCandidate);
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
-      console.error('Content length:', content.length);
-      console.error('First 500 chars:', content.slice(0, 500));
-      console.error('Last 500 chars:', content.slice(-500));
 
       // Fallback: ask AI to repair JSON strictly
       try {
@@ -251,7 +252,7 @@ Round all scores to nearest integer (1-10). Be consistent and factual.`
       }
 
       if (!analysisResult) {
-        throw new Error('Failed to parse AI response. The response may have been truncated. Please try with a shorter pitch.');
+        throw new Error('Failed to parse response. Please try with a shorter pitch.');
       }
     }
 
@@ -269,7 +270,7 @@ Round all scores to nearest integer (1-10). Be consistent and factual.`
     }
 
     if (!analysisResult.memo || !analysisResult.scorecard) {
-      throw new Error('Invalid response structure from AI');
+      throw new Error('Invalid response structure');
     }
 
     return new Response(JSON.stringify(analysisResult), {
@@ -278,10 +279,12 @@ Round all scores to nearest integer (1-10). Be consistent and factual.`
 
   } catch (error) {
     console.error("Error in analyze-startup function:", error);
+    
+    // Sanitize error message before returning to client
+    const userMessage = sanitizeErrorMessage(error);
+    
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : "Unknown error occurred" 
-      }),
+      JSON.stringify({ error: userMessage }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

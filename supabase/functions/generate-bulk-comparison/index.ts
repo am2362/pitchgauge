@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { validateBulkComparisonInput, sanitizeErrorMessage } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,36 +44,22 @@ serve(async (req) => {
     console.log(`Authenticated user: ${userId}`);
 
     if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+      console.error('LOVABLE_API_KEY not configured');
+      throw new Error('Service configuration error');
     }
 
-    const { results } = await req.json();
-
-    // Input validation
-    const MAX_RESULTS = 200;
-    if (!Array.isArray(results) || results.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid or empty results array' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    if (results.length > MAX_RESULTS) {
-      return new Response(
-        JSON.stringify({ error: `Maximum ${MAX_RESULTS} results can be processed at once` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Parse and validate input using schema validation
+    const body = await req.json();
+    const validation = validateBulkComparisonInput(body, 200);
     
-    // Validate each result has required structure
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      if (!result?.startupName || !result?.scores || typeof result.scores.overall !== 'number') {
-        return new Response(
-          JSON.stringify({ error: `Invalid result structure at index ${i}` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    if (!validation.success) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    const { results } = validation.data!;
 
     console.log(`Generating comparison report for ${results.length} startups`);
 
@@ -140,8 +127,12 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Comparison generation error:', error);
+    
+    // Sanitize error message before returning to client
+    const userMessage = sanitizeErrorMessage(error);
+    
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: userMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -219,7 +210,8 @@ Provide:
     });
 
     if (!response.ok) {
-      throw new Error('AI Gateway error');
+      console.error('AI API error:', response.status);
+      throw new Error('AI service error');
     }
 
     const data = await response.json();
