@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { validateCompareInput, sanitizeErrorMessage } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,48 +44,22 @@ serve(async (req) => {
     const userId = claimsData.claims.sub;
     console.log(`Authenticated user: ${userId}`);
 
-    const { analyses, startupNames } = await req.json();
-
-    // Input validation
-    const MAX_STARTUPS_TO_COMPARE = 10;
-    if (!Array.isArray(analyses) || !Array.isArray(startupNames)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid analyses or startupNames format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    if (analyses.length === 0 || startupNames.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'At least one startup required for comparison' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    if (analyses.length > MAX_STARTUPS_TO_COMPARE || startupNames.length > MAX_STARTUPS_TO_COMPARE) {
-      return new Response(
-        JSON.stringify({ error: `Maximum ${MAX_STARTUPS_TO_COMPARE} startups can be compared at once` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    if (analyses.length !== startupNames.length) {
-      return new Response(
-        JSON.stringify({ error: 'Mismatch between analyses and startupNames count' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Parse and validate input using schema validation
+    const body = await req.json();
+    const validation = validateCompareInput(body, 10);
     
-    // Validate each analysis has required scorecard structure
-    for (let i = 0; i < analyses.length; i++) {
-      const analysis = analyses[i];
-      if (!analysis?.scorecard?.team || !analysis?.scorecard?.marketSize) {
-        return new Response(
-          JSON.stringify({ error: `Invalid analysis structure for startup at index ${i}` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    if (!validation.success) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    const { analyses, startupNames } = validation.data!;
 
     if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+      console.error('LOVABLE_API_KEY is not configured');
+      throw new Error('Service configuration error');
     }
 
     console.log('Comparing startups:', startupNames);
@@ -151,7 +126,7 @@ Provide a comprehensive comparison in the following JSON structure:
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI Gateway error:', response.status, errorText);
+      console.error('AI API error:', response.status);
       
       if (response.status === 429) {
         return new Response(
@@ -162,18 +137,18 @@ Provide a comprehensive comparison in the following JSON structure:
       
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: 'AI usage limit reached. Please add credits to your workspace.' }),
+          JSON.stringify({ error: 'AI usage limit reached. Please try again later.' }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
-      throw new Error(`AI Gateway returned ${response.status}: ${errorText}`);
+      throw new Error('AI service error');
     }
 
     const data = await response.json();
     let comparisonText = data.choices?.[0]?.message?.content || '';
 
-    console.log('AI Response:', comparisonText);
+    console.log('AI response received');
 
     // Clean and parse JSON
     comparisonText = comparisonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -182,14 +157,13 @@ Provide a comprehensive comparison in the following JSON structure:
     try {
       comparisonInsights = JSON.parse(comparisonText);
     } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      console.error('Raw text:', comparisonText);
-      throw new Error('Failed to parse AI response as JSON');
+      console.error('JSON parse error');
+      throw new Error('Failed to parse response. Please try again.');
     }
 
     // Validate structure
     if (!comparisonInsights.rankings || !comparisonInsights.comparativeInsights) {
-      throw new Error('Invalid comparison insights structure');
+      throw new Error('Invalid response structure');
     }
 
     return new Response(
@@ -199,10 +173,12 @@ Provide a comprehensive comparison in the following JSON structure:
 
   } catch (error) {
     console.error('Error in compare-startups:', error);
+    
+    // Sanitize error message before returning to client
+    const userMessage = sanitizeErrorMessage(error);
+    
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
-      }),
+      JSON.stringify({ error: userMessage }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

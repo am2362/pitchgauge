@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { validateBulkAnalysisInput, sanitizeErrorMessage } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,53 +48,22 @@ serve(async (req) => {
     const useGeminiDirect = !!GEMINI_API_KEY;
     
     if (!useGeminiDirect && !LOVABLE_API_KEY) {
-      throw new Error('Neither GEMINI_API_KEY nor LOVABLE_API_KEY is configured');
+      console.error('Neither GEMINI_API_KEY nor LOVABLE_API_KEY is configured');
+      throw new Error('Service configuration error');
     }
 
-    // Input validation constants
-    const MAX_STARTUPS = 100;
-    const MAX_PITCH_LENGTH = 50000; // ~50KB per pitch
-    const MAX_NAME_LENGTH = 200;
+    // Parse and validate input using schema validation
+    const body = await req.json();
+    const validation = validateBulkAnalysisInput(body, 100, 50000, 200);
     
-    // Higher batch size and faster processing with direct Gemini API
-    const { batchId, startups, batchSize = useGeminiDirect ? 5 : 2 } = await req.json();
-
-    if (!Array.isArray(startups) || startups.length === 0) {
+    if (!validation.success) {
       return new Response(
-        JSON.stringify({ error: 'Invalid or empty startups array' }),
+        JSON.stringify({ error: validation.error }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (startups.length > MAX_STARTUPS) {
-      return new Response(
-        JSON.stringify({ error: `Maximum ${MAX_STARTUPS} startups per batch allowed` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate each startup entry
-    for (let i = 0; i < startups.length; i++) {
-      const startup = startups[i];
-      if (!startup || typeof startup !== 'object') {
-        return new Response(
-          JSON.stringify({ error: `Invalid startup data at index ${i}` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      if (!startup.name || typeof startup.name !== 'string' || startup.name.length > MAX_NAME_LENGTH) {
-        return new Response(
-          JSON.stringify({ error: `Invalid or missing startup name at index ${i}` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      if (!startup.pitch || typeof startup.pitch !== 'string' || startup.pitch.length > MAX_PITCH_LENGTH) {
-        return new Response(
-          JSON.stringify({ error: `Invalid or too long pitch text for startup "${startup.name}"` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
+    const { batchId, startups, batchSize = useGeminiDirect ? 5 : 2 } = validation.data!;
 
     // Verify batch ownership before processing
     if (batchId) {
@@ -123,7 +93,7 @@ serve(async (req) => {
       const batch = startups.slice(i, i + batchSize);
       console.log(`Processing batch ${Math.floor(i / batchSize) + 1}: startups ${i + 1}-${Math.min(i + batchSize, startups.length)}`);
 
-      const batchPromises = batch.map(async (startup: { name: string; pitch: string }) => {
+      const batchPromises = batch.map(async (startup) => {
         try {
           const result = await analyzeStartup(
             startup.name, 
@@ -136,7 +106,7 @@ serve(async (req) => {
           console.error(`Error analyzing ${startup.name}:`, error);
           return {
             startupName: startup.name,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: 'Analysis failed',
             sector: 'Unknown',
             tags: [],
             metrics: {
@@ -200,8 +170,12 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Bulk analysis error:', error);
+    
+    // Sanitize error message before returning to client
+    const userMessage = sanitizeErrorMessage(error);
+    
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: userMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -299,6 +273,7 @@ Return ONLY valid JSON with this structure:
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error('AI API error:', response.status);
     
     // Handle rate limiting with exponential backoff
     if (response.status === 429 && retryCount < 3) {
@@ -309,7 +284,7 @@ Return ONLY valid JSON with this structure:
       return analyzeStartup(name, pitch, apiKey, useGeminiDirect, retryCount + 1);
     }
     
-    throw new Error(`AI Gateway error: ${response.status} - ${errorText}`);
+    throw new Error('AI service error');
   }
 
   const data = await response.json();
@@ -323,7 +298,7 @@ Return ONLY valid JSON with this structure:
   }
 
   if (!content) {
-    console.error('AI response data:', JSON.stringify(data));
+    console.error('No content in AI response');
     throw new Error('No content in AI response');
   }
 
