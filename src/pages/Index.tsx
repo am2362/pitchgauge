@@ -615,6 +615,16 @@ const Index = () => {
           </Card>
         </div>
 
+        {/* Show extracted pitch summary if available from PDF parsing */}
+        {extractedPitchSummary && (
+          <div className="mt-8">
+            <ExtractedPitchSummary 
+              pitchSummary={extractedPitchSummary} 
+              slides={extractedSlides || undefined} 
+            />
+          </div>
+        )}
+
         {result && (
           <Card className="mt-8 p-8 bg-card border-border shadow-lg">
             <div className="flex justify-between items-center mb-6">
