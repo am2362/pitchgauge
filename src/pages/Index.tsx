@@ -130,6 +130,8 @@ const Index = () => {
   const [startupName, setStartupName] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isPdfParsing, setIsPdfParsing] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -204,20 +206,34 @@ const Index = () => {
       return;
     }
 
+    // Validate file size on client side (20MB limit)
+    const MAX_FILE_SIZE = 20 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: "File too large",
+        description: "Please upload a PDF smaller than 20MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setPdfFile(file);
-    setIsAnalyzing(true);
+    setIsPdfParsing(true);
+    setPdfProgress("Uploading PDF...");
 
     try {
-      // Parse PDF using document parser
+      // Parse PDF using document parser (calls edge function)
+      setPdfProgress("Extracting text from PDF...");
       const { default: parseDocument } = await import("@/lib/document-parser");
       const parsedContent = await parseDocument(file);
       
       setPitchText(parsedContent.text);
+      setStartupName("");
       setPdfFile(null);
       
       toast({
         title: "PDF parsed successfully",
-        description: "Text extracted from PDF. You can now analyze it.",
+        description: `Extracted text from ${parsedContent.pages || 'multiple'} page(s). Review and click 'Generate Analysis'.`,
       });
     } catch (error: any) {
       toast({
@@ -225,8 +241,10 @@ const Index = () => {
         description: error.message || "Please try copying and pasting the text instead",
         variant: "destructive",
       });
+      setPdfFile(null);
     } finally {
-      setIsAnalyzing(false);
+      setIsPdfParsing(false);
+      setPdfProgress("");
     }
   };
 
@@ -501,18 +519,30 @@ const Index = () => {
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">
                   Or Upload Pitch Deck (PDF)
                 </label>
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer bg-secondary/20 hover:bg-secondary/40 transition-all">
+                <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg transition-all ${isPdfParsing ? 'cursor-wait bg-secondary/40' : 'cursor-pointer bg-secondary/20 hover:bg-secondary/40'}`}>
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground text-center px-4">
-                      {pdfFile ? pdfFile.name : "Click to upload PDF pitch deck"}
-                    </p>
+                    {isPdfParsing ? (
+                      <>
+                        <Loader2 className="h-8 w-8 text-primary mb-2 animate-spin" />
+                        <p className="text-sm text-primary font-medium text-center px-4">
+                          {pdfProgress || "Processing PDF..."}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground text-center px-4">
+                          {pdfFile ? pdfFile.name : "Click to upload PDF pitch deck (max 20MB)"}
+                        </p>
+                      </>
+                    )}
                   </div>
                   <input
                     type="file"
                     className="hidden"
                     accept=".pdf"
                     onChange={handleFileChange}
+                    disabled={isPdfParsing}
                   />
                 </label>
               </div>
