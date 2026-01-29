@@ -14,6 +14,8 @@ import { User, Session } from "@supabase/supabase-js";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { exportAnalysisToPDF } from "@/lib/pdf-export";
+import ExtractedPitchSummary from "@/components/ExtractedPitchSummary";
+import type { SlideContent } from "@/lib/document-parser";
 
 interface ScoreItem {
   score: number;
@@ -29,6 +31,7 @@ interface RedFlag {
 
 interface AnalysisResult {
   startupName?: string;
+  extractedPitchSummary?: string;
   memo: string | Record<string, string>;
   scorecard: {
     team: ScoreItem;
@@ -136,6 +139,8 @@ const Index = () => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [extractedPitchSummary, setExtractedPitchSummary] = useState<string | null>(null);
+  const [extractedSlides, setExtractedSlides] = useState<SlideContent[] | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -227,13 +232,23 @@ const Index = () => {
       const { default: parseDocument } = await import("@/lib/document-parser");
       const parsedContent = await parseDocument(file);
       
-      setPitchText(parsedContent.text);
+      // Use cleaned text if available, otherwise use raw text
+      const textToUse = parsedContent.cleanedText || parsedContent.text;
+      setPitchText(textToUse);
       setStartupName("");
       setPdfFile(null);
       
+      // Store the pitch summary and slides for display
+      if (parsedContent.pitchSummary) {
+        setExtractedPitchSummary(parsedContent.pitchSummary);
+        setExtractedSlides(parsedContent.slides || null);
+      }
+      
       toast({
         title: "PDF parsed successfully",
-        description: `Extracted text from ${parsedContent.pages || 'multiple'} page(s). Review and click 'Generate Analysis'.`,
+        description: parsedContent.pitchSummary 
+          ? `Extracted & cleaned ${parsedContent.slides?.length || 0} slides. Review and click 'Generate Analysis'.`
+          : `Extracted text from ${parsedContent.pages || 'multiple'} page(s). Review and click 'Generate Analysis'.`,
       });
     } catch (error: any) {
       toast({
@@ -598,6 +613,16 @@ const Index = () => {
             )}
           </Card>
         </div>
+
+        {/* Show extracted pitch summary if available from PDF parsing */}
+        {extractedPitchSummary && (
+          <div className="mt-8">
+            <ExtractedPitchSummary 
+              pitchSummary={extractedPitchSummary} 
+              slides={extractedSlides || undefined} 
+            />
+          </div>
+        )}
 
         {result && (
           <Card className="mt-8 p-8 bg-card border-border shadow-lg">
