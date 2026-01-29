@@ -140,8 +140,14 @@ serve(async (req) => {
     // If standard extraction failed, use Vision AI on the PDF
     console.log("Standard text extraction yielded little content, using Vision AI...");
     
-    // Convert PDF to base64 for Vision AI
-    const base64Pdf = btoa(String.fromCharCode(...pdfData));
+    // Convert PDF to base64 for Vision AI (chunked to avoid stack overflow)
+    let base64Pdf = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < pdfData.length; i += chunkSize) {
+      const chunk = pdfData.subarray(i, Math.min(i + chunkSize, pdfData.length));
+      base64Pdf += String.fromCharCode.apply(null, chunk as unknown as number[]);
+    }
+    base64Pdf = btoa(base64Pdf);
     const pdfDataUrl = `data:application/pdf;base64,${base64Pdf}`;
     
     // Use Gemini Vision to extract text from the PDF
