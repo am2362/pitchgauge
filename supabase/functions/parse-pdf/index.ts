@@ -96,9 +96,25 @@ serve(async (req) => {
     for (let pageNum = 1; pageNum <= numPages; pageNum++) {
       const page = await doc.getPage(pageNum);
       const textContent = await page.getTextContent();
+      
+      // Debug: log the structure of items on first page
+      if (pageNum === 1) {
+        console.log(`Page 1 items count: ${textContent.items?.length || 0}`);
+        if (textContent.items && textContent.items.length > 0) {
+          console.log(`First item structure: ${JSON.stringify(textContent.items[0])}`);
+        }
+      }
+      
+      // Filter for text items (those with 'str' property) and extract text
       const pageText = textContent.items
+        .filter((item: any) => typeof item.str === 'string')
         .map((item: any) => item.str)
         .join(" ");
+      
+      if (pageNum === 1) {
+        console.log(`Page 1 extracted text length: ${pageText.length}`);
+      }
+      
       textParts.push(pageText);
     }
 
