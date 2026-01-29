@@ -29,6 +29,7 @@ interface RedFlag {
 
 interface AnalysisResult {
   startupName?: string;
+  extractedPitchSummary?: string;
   memo: string | Record<string, string>;
   scorecard: {
     team: ScoreItem;
