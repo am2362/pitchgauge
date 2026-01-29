@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_PAGES_FOR_VISION = 20; // Limit pages to process with Vision AI
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -18,6 +19,15 @@ serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: "AI service not configured" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Authentication check
     const authHeader = req.headers.get('Authorization');
@@ -86,54 +96,131 @@ serve(async (req) => {
     const arrayBuffer = await file.arrayBuffer();
     const pdfData = new Uint8Array(arrayBuffer);
 
-    // Load and parse PDF
+    // Load PDF to get page count and try text extraction first
     const doc = await getDocument(pdfData).promise;
     const numPages = doc.numPages;
     console.log(`PDF has ${numPages} pages`);
 
-    // Extract text from all pages
+    // First, try standard text extraction
     const textParts: string[] = [];
+    let hasEmbeddedText = false;
+    
     for (let pageNum = 1; pageNum <= numPages; pageNum++) {
       const page = await doc.getPage(pageNum);
       const textContent = await page.getTextContent();
       
-      // Debug: log the structure of items on first page
-      if (pageNum === 1) {
-        console.log(`Page 1 items count: ${textContent.items?.length || 0}`);
-        if (textContent.items && textContent.items.length > 0) {
-          console.log(`First item structure: ${JSON.stringify(textContent.items[0])}`);
-        }
-      }
-      
-      // Filter for text items (those with 'str' property) and extract text
       const pageText = textContent.items
         .filter((item: any) => typeof item.str === 'string')
         .map((item: any) => item.str)
-        .join(" ");
+        .join(" ")
+        .trim();
       
-      if (pageNum === 1) {
-        console.log(`Page 1 extracted text length: ${pageText.length}`);
+      if (pageText.length > 10) {
+        hasEmbeddedText = true;
       }
-      
       textParts.push(pageText);
     }
 
-    const extractedText = textParts.join("\n\n").trim();
+    const embeddedText = textParts.join("\n\n").trim();
+    
+    // If we got good text content, return it
+    if (hasEmbeddedText && embeddedText.length > 100) {
+      console.log(`Extracted ${embeddedText.length} characters using standard text extraction`);
+      return new Response(
+        JSON.stringify({ 
+          text: embeddedText,
+          pages: numPages,
+          fileName: file.name,
+          method: "text_extraction"
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If standard extraction failed, use Vision AI on the PDF
+    console.log("Standard text extraction yielded little content, using Vision AI...");
+    
+    // Convert PDF to base64 for Vision AI
+    const base64Pdf = btoa(String.fromCharCode(...pdfData));
+    const pdfDataUrl = `data:application/pdf;base64,${base64Pdf}`;
+    
+    // Use Gemini Vision to extract text from the PDF
+    const visionResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `You are a document text extractor. Extract ALL text content from this PDF document, including:
+- All headings and titles
+- All body text and paragraphs
+- Text in images, graphics, icons, or charts
+- Numbers and statistics
+- Bullet points and lists
+- Any text in diagrams or infographics
+
+Format the output as clean, readable text organized by page. Do not add any commentary or descriptions - just extract the raw text content exactly as it appears.
+
+If there are charts or graphs, describe what data they show (e.g., "Chart showing revenue growth from $1M to $5M over 2020-2023").
+
+Start with "--- Page 1 ---" for each new page.`
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: pdfDataUrl
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 8000,
+      }),
+    });
+
+    if (!visionResponse.ok) {
+      const errorText = await visionResponse.text();
+      console.error("Vision AI error:", visionResponse.status, errorText);
+      
+      if (visionResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "AI service is busy. Please try again in a moment." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ error: "Failed to process PDF with AI vision" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const visionData = await visionResponse.json();
+    const extractedText = visionData.choices?.[0]?.message?.content || "";
 
     if (!extractedText) {
       return new Response(
-        JSON.stringify({ error: "No text content found in PDF. The document may be scanned or image-based." }),
+        JSON.stringify({ error: "Could not extract any text from the PDF. The document may be empty or unreadable." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Extracted ${extractedText.length} characters from PDF`);
+    console.log(`Vision AI extracted ${extractedText.length} characters from PDF`);
 
     return new Response(
       JSON.stringify({ 
         text: extractedText,
         pages: numPages,
-        fileName: file.name 
+        fileName: file.name,
+        method: "vision_ai"
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
