@@ -519,18 +519,30 @@ const Index = () => {
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">
                   Or Upload Pitch Deck (PDF)
                 </label>
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer bg-secondary/20 hover:bg-secondary/40 transition-all">
+                <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg transition-all ${isPdfParsing ? 'cursor-wait bg-secondary/40' : 'cursor-pointer bg-secondary/20 hover:bg-secondary/40'}`}>
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground text-center px-4">
-                      {pdfFile ? pdfFile.name : "Click to upload PDF pitch deck"}
-                    </p>
+                    {isPdfParsing ? (
+                      <>
+                        <Loader2 className="h-8 w-8 text-primary mb-2 animate-spin" />
+                        <p className="text-sm text-primary font-medium text-center px-4">
+                          {pdfProgress || "Processing PDF..."}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground text-center px-4">
+                          {pdfFile ? pdfFile.name : "Click to upload PDF pitch deck (max 20MB)"}
+                        </p>
+                      </>
+                    )}
                   </div>
                   <input
                     type="file"
                     className="hidden"
                     accept=".pdf"
                     onChange={handleFileChange}
+                    disabled={isPdfParsing}
                   />
                 </label>
               </div>
