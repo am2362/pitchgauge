@@ -233,13 +233,23 @@ const Index = () => {
       const { default: parseDocument } = await import("@/lib/document-parser");
       const parsedContent = await parseDocument(file);
       
-      setPitchText(parsedContent.text);
+      // Use cleaned text if available, otherwise use raw text
+      const textToUse = parsedContent.cleanedText || parsedContent.text;
+      setPitchText(textToUse);
       setStartupName("");
       setPdfFile(null);
       
+      // Store the pitch summary and slides for display
+      if (parsedContent.pitchSummary) {
+        setExtractedPitchSummary(parsedContent.pitchSummary);
+        setExtractedSlides(parsedContent.slides || null);
+      }
+      
       toast({
         title: "PDF parsed successfully",
-        description: `Extracted text from ${parsedContent.pages || 'multiple'} page(s). Review and click 'Generate Analysis'.`,
+        description: parsedContent.pitchSummary 
+          ? `Extracted & cleaned ${parsedContent.slides?.length || 0} slides. Review and click 'Generate Analysis'.`
+          : `Extracted text from ${parsedContent.pages || 'multiple'} page(s). Review and click 'Generate Analysis'.`,
       });
     } catch (error: any) {
       toast({
