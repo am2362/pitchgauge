@@ -206,20 +206,34 @@ const Index = () => {
       return;
     }
 
+    // Validate file size on client side (20MB limit)
+    const MAX_FILE_SIZE = 20 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: "File too large",
+        description: "Please upload a PDF smaller than 20MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setPdfFile(file);
-    setIsAnalyzing(true);
+    setIsPdfParsing(true);
+    setPdfProgress("Uploading PDF...");
 
     try {
-      // Parse PDF using document parser
+      // Parse PDF using document parser (calls edge function)
+      setPdfProgress("Extracting text from PDF...");
       const { default: parseDocument } = await import("@/lib/document-parser");
       const parsedContent = await parseDocument(file);
       
       setPitchText(parsedContent.text);
+      setStartupName("");
       setPdfFile(null);
       
       toast({
         title: "PDF parsed successfully",
-        description: "Text extracted from PDF. You can now analyze it.",
+        description: `Extracted text from ${parsedContent.pages || 'multiple'} page(s). Review and click 'Generate Analysis'.`,
       });
     } catch (error: any) {
       toast({
@@ -227,8 +241,10 @@ const Index = () => {
         description: error.message || "Please try copying and pasting the text instead",
         variant: "destructive",
       });
+      setPdfFile(null);
     } finally {
-      setIsAnalyzing(false);
+      setIsPdfParsing(false);
+      setPdfProgress("");
     }
   };
 
