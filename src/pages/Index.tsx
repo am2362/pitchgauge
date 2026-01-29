@@ -140,8 +140,6 @@ const Index = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [extractedPitchSummary, setExtractedPitchSummary] = useState<string | null>(null);
-  const [extractedSlides, setExtractedSlides] = useState<SlideContent[] | null>(null);
-  const { toast } = useToast();
   const { toast } = useToast();
   const navigate = useNavigate();
 
