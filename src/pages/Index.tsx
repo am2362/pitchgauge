@@ -130,6 +130,8 @@ const Index = () => {
   const [startupName, setStartupName] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isPdfParsing, setIsPdfParsing] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [user, setUser] = useState<User | null>(null);
