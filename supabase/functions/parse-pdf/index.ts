@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
-import { getDocument } from "https://esm.sh/pdfjs-serverless@0.6.0";
+import { getDocument } from "https://esm.sh/pdfjs-serverless";
 import { sanitizeErrorMessage } from '../_shared/validation.ts';
 
 const corsHeaders = {
