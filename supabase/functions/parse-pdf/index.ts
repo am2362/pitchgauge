@@ -87,7 +87,7 @@ serve(async (req) => {
     const pdfData = new Uint8Array(arrayBuffer);
 
     // Load and parse PDF
-    const doc = await getDocument(pdfData);
+    const doc = await getDocument(pdfData).promise;
     const numPages = doc.numPages;
     console.log(`PDF has ${numPages} pages`);
 
