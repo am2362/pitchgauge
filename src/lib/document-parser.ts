@@ -2,14 +2,25 @@ import { supabase } from "@/integrations/supabase/client";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
-interface ParseResult {
+export interface SlideContent {
+  slideNumber: number;
+  heading?: string;
+  content: string;
+}
+
+export interface ParseResult {
   text: string;
+  cleanedText?: string;
+  pitchSummary?: string;
+  slides?: SlideContent[];
   pages?: number;
   fileName?: string;
+  method?: "text_extraction" | "vision_ai";
 }
 
 /**
  * Parse a PDF document using the server-side parse-pdf edge function
+ * Returns both raw and AI-cleaned/structured text
  */
 export default async function parseDocument(file: File): Promise<ParseResult> {
   // Client-side validation
@@ -58,7 +69,11 @@ export default async function parseDocument(file: File): Promise<ParseResult> {
 
   return {
     text: result.text,
+    cleanedText: result.cleanedText,
+    pitchSummary: result.pitchSummary,
+    slides: result.slides,
     pages: result.pages,
     fileName: result.fileName,
+    method: result.method,
   };
 }

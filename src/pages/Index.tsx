@@ -14,6 +14,8 @@ import { User, Session } from "@supabase/supabase-js";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { exportAnalysisToPDF } from "@/lib/pdf-export";
+import ExtractedPitchSummary from "@/components/ExtractedPitchSummary";
+import type { SlideContent } from "@/lib/document-parser";
 
 interface ScoreItem {
   score: number;
