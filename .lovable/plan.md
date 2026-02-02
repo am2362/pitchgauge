@@ -1,176 +1,152 @@
 
-
-# Settings Page with Personal Profile Management
+# Fix Historical Analysis Display and Add Pitch Summary Export
 
 ## Overview
 
-This plan adds a comprehensive **Settings page** where users can manage their personal profile, including:
-- Editing their display name
-- Changing their email address
-- Creating or changing their password
+This plan addresses two issues:
+1. Historical analyses show incorrect extracted pitch summaries because they aren't persisted to the database
+2. Users cannot download the extracted pitch summary as PDF or JSON
 
-The implementation leverages the existing `profiles` table and Supabase Auth APIs.
+## Problem Analysis
 
-## Architecture Flow
-
-```text
-┌─────────────────┐    ┌──────────────────┐    ┌───────────────────┐
-│  Settings Page  │───▶│  Profile Section │───▶│  profiles table   │
-│  /settings      │    │  - Display Name  │    │  (full_name)      │
-└─────────────────┘    │  - Avatar (view) │    └───────────────────┘
-                       └──────────────────┘
-                              │
-                       ┌──────────────────┐    ┌───────────────────┐
-                       │  Email Section   │───▶│  Supabase Auth    │
-                       │  - Change Email  │    │  updateUser()     │
-                       └──────────────────┘    └───────────────────┘
-                              │
-                       ┌──────────────────┐    ┌───────────────────┐
-                       │ Password Section │───▶│  Supabase Auth    │
-                       │  - New Password  │    │  updateUser()     │
-                       │  - Confirm       │    └───────────────────┘
-                       └──────────────────┘
-```
+Currently when a PDF pitch deck is uploaded:
+- The extracted pitch summary and slides are stored only in React state
+- This data is NOT saved to the database alongside the analysis
+- When viewing historical analyses, stale/incorrect extracted summaries may appear
+- There's no way to export the extracted pitch summary
 
 ## Changes Required
 
-### 1. Create Settings Page (`src/pages/Settings.tsx`)
+### 1. Update `saveAnalysis()` in `Index.tsx`
 
-A new page with three main sections in a tabbed or card-based layout:
+Save the extracted pitch summary and slides to the `metadata` JSONB column:
 
-**Profile Section:**
-- Load current profile data from `profiles` table
-- Editable display name field
-- Show current email (read-only display)
-- Save button to update `profiles.full_name`
-
-**Email Section:**
-- Input field for new email address
-- Confirmation of current password (security measure)
-- "Update Email" button using `supabase.auth.updateUser({ email })`
-- Note: User will receive confirmation email to both old and new addresses
-
-**Password Section:**
-- Current password field (for verification - optional UX improvement)
-- New password field with validation (min 6 characters)
-- Confirm new password field
-- "Update Password" button using `supabase.auth.updateUser({ password })`
-
-### 2. Add Route to App.tsx
-
-Register the new `/settings` route in the router configuration.
-
-### 3. Add Settings Link to Navigation
-
-Add a Settings button/link in the header of the main Index page (next to the existing Logout button).
-
-### 4. Update Profile Data on Email Change
-
-When email is updated via Supabase Auth, also update the `profiles.email` column to keep them in sync.
-
-## UI Design
-
-The settings page will follow the existing app design patterns:
-- Gradient background matching other pages
-- Card-based sections for each settings category
-- Consistent button styling
-- Toast notifications for success/error feedback
-- Loading states during API calls
-
-**Page Layout:**
 ```text
-┌────────────────────────────────────────────────────────┐
-│  ← Back                     Settings                   │
-├────────────────────────────────────────────────────────┤
-│                                                        │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │  👤 Profile                                      │   │
-│  │                                                  │   │
-│  │  Display Name: [________________]                │   │
-│  │                                                  │   │
-│  │  Email: user@example.com (read-only)            │   │
-│  │                                                  │   │
-│  │                          [Save Changes]          │   │
-│  └─────────────────────────────────────────────────┘   │
-│                                                        │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │  ✉️ Change Email                                 │   │
-│  │                                                  │   │
-│  │  New Email: [________________]                   │   │
-│  │                                                  │   │
-│  │  A confirmation link will be sent to both       │   │
-│  │  your current and new email addresses.          │   │
-│  │                                                  │   │
-│  │                           [Update Email]         │   │
-│  └─────────────────────────────────────────────────┘   │
-│                                                        │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │  🔒 Change Password                              │   │
-│  │                                                  │   │
-│  │  New Password: [________________]                │   │
-│  │  Confirm Password: [________________]            │   │
-│  │  (Must be at least 6 characters)                │   │
-│  │                                                  │   │
-│  │                        [Update Password]         │   │
-│  └─────────────────────────────────────────────────┘   │
-│                                                        │
-└────────────────────────────────────────────────────────┘
+Current: metadata is not populated
+After: metadata = {
+  extractedPitchSummary: "...",
+  extractedSlides: [...],
+  sourceType: "pdf" | "text"
+}
+```
+
+### 2. Update `HistoryItem` Interface in `Index.tsx`
+
+Add `metadata` field to include the extracted pitch data and source type.
+
+### 3. Update `viewHistoricalAnalysis()` in `Index.tsx`
+
+When loading a historical analysis:
+- If `metadata.sourceType === "pdf"` and `metadata.extractedPitchSummary` exists, restore it
+- Otherwise, clear the extracted pitch summary state (for text-based analyses)
+
+This ensures the UI shows the correct extracted summary for PDF-based analyses and hides it for text-based ones.
+
+### 4. Add Export Buttons to `ExtractedPitchSummary` Component
+
+Add two export options:
+- **Export as JSON**: Download pitch summary + slides as structured JSON
+- **Export as PDF**: Generate PDF with executive summary and slide breakdown
+
+### 5. Create Export Function in `pdf-export.ts`
+
+Add a new function `exportPitchSummaryToPDF()` that generates a formatted PDF containing:
+- Executive Summary section with the pitch summary text
+- Slide-by-slide breakdown (if slides are available)
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/pages/Index.tsx` | Update `HistoryItem` interface, `saveAnalysis()`, and `viewHistoricalAnalysis()` |
+| `src/components/ExtractedPitchSummary.tsx` | Add export buttons for PDF and JSON |
+| `src/lib/pdf-export.ts` | Add `exportPitchSummaryToPDF()` function |
+
+## Data Flow
+
+```text
+PDF Upload Flow:
+┌─────────┐    ┌──────────────┐    ┌─────────────────┐    ┌──────────┐
+│  PDF    │───▶│ parse-pdf    │───▶│ pitchSummary +  │───▶│ metadata │
+│  File   │    │ edge func    │    │ slides          │    │ column   │
+└─────────┘    └──────────────┘    └─────────────────┘    └──────────┘
+
+History Load Flow:
+┌──────────────┐    ┌─────────────────────────┐    ┌───────────────────────┐
+│ Click        │───▶│ Check metadata.         │───▶│ Show/Hide Extracted   │
+│ History Item │    │ sourceType              │    │ Pitch Summary         │
+└──────────────┘    └─────────────────────────┘    └───────────────────────┘
+```
+
+## UI Updates
+
+The `ExtractedPitchSummary` component header will include export buttons:
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│  ✨ Extracted & Cleaned Pitch Summary              [JSON] [PDF] ⌄  │
+│     AI-structured content from PDF                                  │
+├─────────────────────────────────────────────────────────────────────┤
+│  Executive Summary                                                  │
+│  ...                                                                │
+├─────────────────────────────────────────────────────────────────────┤
+│  Slide-by-Slide Breakdown                                           │
+│  [Slide 1] [Slide 2] ...                                            │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Technical Details
 
-### Profile Update Logic
+### Metadata Schema
+
+The `metadata` JSONB column will store:
 
 ```typescript
-// Update display name in profiles table
-const { error } = await supabase
-  .from('profiles')
-  .update({ full_name: displayName })
-  .eq('id', user.id);
+interface AnalysisMetadata {
+  sourceType: 'pdf' | 'text';
+  extractedPitchSummary?: string;
+  extractedSlides?: SlideContent[];
+}
 ```
 
-### Email Update Flow
+### Export Functions
 
-1. User enters new email
-2. Call `supabase.auth.updateUser({ email: newEmail })`
-3. Supabase sends confirmation to both old and new email
-4. User must confirm from new email to complete change
-5. After confirmation, update `profiles.email` to keep in sync
-
-### Password Update Logic
-
+**JSON Export:**
 ```typescript
-// Update password
-const { error } = await supabase.auth.updateUser({
-  password: newPassword
-});
+const exportData = {
+  pitchSummary: string,
+  slides: SlideContent[],
+  exportedAt: timestamp
+};
+// Download as .json file
 ```
 
-### Validation
+**PDF Export:**
+```typescript
+exportPitchSummaryToPDF(pitchSummary: string, slides?: SlideContent[])
+// Generates formatted PDF with:
+// - Title and date
+// - Executive Summary section
+// - Slide breakdown (if available)
+```
 
-- Display name: Required, max 100 characters
-- Email: Valid email format (using Zod)
-- Password: Minimum 6 characters, must match confirmation
+### State Management Updates
 
-### Error Handling
+In `viewHistoricalAnalysis()`:
+```typescript
+// After loading analysis result
+if (item.metadata?.sourceType === 'pdf' && item.metadata?.extractedPitchSummary) {
+  setExtractedPitchSummary(item.metadata.extractedPitchSummary);
+  setExtractedSlides(item.metadata.extractedSlides || null);
+} else {
+  // Clear for text-based analyses
+  setExtractedPitchSummary(null);
+  setExtractedSlides(null);
+}
+```
 
-- Show toast notifications for all outcomes
-- Handle Supabase-specific errors (e.g., "Email already in use")
-- Disable form during loading states
-- Clear sensitive fields after submission
+## Backward Compatibility
 
-## Files to Create/Modify
-
-| File | Action | Description |
-|------|--------|-------------|
-| `src/pages/Settings.tsx` | Create | New settings page with profile, email, and password sections |
-| `src/App.tsx` | Modify | Add `/settings` route |
-| `src/pages/Index.tsx` | Modify | Add Settings button to header navigation |
-
-## Security Considerations
-
-- All profile updates respect existing RLS policies (users can only update their own profile)
-- Password is never displayed, only updated
-- Email change requires confirmation from both addresses (Supabase built-in)
-- Form inputs are validated client-side before submission
-
+- Existing analyses without metadata will work normally (no extracted summary shown)
+- The `sourceType` field allows distinguishing between PDF and text-based analyses
+- No database schema changes required (using existing `metadata` JSONB column)
