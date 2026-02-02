@@ -161,6 +161,42 @@ const Index = () => {
     return null;
   };
 
+  // Parse slide-formatted text into structured slides and generate a summary
+  const parseSlideFormattedText = (text: string): { slides: SlideContent[]; summary: string } | null => {
+    // Match "Slide X:" pattern (case-insensitive)
+    const slidePattern = /Slide\s*(\d+)\s*[:\.]/gi;
+    const matches = [...text.matchAll(slidePattern)];
+    
+    if (matches.length < 2) return null; // Need at least 2 slides to consider it slide-formatted
+    
+    const slides: SlideContent[] = [];
+    
+    for (let i = 0; i < matches.length; i++) {
+      const match = matches[i];
+      const slideNumber = parseInt(match[1], 10);
+      const startIndex = match.index! + match[0].length;
+      const endIndex = i + 1 < matches.length ? matches[i + 1].index! : text.length;
+      
+      const content = text.slice(startIndex, endIndex).trim();
+      
+      // Try to extract heading (first sentence or phrase before period)
+      const firstSentence = content.split(/[.!?]/)[0].trim();
+      const heading = firstSentence.length < 100 ? firstSentence : undefined;
+      
+      slides.push({
+        slideNumber,
+        heading,
+        content,
+      });
+    }
+    
+    // Generate summary from first few slides
+    const summarySlides = slides.slice(0, Math.min(5, slides.length));
+    const summary = summarySlides.map(s => s.content.split('.').slice(0, 2).join('.')).join(' ').slice(0, 500);
+    
+    return { slides, summary };
+  };
+
   useEffect(() => {
     // Check auth state
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -389,14 +425,22 @@ const Index = () => {
     setResult(analysisResult);
     setPitchText(item.pitch_text);
     
-    // Restore extracted pitch summary if it was from a PDF, otherwise clear it
+    // Restore extracted pitch summary from metadata OR parse slide-formatted text
     if (item.metadata?.sourceType === 'pdf' && item.metadata?.extractedPitchSummary) {
+      // PDF-based analysis: restore from metadata
       setExtractedPitchSummary(item.metadata.extractedPitchSummary);
       setExtractedSlides(item.metadata.extractedSlides || null);
     } else {
-      // Clear for text-based analyses to avoid showing stale data
-      setExtractedPitchSummary(null);
-      setExtractedSlides(null);
+      // Text-based analysis: try to parse slide format from pitch text
+      const parsed = parseSlideFormattedText(item.pitch_text);
+      if (parsed) {
+        setExtractedPitchSummary(parsed.summary);
+        setExtractedSlides(parsed.slides);
+      } else {
+        // Clear for non-slide text analyses
+        setExtractedPitchSummary(null);
+        setExtractedSlides(null);
+      }
     }
     
     toast({

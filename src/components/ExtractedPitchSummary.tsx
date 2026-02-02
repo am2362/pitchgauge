@@ -45,7 +45,7 @@ const ExtractedPitchSummary = ({ pitchSummary, slides, startupName }: ExtractedP
             </div>
             <div className="text-left">
               <h3 className="text-lg font-semibold text-foreground">Extracted & Cleaned Pitch Summary</h3>
-              <p className="text-sm text-muted-foreground">AI-structured content from PDF</p>
+              <p className="text-sm text-muted-foreground">AI-structured content from pitch</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
