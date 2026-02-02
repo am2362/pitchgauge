@@ -1,210 +1,245 @@
 
-# Add Recent Analyses Section to Compare Startups Page
+
+# Implement 1000 Startup Support with Chunked Processing
 
 ## Overview
 
-This plan adds a "Recent Analyses" section to the Compare Startups page, positioned below the startup input cards (Startup A, Startup B, etc.). This allows users to quickly access their saved comparison analyses without navigating to the History page.
+This plan enables the bulk analysis feature to process up to **1000 startups** by implementing chunked processing from the frontend. Instead of sending all startups to a single edge function call (which would timeout), the frontend will send smaller chunks (50-100 startups each) and manage the overall progress.
 
-## Current State
+## Current Architecture & Constraints
 
-- The Compare page (`/compare`) currently has:
-  - Header with navigation and action buttons
-  - Startup pitch input cards (A, B, etc.)
-  - Comparison results table
-  - A "History" button in the header that navigates to `/history`
-  
-- There is NO Recent Analyses section on this page
-- Users must go to `/history` to see past comparisons
+| Constraint | Current Value | Impact |
+|------------|---------------|--------|
+| Edge Function Timeout | ~60-150 seconds | Cannot process 1000 startups in one call |
+| Backend Validation Limit | 100 startups | Prevents >100 per API call |
+| UI Messaging | "up to 1000" | Already advertises 1000 support |
+| Frontend Excel Parser | 1000 startups | Already supports parsing 1000 |
 
-## Proposed Solution
-
-Add a "Recent Comparisons" card section at the bottom of the Compare page that:
-1. Fetches and displays the user's most recent comparison analyses
-2. Allows clicking to load a saved comparison back into the page
-3. Matches the styling of the Recent Analyses section on the Index page
-
-## Architecture
-
+### Current Flow (Single Request)
 ```text
-┌─────────────────────────────────────────────────────────┐
-│  Compare Startups Header                                │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │  Startup A                                       │   │
-│  │  [Pitch text area...]                            │   │
-│  └─────────────────────────────────────────────────┘   │
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │  Startup B                                       │   │
-│  │  [Pitch text area...]                            │   │
-│  └─────────────────────────────────────────────────┘   │
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │  📊 Comparison Table                             │   │
-│  └─────────────────────────────────────────────────┘   │
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │  <-- NEW
-│  │  🕐 Recent Comparisons                           │   │
-│  │                                                  │   │
-│  │  ┌───────────────────────────────────────────┐  │   │
-│  │  │ Startup A vs B vs C       Jan 15, 2026   │  │   │
-│  │  │ Click to load comparison                  │  │   │
-│  │  └───────────────────────────────────────────┘  │   │
-│  │                                                  │   │
-│  │  ┌───────────────────────────────────────────┐  │   │
-│  │  │ TechCorp vs DataInc       Jan 10, 2026   │  │   │
-│  │  │ Click to load comparison                  │  │   │
-│  │  └───────────────────────────────────────────┘  │   │
-│  └─────────────────────────────────────────────────┘   │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+Frontend                              Edge Function
+   │                                      │
+   │──── All 1000 startups ─────────────▶│
+   │                                      │ TIMEOUT after ~2 min
+   │◀──────── Error ──────────────────────│
 ```
 
-## Changes Required
+### New Flow (Chunked Processing)
+```text
+Frontend                              Edge Function
+   │                                      │
+   │──── Chunk 1 (50 startups) ─────────▶│
+   │◀──── Results (50) ───────────────────│
+   │                                      │
+   │──── Chunk 2 (50 startups) ─────────▶│
+   │◀──── Results (50) ───────────────────│
+   │                                      │
+   │        ... repeat ...                │
+   │                                      │
+   │──── Final chunk ───────────────────▶│
+   │◀──── Complete ───────────────────────│
+```
 
-### 1. Update Compare.tsx
+## Architecture Changes
 
-**Add State and Data Fetching:**
-- Add `recentComparisons` state to store fetched history
-- Create `loadRecentComparisons()` function to fetch from `comparison_analyses` table
-- Call this function on component mount when user is authenticated
-- Limit to most recent 5 comparisons
+### 1. Frontend Chunked Processing (BulkAnalysis.tsx)
 
-**Add Load History Function:**
-- Create `loadHistoricalComparison()` function that:
-  - Populates the pitch slots with saved data
-  - Restores analyses for each startup
-  - Restores comparison insights
-  - Shows toast notification confirming load
+**New Constants:**
+- `CHUNK_SIZE = 50` - Number of startups per API call
+- `DELAY_BETWEEN_CHUNKS = 2000` - 2 second pause between chunks
 
-**Add UI Section:**
-- Add a Card section below the comparison table or startup input cards
-- Display recent comparisons with:
-  - Startup names as badges
-  - Date created
-  - Click to load functionality
-- Style consistently with the Index page's Recent Analyses section
-
-## Technical Details
-
-### Interface for Recent Comparisons
-
+**Modified `handleUploadComplete` Function:**
 ```typescript
-interface RecentComparison {
-  id: string;
-  created_at: string;
-  startup_names: string[];
-  pitches: string[];
-  analyses: AnalysisResult[];
-  comparison_insights: any;
+// Split startups into chunks of 50
+const chunks = splitIntoChunks(startups, CHUNK_SIZE);
+let completedCount = 0;
+const allResults = [];
+
+for (const chunk of chunks) {
+  // Call edge function with this chunk
+  const { data, error } = await supabase.functions.invoke('analyze-bulk-startups', {
+    body: {
+      batchId: batch.id,
+      startups: chunk,
+      batchSize: 5,
+      appendResults: true  // NEW: tells backend to append to existing results
+    }
+  });
+  
+  completedCount += chunk.length;
+  allResults.push(...data.results);
+  
+  // Update local state for progress bar
+  setCurrentAnalysis(prev => ({
+    ...prev,
+    completed_startups: completedCount,
+    results: allResults
+  }));
+  
+  // Delay between chunks
+  if (completedCount < startups.length) {
+    await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_CHUNKS));
+  }
 }
 ```
 
-### Fetching Recent Comparisons
+### 2. Backend Changes (analyze-bulk-startups/index.ts)
 
+**Increase Validation Limit:**
 ```typescript
-const loadRecentComparisons = async () => {
-  if (!user) return;
-  
-  const { data, error } = await supabase
-    .from("comparison_analyses")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(5);
-    
-  if (!error && data) {
-    setRecentComparisons(data);
-  }
-};
+// Change from 100 to 100 per chunk (frontend handles overall 1000 limit)
+const validation = validateBulkAnalysisInput(body, 100, 50000, 200);
+// No change needed - 100 per request is fine with chunking
 ```
 
-### Loading a Historical Comparison
-
+**Add Append Mode:**
 ```typescript
-const loadHistoricalComparison = (comparison: RecentComparison) => {
-  // Restore pitch slots from saved data
-  const restoredPitches: PitchSlot[] = comparison.startup_names.map((name, index) => ({
-    id: index + 1,
-    name: name,
-    text: comparison.pitches[index] || "",
-    analysis: comparison.analyses[index] || null,
-    loading: false,
-  }));
+const { batchId, startups, batchSize, appendResults = false } = validation.data!;
+
+// When updating database, either replace or append results
+if (appendResults && batchId) {
+  // Fetch existing results and append new ones
+  const { data: existing } = await supabaseAuth
+    .from('bulk_analyses')
+    .select('results')
+    .eq('id', batchId)
+    .single();
   
-  setPitches(restoredPitches);
-  setComparisonInsights(comparison.comparison_insights);
+  const existingResults = existing?.results || [];
+  const combinedResults = [...existingResults, ...allResults];
   
-  toast({
-    title: "Comparison Loaded",
-    description: `Loaded comparison from ${new Date(comparison.created_at).toLocaleDateString()}`,
-  });
-};
+  await supabaseAuth
+    .from('bulk_analyses')
+    .update({
+      completed_startups: combinedResults.length,
+      results: combinedResults
+    })
+    .eq('id', batchId);
+}
 ```
 
-### UI Component
+### 3. Validation Schema Update (_shared/validation.ts)
+
+Add `appendResults` to the input interface:
+
+```typescript
+export interface BulkAnalysisInput {
+  batchId?: string;
+  startups: StartupEntry[];
+  batchSize?: number;
+  appendResults?: boolean;  // NEW
+}
+```
+
+### 4. Progress Bar Enhancement (AnalysisProgressBar.tsx)
+
+Update the estimated time calculation for larger batches:
+
+```typescript
+// More accurate estimation for chunked processing
+const estimatedSeconds = remaining * 2.5; // ~2.5 seconds per startup with chunking
+const estimatedMinutes = Math.ceil(estimatedSeconds / 60);
+```
+
+## Data Flow
 
 ```text
-<Card className="p-8 bg-card border-border shadow-lg mt-6">
-  <div className="flex items-center gap-3 mb-6">
-    <History className="h-6 w-6 text-primary" />
-    <h2 className="text-2xl font-bold text-foreground">Recent Comparisons</h2>
-  </div>
-
-  {recentComparisons.length === 0 ? (
-    <p className="text-muted-foreground text-center py-8">
-      No saved comparisons yet. Save one to see it here!
-    </p>
-  ) : (
-    <div className="space-y-3 max-h-[400px] overflow-y-auto">
-      {recentComparisons.map((comparison) => (
-        <Card
-          key={comparison.id}
-          className="p-4 cursor-pointer hover:bg-secondary/50 transition-all"
-          onClick={() => loadHistoricalComparison(comparison)}
-        >
-          <div className="flex justify-between items-start mb-2">
-            <div className="flex flex-wrap gap-2">
-              {comparison.startup_names.map((name, idx) => (
-                <Badge key={idx} variant="secondary">{name}</Badge>
-              ))}
-            </div>
-            <Badge variant="outline" className="ml-2 shrink-0">
-              {new Date(comparison.created_at).toLocaleDateString()}
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Click to load comparison
-          </p>
-        </Card>
-      ))}
-    </div>
-  )}
-</Card>
+┌──────────────────┐
+│  Upload Excel    │
+│  (1000 startups) │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  Create batch    │──────▶ Database: batch record created
+│  record in DB    │        status: 'processing'
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  Split into      │
+│  20 chunks of 50 │
+└────────┬─────────┘
+         │
+    ┌────┴────┐
+    ▼         ▼
+┌───────┐ ┌───────┐     
+│Chunk 1│ │Chunk 2│ ... (sequential processing)
+└───┬───┘ └───┬───┘
+    │         │
+    ▼         ▼
+┌───────────────────────┐
+│  Edge Function        │
+│  (processes 50)       │
+│  Updates DB with      │
+│  appended results     │
+└───────────────────────┘
+         │
+         ▼
+┌──────────────────┐
+│  All chunks done │
+│  status: complete│
+└──────────────────┘
+         │
+         ▼
+┌──────────────────┐
+│  Generate        │
+│  Comparison      │
+└──────────────────┘
 ```
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/Compare.tsx` | Add state, fetching, load function, and UI for recent comparisons |
+| `src/pages/BulkAnalysis.tsx` | Implement chunked processing loop in `handleUploadComplete` |
+| `supabase/functions/analyze-bulk-startups/index.ts` | Add `appendResults` mode for incremental updates |
+| `supabase/functions/_shared/validation.ts` | Add `appendResults` to `BulkAnalysisInput` interface |
+| `src/components/bulk/AnalysisProgressBar.tsx` | Update time estimation for large batches |
 
-## User Flow
+## Error Handling
 
-1. User navigates to Compare Startups page
-2. Recent Comparisons section loads and displays past saved comparisons
-3. User clicks on a past comparison
-4. The page populates:
-   - All pitch text areas with saved content
-   - All analysis results for each startup
-   - The comparison insights section
-5. User sees a toast confirmation: "Comparison Loaded"
-6. User can continue editing or export the loaded comparison
+**Per-Chunk Failures:**
+- If a chunk fails, log the error and continue with next chunk
+- Failed startups within a chunk are marked with `error: true` 
+- Final summary shows "X of Y startups analyzed successfully"
 
-## Considerations
+**Network Interruptions:**
+- Results are saved to database after each chunk
+- User can refresh page and see partial progress
+- "Resume" functionality (future enhancement)
 
-- **Limit to 5**: Only show the 5 most recent comparisons to keep the UI clean
-- **Loading State**: Show spinner while fetching recent comparisons
-- **Empty State**: Display friendly message when no comparisons exist
-- **Refresh After Save**: After saving a new comparison, refresh the recent comparisons list
+## Performance Estimates
+
+| Startups | Chunks | Estimated Time |
+|----------|--------|----------------|
+| 100 | 2 | ~2 minutes |
+| 500 | 10 | ~10 minutes |
+| 1000 | 20 | ~20 minutes |
+
+## UI Updates
+
+The progress bar will show real-time updates as each chunk completes:
+
+```text
+┌────────────────────────────────────────────────────┐
+│  ⏳ Analysis in Progress                           │
+│                                                    │
+│  Processing startups in batches...                 │
+│                                                    │
+│  ████████████████░░░░░░░░░░░░░░░  450 / 1000      │
+│                                                    │
+│  Currently processing: Chunk 10 of 20              │
+│  Estimated time remaining: ~12 minutes             │
+│                                                    │
+│  • Results saved after each batch                  │
+│  • You can safely leave and return later           │
+└────────────────────────────────────────────────────┘
+```
+
+## Backward Compatibility
+
+- Existing analyses with <100 startups work unchanged
+- No database schema changes required
+- `appendResults` defaults to `false` for existing API calls
+
