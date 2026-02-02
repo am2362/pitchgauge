@@ -1,176 +1,176 @@
 
 
-# Enhanced PDF Pitch Extraction with Intelligent Cleaning
+# Settings Page with Personal Profile Management
 
 ## Overview
 
-This plan adds a **text cleaning and structuring step** between raw PDF extraction and analysis. After extracting text from graphic-heavy PDFs, we'll use AI to clean, de-noise, and organize the content into a coherent pitch summary. Users will see both the cleaned summary and the full analysis.
+This plan adds a comprehensive **Settings page** where users can manage their personal profile, including:
+- Editing their display name
+- Changing their email address
+- Creating or changing their password
+
+The implementation leverages the existing `profiles` table and Supabase Auth APIs.
 
 ## Architecture Flow
 
 ```text
-┌─────────────────┐    ┌──────────────────┐    ┌───────────────────┐    ┌──────────────────┐
-│   PDF Upload    │───▶│  Text Extraction │───▶│   AI Cleaning     │───▶│   VC Analysis    │
-│  (parse-pdf)    │    │  (Vision/pdfjs)  │    │   & Structuring   │    │  (analyze-startup│
-└─────────────────┘    └──────────────────┘    └───────────────────┘    └──────────────────┘
-                                                        │
-                                                        ▼
-                                              ┌────────────────────┐
-                                              │ "Extracted & Cleaned│
-                                              │   Pitch Summary"   │
-                                              │ shown in UI output │
-                                              └────────────────────┘
+┌─────────────────┐    ┌──────────────────┐    ┌───────────────────┐
+│  Settings Page  │───▶│  Profile Section │───▶│  profiles table   │
+│  /settings      │    │  - Display Name  │    │  (full_name)      │
+└─────────────────┘    │  - Avatar (view) │    └───────────────────┘
+                       └──────────────────┘
+                              │
+                       ┌──────────────────┐    ┌───────────────────┐
+                       │  Email Section   │───▶│  Supabase Auth    │
+                       │  - Change Email  │    │  updateUser()     │
+                       └──────────────────┘    └───────────────────┘
+                              │
+                       ┌──────────────────┐    ┌───────────────────┐
+                       │ Password Section │───▶│  Supabase Auth    │
+                       │  - New Password  │    │  updateUser()     │
+                       │  - Confirm       │    └───────────────────┘
+                       └──────────────────┘
 ```
 
 ## Changes Required
 
-### 1. Update `parse-pdf` Edge Function
+### 1. Create Settings Page (`src/pages/Settings.tsx`)
 
-Add a new AI-powered cleaning step that runs after extraction (both standard and Vision AI methods).
+A new page with three main sections in a tabbed or card-based layout:
 
-**New cleaning prompt will:**
-- Remove noise (repeated words like "airbnb", watermarks, page numbers, symbols)
-- Group text fragments into logical sentences/paragraphs per slide
-- Preserve structure with slide numbers and headings
-- Output a coherent pitch summary ready for analysis
+**Profile Section:**
+- Load current profile data from `profiles` table
+- Editable display name field
+- Show current email (read-only display)
+- Save button to update `profiles.full_name`
 
-**Return format change:**
-```typescript
-{
-  text: string,           // Raw extracted text (for debugging)
-  cleanedText: string,    // AI-cleaned and structured text
-  pitchSummary: string,   // Coherent pitch summary for display
-  pages: number,
-  fileName: string,
-  method: "text_extraction" | "vision_ai",
-  slides?: Array<{        // Structured slide-by-slide breakdown
-    slideNumber: number,
-    heading?: string,
-    content: string
-  }>
-}
-```
+**Email Section:**
+- Input field for new email address
+- Confirmation of current password (security measure)
+- "Update Email" button using `supabase.auth.updateUser({ email })`
+- Note: User will receive confirmation email to both old and new addresses
 
-### 2. Update `document-parser.ts` Client
+**Password Section:**
+- Current password field (for verification - optional UX improvement)
+- New password field with validation (min 6 characters)
+- Confirm new password field
+- "Update Password" button using `supabase.auth.updateUser({ password })`
 
-Extend the `ParseResult` interface to include the cleaned text and pitch summary:
+### 2. Add Route to App.tsx
 
-```typescript
-interface ParseResult {
-  text: string;           // Raw text
-  cleanedText?: string;   // Cleaned/structured text
-  pitchSummary?: string;  // Human-readable summary
-  pages?: number;
-  fileName?: string;
-  slides?: Array<{
-    slideNumber: number;
-    heading?: string;
-    content: string;
-  }>;
-}
-```
+Register the new `/settings` route in the router configuration.
 
-### 3. Update `analyze-startup` Edge Function
+### 3. Add Settings Link to Navigation
 
-Modify the system prompt to:
-- Accept the cleaned text as the primary input
-- Include raw key phrases for additional context
-- Output a new `extractedPitchSummary` field in the analysis result
+Add a Settings button/link in the header of the main Index page (next to the existing Logout button).
 
-Add to the JSON response structure:
-```json
-{
-  "extractedPitchSummary": "The cleaned and structured version of the pitch that was analyzed...",
-  // ... existing fields
-}
-```
+### 4. Update Profile Data on Email Change
 
-### 4. Update Frontend (`Index.tsx`)
+When email is updated via Supabase Auth, also update the `profiles.email` column to keep them in sync.
 
-- Store the cleaned pitch summary from PDF parsing
-- Pass cleaned text (not raw) to the analysis function
-- Display "Extracted & Cleaned Pitch Summary" section in analysis results
-- Add a new tab or collapsible section showing the structured extraction
+## UI Design
 
-**New UI element (before analysis tabs):**
-```
-┌────────────────────────────────────────┐
-│ 📄 Extracted Pitch Summary             │
-│                                        │
-│ Slide 1: Company Overview              │
-│ Airbnb connects travelers with unique  │
-│ accommodations worldwide...            │
-│                                        │
-│ Slide 2: The Problem                   │
-│ Hotels are expensive and impersonal... │
-│ ...                                    │
-└────────────────────────────────────────┘
-```
+The settings page will follow the existing app design patterns:
+- Gradient background matching other pages
+- Card-based sections for each settings category
+- Consistent button styling
+- Toast notifications for success/error feedback
+- Loading states during API calls
 
-### 5. Update Analysis Result Interface
-
-Add new field to the `AnalysisResult` interface:
-
-```typescript
-interface AnalysisResult {
-  extractedPitchSummary?: string;  // NEW: Cleaned pitch summary
-  startupName?: string;
-  memo: string | Record<string, string>;
-  // ... existing fields
-}
+**Page Layout:**
+```text
+┌────────────────────────────────────────────────────────┐
+│  ← Back                     Settings                   │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  👤 Profile                                      │   │
+│  │                                                  │   │
+│  │  Display Name: [________________]                │   │
+│  │                                                  │   │
+│  │  Email: user@example.com (read-only)            │   │
+│  │                                                  │   │
+│  │                          [Save Changes]          │   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                        │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  ✉️ Change Email                                 │   │
+│  │                                                  │   │
+│  │  New Email: [________________]                   │   │
+│  │                                                  │   │
+│  │  A confirmation link will be sent to both       │   │
+│  │  your current and new email addresses.          │   │
+│  │                                                  │   │
+│  │                           [Update Email]         │   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                        │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  🔒 Change Password                              │   │
+│  │                                                  │   │
+│  │  New Password: [________________]                │   │
+│  │  Confirm Password: [________________]            │   │
+│  │  (Must be at least 6 characters)                │   │
+│  │                                                  │   │
+│  │                        [Update Password]         │   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                        │
+└────────────────────────────────────────────────────────┘
 ```
 
 ## Technical Details
 
-### AI Cleaning Prompt (in `parse-pdf`)
+### Profile Update Logic
 
-```text
-You are a pitch deck text cleaner. Given raw extracted text from a PDF pitch deck:
-
-1. REMOVE NOISE:
-   - Repeated company names used as watermarks
-   - Page numbers and navigation elements
-   - Meaningless symbols (e.g., "000000", "S", "L", stray letters)
-   - Repeated headers/footers
-   
-2. STRUCTURE BY SLIDE:
-   - Identify slide boundaries from context
-   - Extract headings/titles for each slide
-   - Group fragmented text into coherent sentences
-   
-3. OUTPUT FORMAT:
-   Return JSON with:
-   {
-     "pitchSummary": "A 2-3 paragraph executive summary of the entire pitch",
-     "slides": [
-       {
-         "slideNumber": 1,
-         "heading": "Company Overview",
-         "content": "Full cleaned text from this slide..."
-       }
-     ],
-     "cleanedText": "All cleaned slide content concatenated with slide markers"
-   }
+```typescript
+// Update display name in profiles table
+const { error } = await supabase
+  .from('profiles')
+  .update({ full_name: displayName })
+  .eq('id', user.id);
 ```
+
+### Email Update Flow
+
+1. User enters new email
+2. Call `supabase.auth.updateUser({ email: newEmail })`
+3. Supabase sends confirmation to both old and new email
+4. User must confirm from new email to complete change
+5. After confirmation, update `profiles.email` to keep in sync
+
+### Password Update Logic
+
+```typescript
+// Update password
+const { error } = await supabase.auth.updateUser({
+  password: newPassword
+});
+```
+
+### Validation
+
+- Display name: Required, max 100 characters
+- Email: Valid email format (using Zod)
+- Password: Minimum 6 characters, must match confirmation
 
 ### Error Handling
 
-- If cleaning fails, fall back to raw extracted text
-- Log cleaning errors but don't block the analysis
-- Always provide the raw text as backup
+- Show toast notifications for all outcomes
+- Handle Supabase-specific errors (e.g., "Email already in use")
+- Disable form during loading states
+- Clear sensitive fields after submission
 
-## Files to Modify
+## Files to Create/Modify
 
-| File | Changes |
-|------|---------|
-| `supabase/functions/parse-pdf/index.ts` | Add AI cleaning step after extraction |
-| `src/lib/document-parser.ts` | Extend interface, return cleaned text |
-| `supabase/functions/analyze-startup/index.ts` | Accept cleaned text, output pitch summary |
-| `src/pages/Index.tsx` | Display extracted pitch summary in results |
+| File | Action | Description |
+|------|--------|-------------|
+| `src/pages/Settings.tsx` | Create | New settings page with profile, email, and password sections |
+| `src/App.tsx` | Modify | Add `/settings` route |
+| `src/pages/Index.tsx` | Modify | Add Settings button to header navigation |
 
-## Estimated Token Usage
+## Security Considerations
 
-- Cleaning step: ~500 input + ~1000 output tokens per PDF
-- Uses the same `google/gemini-2.5-flash` model already in use
-- Falls back gracefully if AI limits are reached
+- All profile updates respect existing RLS policies (users can only update their own profile)
+- Password is never displayed, only updated
+- Email change requires confirmation from both addresses (Supabase built-in)
+- Form inputs are validated client-side before submission
 
