@@ -50,6 +50,15 @@ interface PitchSlot {
   loading: boolean;
 }
 
+interface RecentComparison {
+  id: string;
+  created_at: string;
+  startup_names: string[];
+  pitches: string[];
+  analyses: AnalysisResult[];
+  comparison_insights: any;
+}
+
 export default function Compare() {
   const [user, setUser] = useState<User | null>(null);
   const [pitches, setPitches] = useState<PitchSlot[]>([
@@ -65,9 +74,51 @@ export default function Compare() {
   const [isProcessingExcel, setIsProcessingExcel] = useState(false);
   const [editingNameId, setEditingNameId] = useState<number | null>(null);
   const [tempName, setTempName] = useState("");
+  const [recentComparisons, setRecentComparisons] = useState<RecentComparison[]>([]);
+  const [isLoadingRecent, setIsLoadingRecent] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const loadRecentComparisons = async () => {
+    if (!user) return;
+    
+    setIsLoadingRecent(true);
+    try {
+      const { data, error } = await supabase
+        .from("comparison_analyses")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+        
+      if (!error && data) {
+        setRecentComparisons(data as unknown as RecentComparison[]);
+      }
+    } catch (error) {
+      console.error("Failed to load recent comparisons:", error);
+    } finally {
+      setIsLoadingRecent(false);
+    }
+  };
+
+  const loadHistoricalComparison = (comparison: RecentComparison) => {
+    const restoredPitches: PitchSlot[] = comparison.startup_names.map((name, index) => ({
+      id: index + 1,
+      name: name,
+      text: comparison.pitches[index] || "",
+      analysis: comparison.analyses[index] || null,
+      loading: false,
+    }));
+    
+    setPitches(restoredPitches);
+    setComparisonInsights(comparison.comparison_insights);
+    
+    toast({
+      title: "Comparison Loaded",
+      description: `Loaded comparison from ${new Date(comparison.created_at).toLocaleDateString()}`,
+    });
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -88,6 +139,12 @@ export default function Compare() {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  useEffect(() => {
+    if (user) {
+      loadRecentComparisons();
+    }
+  }, [user]);
 
   const addPitch = () => {
     setPitches([...pitches, {
@@ -387,6 +444,9 @@ export default function Compare() {
         title: "Saved",
         description: "Comparison saved to your history",
       });
+
+      // Refresh recent comparisons list
+      loadRecentComparisons();
     } catch (error: any) {
       toast({
         title: "Save Failed",
@@ -671,6 +731,48 @@ export default function Compare() {
             </div>
           </Card>
         )}
+
+        {/* Recent Comparisons Section */}
+        <Card className="p-8 bg-card border-border shadow-lg mt-6">
+          <div className="flex items-center gap-3 mb-6">
+            <History className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-bold text-foreground">Recent Comparisons</h2>
+          </div>
+
+          {isLoadingRecent ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : recentComparisons.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              No saved comparisons yet. Analyze startups and save to see them here!
+            </p>
+          ) : (
+            <div className="space-y-3 max-h-[400px] overflow-y-auto">
+              {recentComparisons.map((comparison) => (
+                <Card
+                  key={comparison.id}
+                  className="p-4 cursor-pointer hover:bg-secondary/50 transition-all border-border"
+                  onClick={() => loadHistoricalComparison(comparison)}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex flex-wrap gap-2">
+                      {comparison.startup_names.map((name, idx) => (
+                        <Badge key={idx} variant="secondary">{name}</Badge>
+                      ))}
+                    </div>
+                    <Badge variant="outline" className="ml-2 shrink-0">
+                      {new Date(comparison.created_at).toLocaleDateString()}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Click to load comparison
+                  </p>
+                </Card>
+              ))}
+            </div>
+          )}
+        </Card>
 
         {/* Comparison Results Dialog */}
         <Dialog open={showComparisonDialog} onOpenChange={setShowComparisonDialog}>
