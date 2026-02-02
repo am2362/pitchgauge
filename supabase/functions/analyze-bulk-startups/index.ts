@@ -17,7 +17,6 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     // Authentication check
     const authHeader = req.headers.get('Authorization');
@@ -84,8 +83,7 @@ serve(async (req) => {
 
     console.log(`Processing ${startups.length} startups in batches of ${batchSize}`);
 
-    // Use SERVICE_ROLE_KEY only after ownership verification
-    const supabaseAdmin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+    // Use authenticated client throughout - RLS policies enforce ownership
     const allResults: any[] = [];
 
     // Process in batches to avoid rate limits
@@ -134,9 +132,9 @@ serve(async (req) => {
       const batchResults = await Promise.all(batchPromises);
       allResults.push(...batchResults);
 
-      // Update progress in database (ownership already verified)
+      // Update progress in database - RLS policies ensure user can only update their own records
       if (batchId) {
-        await supabaseAdmin
+        await supabaseAuth
           .from('bulk_analyses')
           .update({
             completed_startups: allResults.length,
@@ -151,9 +149,9 @@ serve(async (req) => {
       }
     }
 
-    // Mark as completed (ownership already verified)
+    // Mark as completed - RLS policies ensure user can only update their own records
     if (batchId) {
-      await supabaseAdmin
+      await supabaseAuth
         .from('bulk_analyses')
         .update({
           status: 'completed',
