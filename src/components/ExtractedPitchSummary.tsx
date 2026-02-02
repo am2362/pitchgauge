@@ -1,16 +1,39 @@
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, FileText, Sparkles } from "lucide-react";
+import { ChevronDown, FileText, Sparkles, FileDown, FileJson } from "lucide-react";
 import { useState } from "react";
 import type { SlideContent } from "@/lib/document-parser";
+import { exportPitchSummaryToPDF } from "@/lib/pdf-export";
 
 interface ExtractedPitchSummaryProps {
   pitchSummary: string;
   slides?: SlideContent[];
+  startupName?: string;
 }
 
-const ExtractedPitchSummary = ({ pitchSummary, slides }: ExtractedPitchSummaryProps) => {
+const ExtractedPitchSummary = ({ pitchSummary, slides, startupName }: ExtractedPitchSummaryProps) => {
   const [isOpen, setIsOpen] = useState(true);
+
+  const handleExportJSON = () => {
+    const exportData = {
+      pitchSummary,
+      slides: slides || [],
+      exportedAt: new Date().toISOString(),
+      startupName: startupName || undefined,
+    };
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+    const fileName = `pitch-summary${startupName ? `-${startupName.replace(/\s+/g, '_')}` : ''}-${Date.now()}.json`;
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', fileName);
+    linkElement.click();
+  };
+
+  const handleExportPDF = () => {
+    exportPitchSummaryToPDF(pitchSummary, slides, startupName);
+  };
 
   return (
     <Card className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
@@ -25,7 +48,27 @@ const ExtractedPitchSummary = ({ pitchSummary, slides }: ExtractedPitchSummaryPr
               <p className="text-sm text-muted-foreground">AI-structured content from PDF</p>
             </div>
           </div>
-          <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={(e) => { e.stopPropagation(); handleExportJSON(); }}
+              className="h-8"
+            >
+              <FileJson className="h-4 w-4 mr-1" />
+              JSON
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={(e) => { e.stopPropagation(); handleExportPDF(); }}
+              className="h-8"
+            >
+              <FileDown className="h-4 w-4 mr-1" />
+              PDF
+            </Button>
+            <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          </div>
         </CollapsibleTrigger>
         
         <CollapsibleContent className="mt-4 space-y-4">
