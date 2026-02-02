@@ -62,13 +62,14 @@ serve(async (req) => {
       );
     }
 
-    const { batchId, startups, batchSize = useGeminiDirect ? 5 : 2 } = validation.data!;
+    const { batchId, startups, batchSize = useGeminiDirect ? 5 : 2, appendResults = false } = validation.data!;
 
     // Verify batch ownership before processing
+    let existingResults: any[] = [];
     if (batchId) {
       const { data: batch, error: batchError } = await supabaseAuth
         .from('bulk_analyses')
-        .select('id, user_id')
+        .select('id, user_id, results')
         .eq('id', batchId)
         .eq('user_id', userId)
         .single();
@@ -78,6 +79,12 @@ serve(async (req) => {
           JSON.stringify({ error: 'Batch not found or unauthorized' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // If appending, get existing results
+      if (appendResults && batch.results) {
+        existingResults = batch.results as any[];
+        console.log(`Append mode: ${existingResults.length} existing results`);
       }
     }
 
@@ -134,11 +141,12 @@ serve(async (req) => {
 
       // Update progress in database - RLS policies ensure user can only update their own records
       if (batchId) {
+        const combinedResults = [...existingResults, ...allResults];
         await supabaseAuth
           .from('bulk_analyses')
           .update({
-            completed_startups: allResults.length,
-            results: allResults
+            completed_startups: combinedResults.length,
+            results: combinedResults
           })
           .eq('id', batchId);
       }
@@ -149,20 +157,11 @@ serve(async (req) => {
       }
     }
 
-    // Mark as completed - RLS policies ensure user can only update their own records
-    if (batchId) {
-      await supabaseAuth
-        .from('bulk_analyses')
-        .update({
-          status: 'completed',
-          completed_startups: allResults.length,
-          results: allResults
-        })
-        .eq('id', batchId);
-    }
+    // Combine results and return (don't mark as completed - frontend handles final status)
+    const combinedResults = [...existingResults, ...allResults];
 
     return new Response(
-      JSON.stringify({ results: allResults }),
+      JSON.stringify({ results: allResults, totalProcessed: combinedResults.length }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

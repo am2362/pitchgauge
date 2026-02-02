@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, Eye, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,20 @@ import { InvestmentRankingsTable } from '@/components/bulk/InvestmentRankingsTab
 import { SectorBreakdownChart } from '@/components/bulk/SectorBreakdownChart';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import type { BulkAnalysis, ComparisonReport } from '@/types/bulk-analysis';
+import type { BulkAnalysis, ComparisonReport, BulkAnalysisResult } from '@/types/bulk-analysis';
 import { exportBulkAnalysisToExcel } from '@/lib/bulk-excel-export';
+
+// Chunked processing constants
+const CHUNK_SIZE = 50;
+const DELAY_BETWEEN_CHUNKS = 2000;
+
+function splitIntoChunks<T>(array: T[], chunkSize: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
 
 export default function BulkAnalysis() {
   const navigate = useNavigate();
@@ -121,18 +133,95 @@ export default function BulkAnalysis() {
 
       if (insertError) throw insertError;
 
-      setCurrentAnalysis(batch as unknown as BulkAnalysis);
+      const batchRecord = batch as unknown as BulkAnalysis;
+      setCurrentAnalysis(batchRecord);
 
-      // Start analysis
-      const { error: functionError } = await supabase.functions.invoke('analyze-bulk-startups', {
-        body: {
-          batchId: batch.id,
-          startups: startups,
-          batchSize: 2
+      // Split startups into chunks for processing
+      const chunks = splitIntoChunks(startups, CHUNK_SIZE);
+      let completedCount = 0;
+      const allResults: BulkAnalysisResult[] = [];
+      let hasError = false;
+
+      for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+        const chunk = chunks[chunkIndex];
+        
+        try {
+          const { data, error: functionError } = await supabase.functions.invoke('analyze-bulk-startups', {
+            body: {
+              batchId: batch.id,
+              startups: chunk,
+              batchSize: 5,
+              appendResults: chunkIndex > 0 // Append for all chunks after the first
+            }
+          });
+
+          if (functionError) {
+            console.error(`Chunk ${chunkIndex + 1} failed:`, functionError);
+            hasError = true;
+            continue; // Continue with next chunk
+          }
+
+          if (data?.results) {
+            completedCount += chunk.length;
+            allResults.push(...data.results);
+
+            // Update local state for progress bar
+            setCurrentAnalysis(prev => prev ? {
+              ...prev,
+              completed_startups: completedCount,
+              results: allResults
+            } : null);
+          }
+        } catch (chunkError) {
+          console.error(`Chunk ${chunkIndex + 1} error:`, chunkError);
+          hasError = true;
+          continue; // Continue with next chunk
         }
-      });
 
-      if (functionError) throw functionError;
+        // Delay between chunks (except for last chunk)
+        if (chunkIndex < chunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_CHUNKS));
+        }
+      }
+
+      // Final status update
+      await supabase
+        .from('bulk_analyses')
+        .update({
+          status: 'completed',
+          completed_startups: allResults.length,
+          results: allResults as unknown as any
+        })
+        .eq('id', batch.id);
+
+      // Update local state to completed
+      setCurrentAnalysis(prev => prev ? {
+        ...prev,
+        status: 'completed',
+        completed_startups: allResults.length,
+        results: allResults
+      } : null);
+
+      // Show completion toast
+      if (hasError) {
+        toast({
+          title: "Analysis Complete",
+          description: `Analyzed ${allResults.length} of ${startups.length} startups. Some chunks failed.`,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Analysis Complete",
+          description: `Successfully analyzed ${allResults.length} startups.`
+        });
+      }
+
+      // Generate comparison report
+      if (allResults.length > 0) {
+        await generateComparison(batch.id);
+      }
+
+      loadHistory();
 
     } catch (error) {
       console.error('Error starting analysis:', error);

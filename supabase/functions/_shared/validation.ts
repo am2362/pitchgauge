@@ -98,6 +98,7 @@ export interface BulkAnalysisInput {
   batchId?: string;
   startups: StartupEntry[];
   batchSize?: number;
+  appendResults?: boolean;
 }
 
 export function validateBulkAnalysisInput(

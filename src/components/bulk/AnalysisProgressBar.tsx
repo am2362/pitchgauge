@@ -12,8 +12,9 @@ export function AnalysisProgressBar({ completed, total, currentStartup }: Analys
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
   const remaining = total - completed;
   
-  // Estimate: ~3 seconds per startup (including batch delays)
-  const estimatedMinutes = Math.ceil((remaining * 3) / 60);
+  // Estimate: ~2.5 seconds per startup with chunked processing
+  const estimatedSeconds = remaining * 2.5;
+  const estimatedMinutes = Math.ceil(estimatedSeconds / 60);
 
   return (
     <Card>
