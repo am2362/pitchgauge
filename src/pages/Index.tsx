@@ -60,6 +60,12 @@ interface AnalysisResult {
   };
 }
 
+interface AnalysisMetadata {
+  sourceType: 'pdf' | 'text';
+  extractedPitchSummary?: string;
+  extractedSlides?: SlideContent[];
+}
+
 interface HistoryItem {
   id: string;
   created_at: string;
@@ -70,6 +76,8 @@ interface HistoryItem {
   follow_up_questions: any;
   investment_thesis: string;
   benchmarking: any;
+  metadata?: any; // JSON from database, cast to AnalysisMetadata when needed
+  startup_name?: string;
 }
 
 const SAMPLE_PITCHES = {
@@ -270,6 +278,13 @@ const Index = () => {
       const startupNameToSave = analysisData.startupName || startupName.trim() || extractStartupName(pitchInput) || null;
       console.log('Saving with startup_name:', startupNameToSave);
       
+      // Build metadata with source type and extracted pitch data
+      const metadata: AnalysisMetadata = {
+        sourceType: extractedPitchSummary ? 'pdf' : 'text',
+        ...(extractedPitchSummary && { extractedPitchSummary }),
+        ...(extractedSlides && { extractedSlides }),
+      };
+      
       const { error } = await supabase
         .from('startup_analyses')
         .insert([{
@@ -282,6 +297,7 @@ const Index = () => {
           follow_up_questions: analysisData.followUpQuestions as any,
           investment_thesis: analysisData.investmentThesis ? JSON.stringify(analysisData.investmentThesis) : null,
           benchmarking: analysisData.benchmarking as any,
+          metadata: metadata as any,
         }]);
       
       if (error) throw error;
@@ -368,9 +384,20 @@ const Index = () => {
       followUpQuestions: item.follow_up_questions,
       investmentThesis: item.investment_thesis ? JSON.parse(item.investment_thesis) : undefined,
       benchmarking: item.benchmarking,
+      startupName: item.startup_name,
     };
     setResult(analysisResult);
     setPitchText(item.pitch_text);
+    
+    // Restore extracted pitch summary if it was from a PDF, otherwise clear it
+    if (item.metadata?.sourceType === 'pdf' && item.metadata?.extractedPitchSummary) {
+      setExtractedPitchSummary(item.metadata.extractedPitchSummary);
+      setExtractedSlides(item.metadata.extractedSlides || null);
+    } else {
+      // Clear for text-based analyses to avoid showing stale data
+      setExtractedPitchSummary(null);
+      setExtractedSlides(null);
+    }
     
     toast({
       title: "Analysis loaded",

@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import type { SlideContent } from '@/lib/document-parser';
 
 interface ScoreItem {
   score: number;
@@ -226,4 +227,71 @@ export const exportComparisonToPDF = (comparisonData: ComparisonData) => {
   });
 
   pdf.save(`Comparison_${comparisonData.startupNames.join('_vs_')}_${Date.now()}.pdf`);
+};
+
+export const exportPitchSummaryToPDF = (
+  pitchSummary: string, 
+  slides?: SlideContent[], 
+  startupName?: string
+) => {
+  const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const margin = 20;
+  let yPosition = 20;
+
+  const addText = (text: string, fontSize: number = 10, isBold: boolean = false) => {
+    if (yPosition > 270) {
+      pdf.addPage();
+      yPosition = 20;
+    }
+    pdf.setFontSize(fontSize);
+    pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+    const lines = pdf.splitTextToSize(text, pageWidth - 2 * margin);
+    pdf.text(lines, margin, yPosition);
+    yPosition += lines.length * fontSize * 0.5 + 5;
+  };
+
+  const addSection = (title: string, content: string) => {
+    addText(title, 14, true);
+    addText(content, 10, false);
+    yPosition += 5;
+  };
+
+  // Header
+  const title = startupName 
+    ? `Extracted Pitch Summary: ${startupName}` 
+    : 'Extracted Pitch Summary';
+  addText(title, 18, true);
+  addText(`Generated: ${new Date().toLocaleDateString()}`, 10, false);
+  yPosition += 10;
+
+  // Executive Summary
+  addSection('Executive Summary', pitchSummary);
+
+  // Slide-by-slide breakdown
+  if (slides && slides.length > 0) {
+    yPosition += 5;
+    addText('Slide-by-Slide Breakdown', 16, true);
+    yPosition += 5;
+
+    slides.forEach((slide) => {
+      if (yPosition > 250) {
+        pdf.addPage();
+        yPosition = 20;
+      }
+      
+      const slideTitle = slide.heading 
+        ? `Slide ${slide.slideNumber}: ${slide.heading}`
+        : `Slide ${slide.slideNumber}`;
+      addText(slideTitle, 12, true);
+      addText(slide.content, 10, false);
+      yPosition += 3;
+    });
+  }
+
+  // Save PDF
+  const fileName = startupName 
+    ? `${startupName.replace(/\s+/g, '_')}_Pitch_Summary_${Date.now()}.pdf`
+    : `Pitch_Summary_${Date.now()}.pdf`;
+  pdf.save(fileName);
 };
