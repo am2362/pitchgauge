@@ -44,7 +44,10 @@ serve(async (req) => {
     const userId = claimsData.claims.sub;
     console.log(`Authenticated user: ${userId}`);
 
-    const useGeminiDirect = !!GEMINI_API_KEY;
+    // Prefer the Lovable AI gateway for stability.
+    // GEMINI_API_KEY may be missing/expired and can cause full-batch failures.
+    // (We keep the direct Gemini path available for future use, but default to gateway.)
+    const useGeminiDirect = false;
     
     if (!useGeminiDirect && !LOVABLE_API_KEY) {
       console.error('Neither GEMINI_API_KEY nor LOVABLE_API_KEY is configured');
@@ -62,7 +65,7 @@ serve(async (req) => {
       );
     }
 
-    const { batchId, startups, batchSize = useGeminiDirect ? 5 : 2, appendResults = false } = validation.data!;
+    const { batchId, startups, batchSize = useGeminiDirect ? 3 : 1, appendResults = false } = validation.data!;
 
     // Verify batch ownership before processing
     let existingResults: any[] = [];
@@ -151,9 +154,9 @@ serve(async (req) => {
           .eq('id', batchId);
       }
 
-      // Add delay between batches - shorter delay with direct Gemini API
+      // Add a small delay between batches to reduce rate-limit pressure.
       if (i + batchSize < startups.length) {
-        await new Promise(resolve => setTimeout(resolve, useGeminiDirect ? 2000 : 5000));
+        await new Promise(resolve => setTimeout(resolve, useGeminiDirect ? 750 : 1200));
       }
     }
 
@@ -257,11 +260,12 @@ Return ONLY valid JSON with this structure:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-2.5-flash-lite',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Startup Name: ${name}\n\nPitch:\n${pitch}` }
         ],
+        max_tokens: 2000,
         temperature: 0,
         top_p: 1
       }),
@@ -284,11 +288,11 @@ Return ONLY valid JSON with this structure:
       }
     }
     
-    // Handle rate limiting with exponential backoff
-    if (response.status === 429 && retryCount < 3) {
-      const delays = [10000, 30000, 60000]; // 10s, 30s, 60s
-      const delay = delays[retryCount];
-      console.log(`Rate limited. Retrying ${name} in ${delay/1000}s (attempt ${retryCount + 1}/3)`);
+    // Handle rate limiting with *short* backoff.
+    // Long sleeps inside a single request can cause the whole function call to time out (appears as "Load failed" in the browser).
+    if (response.status === 429 && retryCount < 1) {
+      const delay = 8000;
+      console.log(`Rate limited. Retrying ${name} in ${delay / 1000}s (attempt ${retryCount + 1}/2)`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return analyzeStartup(name, pitch, apiKey, useGeminiDirect, retryCount + 1);
     }

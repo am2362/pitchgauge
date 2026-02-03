@@ -13,8 +13,13 @@ import type { BulkAnalysis, ComparisonReport, BulkAnalysisResult } from '@/types
 import { exportBulkAnalysisToExcel } from '@/lib/bulk-excel-export';
 
 // Chunked processing constants
-const CHUNK_SIZE = 50;
-const DELAY_BETWEEN_CHUNKS = 2000;
+// Keep chunks small to avoid backend timeouts and free-tier rate limits.
+const CHUNK_SIZE = 8;
+const DELAY_BETWEEN_CHUNKS = 8000;
+
+function isSuccessfulBulkResult(r: any): boolean {
+  return !(r?.scores?.overall === 0 && r?.summary === "Failed to analyze this startup");
+}
 
 function splitIntoChunks<T>(array: T[], chunkSize: number): T[][] {
   const chunks: T[][] = [];
@@ -74,9 +79,7 @@ export default function BulkAnalysis() {
         
         if (data.status === 'completed') {
           const results = data.results as any[] || [];
-          const successfulCount = results.filter((r: any) => 
-            !(r.scores?.overall === 0 && r.summary === "Failed to analyze this startup")
-          ).length;
+          const successfulCount = results.filter(isSuccessfulBulkResult).length;
           const totalCount = results.length;
           
           if (successfulCount < totalCount) {
@@ -92,8 +95,8 @@ export default function BulkAnalysis() {
             });
           }
           
-          // Auto-generate comparison report if it doesn't exist
-          if (data.results && !data.comparison_report) {
+          // Auto-generate comparison report only if we have at least 1 successful analysis.
+          if (successfulCount > 0 && data.results && !data.comparison_report) {
             await generateComparison(batchId);
           }
           
@@ -146,24 +149,36 @@ export default function BulkAnalysis() {
         const chunk = chunks[chunkIndex];
         
         try {
-          const { data, error: functionError } = await supabase.functions.invoke('analyze-bulk-startups', {
-            body: {
-              batchId: batch.id,
-              startups: chunk,
-              batchSize: 5,
-              appendResults: chunkIndex > 0 // Append for all chunks after the first
-            }
-          });
+          // Retry transient invoke failures (often shown as "Load failed" in the browser).
+          let invokeData: any | null = null;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            const { data, error: functionError } = await supabase.functions.invoke('analyze-bulk-startups', {
+              body: {
+                batchId: batch.id,
+                startups: chunk,
+                batchSize: 1,
+                appendResults: chunkIndex > 0 // Append for all chunks after the first
+              }
+            });
 
-          if (functionError) {
-            console.error(`Chunk ${chunkIndex + 1} failed:`, functionError);
-            hasError = true;
-            continue; // Continue with next chunk
+            if (!functionError && data?.results) {
+              invokeData = data;
+              break;
+            }
+
+            const delay = 2000 * (attempt + 1);
+            console.warn(`Chunk ${chunkIndex + 1} invoke attempt ${attempt + 1} failed; retrying in ${delay}ms`, functionError);
+            await new Promise(resolve => setTimeout(resolve, delay));
           }
 
-          if (data?.results) {
-            completedCount += chunk.length;
-            allResults.push(...data.results);
+          if (!invokeData?.results) {
+            hasError = true;
+            continue;
+          }
+
+          if (invokeData?.results) {
+            completedCount += invokeData.results.length;
+            allResults.push(...invokeData.results);
 
             // Update local state for progress bar
             setCurrentAnalysis(prev => prev ? {
@@ -203,21 +218,29 @@ export default function BulkAnalysis() {
       } : null);
 
       // Show completion toast
-      if (hasError) {
+      const successfulCount = allResults.filter(isSuccessfulBulkResult).length;
+      const failedCount = startups.length - successfulCount;
+      if (successfulCount === 0) {
+        toast({
+          title: "No Successful Analyses",
+          description: "All startups failed to analyze (usually due to rate limits/timeouts). Try again in a few minutes or with fewer startups per run.",
+          variant: "destructive"
+        });
+      } else if (hasError || failedCount > 0) {
         toast({
           title: "Analysis Complete",
-          description: `Analyzed ${allResults.length} of ${startups.length} startups. Some chunks failed.`,
+          description: `Successfully analyzed ${successfulCount} of ${startups.length} startups. ${failedCount} failed (likely rate limits).`,
           variant: "default"
         });
       } else {
         toast({
           title: "Analysis Complete",
-          description: `Successfully analyzed ${allResults.length} startups.`
+          description: `Successfully analyzed ${successfulCount} startups.`
         });
       }
 
       // Generate comparison report
-      if (allResults.length > 0) {
+      if (successfulCount > 0) {
         await generateComparison(batch.id);
       }
 
@@ -244,9 +267,7 @@ export default function BulkAnalysis() {
       if (!batch?.results) return;
 
       // Filter out failed analyses before generating comparison
-      const successfulResults = (batch.results as any[]).filter((r: any) => 
-        !(r.scores?.overall === 0 && r.summary === "Failed to analyze this startup")
-      );
+      const successfulResults = (batch.results as any[]).filter(isSuccessfulBulkResult);
 
       if (successfulResults.length === 0) {
         toast({
@@ -337,7 +358,10 @@ export default function BulkAnalysis() {
     if (data) {
       setCurrentAnalysis(data as unknown as BulkAnalysis);
       if (data.status === 'completed' && data.results && !data.comparison_report) {
-        await generateComparison(batchId);
+        const successfulCount = (data.results as any[]).filter(isSuccessfulBulkResult).length;
+        if (successfulCount > 0) {
+          await generateComparison(batchId);
+        }
       }
     }
   };
@@ -395,6 +419,22 @@ export default function BulkAnalysis() {
                 <InvestmentRankingsTable rankings={currentAnalysis.comparison_report.investmentRankings} />
                 <SectorBreakdownChart sectorBreakdown={currentAnalysis.comparison_report.sectorBreakdown} />
               </>
+            )}
+
+            {!currentAnalysis.comparison_report && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Comparison Report Unavailable</CardTitle>
+                  <CardDescription>
+                    No successful analyses were produced, so we can’t generate a comparison report.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    This is usually caused by AI rate limits/timeouts during high-volume runs. Try again in a few minutes or run a smaller batch.
+                  </p>
+                </CardContent>
+              </Card>
             )}
           </div>
         )}
