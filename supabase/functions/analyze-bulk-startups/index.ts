@@ -269,8 +269,20 @@ Return ONLY valid JSON with this structure:
   }
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('AI API error:', response.status);
+    const errorText = await response.text().catch(() => '');
+    // Log a short, safe snippet to help debugging without blowing up logs.
+    const snippet = errorText ? errorText.slice(0, 800) : '(no body)';
+    console.error('AI API error:', response.status, snippet);
+
+    // If Gemini is misconfigured / model access is denied / key invalid, fall back to Lovable AI.
+    // This prevents "all analyses failed" when GEMINI_API_KEY exists but is not usable.
+    if (useGeminiDirect && (response.status === 400 || response.status === 401 || response.status === 403)) {
+      const fallbackKey = Deno.env.get('LOVABLE_API_KEY');
+      if (fallbackKey) {
+        console.log(`Falling back to Lovable AI gateway for ${name} after Gemini ${response.status}`);
+        return analyzeStartup(name, pitch, fallbackKey, false, retryCount);
+      }
+    }
     
     // Handle rate limiting with exponential backoff
     if (response.status === 429 && retryCount < 3) {
