@@ -14,8 +14,12 @@ import { exportBulkAnalysisToExcel } from '@/lib/bulk-excel-export';
 
 // Chunked processing constants
 // Keep chunks small to avoid backend timeouts and free-tier rate limits.
-const CHUNK_SIZE = 8;
-const DELAY_BETWEEN_CHUNKS = 8000;
+// We intentionally run *very* small chunks to avoid per-request timeouts.
+// Longer cooldowns happen *between* requests (frontend), not inside a single backend invocation.
+const CHUNK_SIZE = 1;
+const INITIAL_COOLDOWN_MS = 6000;
+const MIN_COOLDOWN_MS = 4000;
+const MAX_COOLDOWN_MS = 60000;
 
 function isSuccessfulBulkResult(r: any): boolean {
   return !(r?.scores?.overall === 0 && r?.summary === "Failed to analyze this startup");
@@ -27,6 +31,35 @@ function splitIntoChunks<T>(array: T[], chunkSize: number): T[][] {
     chunks.push(array.slice(i, i + chunkSize));
   }
   return chunks;
+}
+
+function createFailedBulkResult(startupName: string, errorType: string, errorMessage: string): BulkAnalysisResult {
+  return {
+    startupName,
+    errorType,
+    errorStatus: null,
+    errorMessage,
+    sector: 'Unknown',
+    tags: [],
+    metrics: {
+      team: 'Analysis failed',
+      product: 'Analysis failed',
+      market: 'Analysis failed',
+      traction: 'Analysis failed',
+      funding: 'Analysis failed',
+      businessModel: 'Analysis failed'
+    },
+    scores: {
+      team: 0,
+      product: 0,
+      market: 0,
+      traction: 0,
+      funding: 0,
+      businessModel: 0,
+      overall: 0
+    },
+    summary: 'Failed to analyze this startup'
+  };
 }
 
 export default function BulkAnalysis() {
@@ -144,6 +177,8 @@ export default function BulkAnalysis() {
       let completedCount = 0;
       const allResults: BulkAnalysisResult[] = [];
       let hasError = false;
+      let cooldownMs = INITIAL_COOLDOWN_MS;
+      let successStreak = 0;
 
       for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
         const chunk = chunks[chunkIndex];
@@ -151,6 +186,7 @@ export default function BulkAnalysis() {
         try {
           // Retry transient invoke failures (often shown as "Load failed" in the browser).
           let invokeData: any | null = null;
+          let lastInvokeError: any = null;
           for (let attempt = 0; attempt < 3; attempt++) {
             const { data, error: functionError } = await supabase.functions.invoke('analyze-bulk-startups', {
               body: {
@@ -166,36 +202,86 @@ export default function BulkAnalysis() {
               break;
             }
 
+            lastInvokeError = functionError;
+
             const delay = 2000 * (attempt + 1);
             console.warn(`Chunk ${chunkIndex + 1} invoke attempt ${attempt + 1} failed; retrying in ${delay}ms`, functionError);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
 
+          const chunkResults: BulkAnalysisResult[] = invokeData?.results
+            ? (invokeData.results as BulkAnalysisResult[])
+            : chunk.map((s) => createFailedBulkResult(
+                s.name,
+                'invoke_failed',
+                lastInvokeError?.message || 'Function invoke failed'
+              ));
+
           if (!invokeData?.results) {
             hasError = true;
-            continue;
+            // Persist placeholders so progress/history stays consistent even if this chunk never reached the backend.
+            await supabase
+              .from('bulk_analyses')
+              .update({
+                completed_startups: completedCount + chunkResults.length,
+                results: [...allResults, ...chunkResults] as unknown as any
+              })
+              .eq('id', batch.id);
           }
 
-          if (invokeData?.results) {
-            completedCount += invokeData.results.length;
-            allResults.push(...invokeData.results);
+          completedCount += chunkResults.length;
+          allResults.push(...chunkResults);
 
-            // Update local state for progress bar
-            setCurrentAnalysis(prev => prev ? {
-              ...prev,
-              completed_startups: completedCount,
-              results: allResults
-            } : null);
+          // Adaptive cooldown: if we hit rate limits or failures, slow down; otherwise cautiously speed up.
+          const rateLimitedCount = chunkResults.filter(r => (r as any)?.errorType === 'rate_limited').length;
+          const failedCount = chunkResults.filter(r => !isSuccessfulBulkResult(r)).length;
+
+          if (!invokeData?.results || rateLimitedCount > 0) {
+            cooldownMs = Math.min(MAX_COOLDOWN_MS, Math.round(cooldownMs * 1.7) + 2000);
+            successStreak = 0;
+          } else if (failedCount > 0) {
+            cooldownMs = Math.min(MAX_COOLDOWN_MS, Math.round(cooldownMs * 1.25) + 1000);
+            successStreak = 0;
+          } else {
+            successStreak += 1;
+            if (successStreak >= 3) {
+              cooldownMs = Math.max(MIN_COOLDOWN_MS, Math.round(cooldownMs * 0.92));
+            }
           }
+
+          // Update local state for progress bar
+          setCurrentAnalysis(prev => prev ? {
+            ...prev,
+            completed_startups: completedCount,
+            results: allResults
+          } : null);
         } catch (chunkError) {
           console.error(`Chunk ${chunkIndex + 1} error:`, chunkError);
           hasError = true;
-          continue; // Continue with next chunk
+
+          const fallbackResults = chunk.map((s) => createFailedBulkResult(
+            s.name,
+            'invoke_failed',
+            chunkError instanceof Error ? chunkError.message : 'Unknown chunk error'
+          ));
+
+          completedCount += fallbackResults.length;
+          allResults.push(...fallbackResults);
+
+          setCurrentAnalysis(prev => prev ? {
+            ...prev,
+            completed_startups: completedCount,
+            results: allResults
+          } : null);
+
+          cooldownMs = Math.min(MAX_COOLDOWN_MS, Math.round(cooldownMs * 1.7) + 2000);
+          successStreak = 0;
         }
 
         // Delay between chunks (except for last chunk)
         if (chunkIndex < chunks.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_CHUNKS));
+          const jitter = Math.round(Math.random() * 800);
+          await new Promise(resolve => setTimeout(resolve, cooldownMs + jitter));
         }
       }
 
