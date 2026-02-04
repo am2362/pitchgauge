@@ -166,11 +166,9 @@ serve(async (req) => {
       }
     }
 
-    // Combine results and return (don't mark as completed - frontend handles final status)
-    const combinedResults = [...existingResults, ...allResults];
-
+    // Return only the newly-analysed results (frontend tracks cumulative count via polling/state).
     return new Response(
-      JSON.stringify({ results: allResults, totalProcessed: combinedResults.length }),
+      JSON.stringify({ results: allResults, totalProcessed: allResults.length }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

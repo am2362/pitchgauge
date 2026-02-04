@@ -282,14 +282,10 @@ export default function BulkAnalysis() {
         }
       }
 
-      // Final status update
+      // Final status update (results already persisted incrementally by the backend RPC).
       await supabase
         .from('bulk_analyses')
-        .update({
-          status: 'completed',
-          completed_startups: allResults.length,
-          results: allResults as unknown as any
-        })
+        .update({ status: 'completed' })
         .eq('id', batch.id);
 
       // Update local state to completed
