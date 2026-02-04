@@ -219,14 +219,11 @@ export default function BulkAnalysis() {
 
           if (!invokeData?.results) {
             hasError = true;
-            // Persist placeholders so progress/history stays consistent even if this chunk never reached the backend.
-            await supabase
-              .from('bulk_analyses')
-              .update({
-                completed_startups: completedCount + chunkResults.length,
-                results: [...allResults, ...chunkResults] as unknown as any
-              })
-              .eq('id', batch.id);
+            // Persist placeholders via RPC to keep payloads small.
+            await supabase.rpc('append_bulk_analysis_results', {
+              p_batch_id: batch.id,
+              p_results: chunkResults
+            });
           }
 
           completedCount += chunkResults.length;
