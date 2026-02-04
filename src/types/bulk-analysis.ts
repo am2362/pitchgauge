@@ -24,6 +24,10 @@ export interface BulkAnalysisResult {
   metrics: BulkStartupMetrics;
   scores: BulkStartupScores;
   summary: string;
+  /** Optional diagnostics from backend functions */
+  errorType?: string;
+  errorStatus?: number | null;
+  errorMessage?: string;
 }
 
 export interface ScoreComparisonTable {

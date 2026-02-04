@@ -12,8 +12,9 @@ export function AnalysisProgressBar({ completed, total, currentStartup }: Analys
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
   const remaining = total - completed;
   
-  // Estimate: ~2.5 seconds per startup with chunked processing
-  const estimatedSeconds = remaining * 2.5;
+  // Estimate: bulk analysis is intentionally throttled to avoid AI rate limits.
+  // This is a rough estimate and will vary depending on cooldown/backoff.
+  const estimatedSeconds = remaining * 9;
   const estimatedMinutes = Math.ceil(estimatedSeconds / 60);
 
   return (
@@ -51,8 +52,8 @@ export function AnalysisProgressBar({ completed, total, currentStartup }: Analys
         )}
 
         <div className="text-xs text-muted-foreground">
-          <p>• Analysis runs in the background</p>
-          <p>• You can safely leave this page and return later</p>
+          <p>• Keep this tab open while processing</p>
+          <p>• Results are saved as they’re generated</p>
         </div>
       </CardContent>
     </Card>
