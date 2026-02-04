@@ -147,16 +147,15 @@ serve(async (req) => {
       const batchResults = await Promise.all(batchPromises);
       allResults.push(...batchResults);
 
-      // Update progress in database - RLS policies ensure user can only update their own records
-      if (batchId) {
-        const combinedResults = [...existingResults, ...allResults];
-        await supabaseAuth
-          .from('bulk_analyses')
-          .update({
-            completed_startups: combinedResults.length,
-            results: combinedResults
-          })
-          .eq('id', batchId);
+      // Append results incrementally using the new DB function (keeps payloads small).
+      if (batchId && batchResults.length > 0) {
+        const { error: appendErr } = await supabaseAuth.rpc('append_bulk_analysis_results', {
+          p_batch_id: batchId,
+          p_results: batchResults
+        });
+        if (appendErr) {
+          console.error('append_bulk_analysis_results error', appendErr);
+        }
       }
 
       // Add a small delay between batches to reduce rate-limit pressure.
@@ -167,11 +166,9 @@ serve(async (req) => {
       }
     }
 
-    // Combine results and return (don't mark as completed - frontend handles final status)
-    const combinedResults = [...existingResults, ...allResults];
-
+    // Return only the newly-analysed results (frontend tracks cumulative count via polling/state).
     return new Response(
-      JSON.stringify({ results: allResults, totalProcessed: combinedResults.length }),
+      JSON.stringify({ results: allResults, totalProcessed: allResults.length }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

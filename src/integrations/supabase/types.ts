@@ -166,7 +166,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      append_bulk_analysis_results: {
+        Args: { p_batch_id: string; p_results: Json }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
