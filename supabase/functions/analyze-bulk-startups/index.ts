@@ -104,16 +104,21 @@ serve(async (req) => {
       const batchPromises = batch.map(async (startup) => {
         try {
           const result = await analyzeStartup(
-            startup.name, 
-            startup.pitch, 
+            startup.name,
+            startup.pitch,
             useGeminiDirect ? GEMINI_API_KEY! : LOVABLE_API_KEY!,
-            useGeminiDirect
+            useGeminiDirect,
           );
           return result;
         } catch (error) {
           console.error(`Error analyzing ${startup.name}:`, error);
+          const kind = (error as any)?.kind;
+          const status = (error as any)?.status;
           return {
             startupName: startup.name,
+            errorType: kind === 'rate_limited' ? 'rate_limited' : 'ai_error',
+            errorStatus: typeof status === 'number' ? status : null,
+            errorMessage: kind === 'rate_limited' ? 'Rate limited' : 'Analysis failed',
             error: 'Analysis failed',
             sector: 'Unknown',
             tags: [],
@@ -155,8 +160,10 @@ serve(async (req) => {
       }
 
       // Add a small delay between batches to reduce rate-limit pressure.
+      // Keep per-invocation sleeps small so the whole request doesn't time out.
+      // Frontend handles longer cooldowns between invocations.
       if (i + batchSize < startups.length) {
-        await new Promise(resolve => setTimeout(resolve, useGeminiDirect ? 750 : 1200));
+        await new Promise(resolve => setTimeout(resolve, useGeminiDirect ? 200 : 250));
       }
     }
 
@@ -181,7 +188,15 @@ serve(async (req) => {
   }
 });
 
-async function analyzeStartup(name: string, pitch: string, apiKey: string, useGeminiDirect = false, retryCount = 0): Promise<any> {
+class RateLimitError extends Error {
+  kind = 'rate_limited' as const;
+  status = 429;
+  constructor(message = 'Rate limited') {
+    super(message);
+  }
+}
+
+async function analyzeStartup(name: string, pitch: string, apiKey: string, useGeminiDirect = false): Promise<any> {
   const systemPrompt = `You are analyzing a startup pitch. Extract structured information and be objective, concise, and deterministic.
 
 EXTRACT:
@@ -278,23 +293,20 @@ Return ONLY valid JSON with this structure:
     const snippet = errorText ? errorText.slice(0, 800) : '(no body)';
     console.error('AI API error:', response.status, snippet);
 
+    // IMPORTANT: Do not do long sleeps/retries inside a single request.
+    // That causes whole-chunk timeouts and looks like "random" failures.
+    if (response.status === 429) {
+      throw new RateLimitError('Rate limited');
+    }
+
     // If Gemini is misconfigured / model access is denied / key invalid, fall back to Lovable AI.
     // This prevents "all analyses failed" when GEMINI_API_KEY exists but is not usable.
     if (useGeminiDirect && (response.status === 400 || response.status === 401 || response.status === 403)) {
       const fallbackKey = Deno.env.get('LOVABLE_API_KEY');
       if (fallbackKey) {
         console.log(`Falling back to Lovable AI gateway for ${name} after Gemini ${response.status}`);
-        return analyzeStartup(name, pitch, fallbackKey, false, retryCount);
+        return analyzeStartup(name, pitch, fallbackKey, false);
       }
-    }
-    
-    // Handle rate limiting with *short* backoff.
-    // Long sleeps inside a single request can cause the whole function call to time out (appears as "Load failed" in the browser).
-    if (response.status === 429 && retryCount < 1) {
-      const delay = 8000;
-      console.log(`Rate limited. Retrying ${name} in ${delay / 1000}s (attempt ${retryCount + 1}/2)`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return analyzeStartup(name, pitch, apiKey, useGeminiDirect, retryCount + 1);
     }
     
     throw new Error('AI service error');
