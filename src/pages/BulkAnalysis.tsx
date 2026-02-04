@@ -222,7 +222,7 @@ export default function BulkAnalysis() {
             // Persist placeholders via RPC to keep payloads small.
             await supabase.rpc('append_bulk_analysis_results', {
               p_batch_id: batch.id,
-              p_results: chunkResults
+              p_results: JSON.parse(JSON.stringify(chunkResults))
             });
           }
 
