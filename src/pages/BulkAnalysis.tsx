@@ -183,6 +183,18 @@ export default function BulkAnalysis() {
       for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
         const chunk = chunks[chunkIndex];
         
+        // Refresh session before each chunk to prevent mid-processing 401s
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !sessionData.session) {
+          toast({
+            title: "Session Expired",
+            description: "Your session has expired. Please sign in again to continue.",
+            variant: "destructive"
+          });
+          navigate('/auth');
+          return;
+        }
+        
         try {
           // Retry transient invoke failures (often shown as "Load failed" in the browser).
           let invokeData: any | null = null;
