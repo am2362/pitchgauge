@@ -69,8 +69,47 @@ export default function BulkAnalysis() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
   useEffect(() => {
-    loadHistory();
-  }, []);
+    let isActive = true;
+
+    const init = async () => {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (!isActive) return;
+
+      if (sessionError || !sessionData.session?.user) {
+        setIsLoadingHistory(false);
+        toast({
+          title: 'Sign in required',
+          description: 'Please sign in to view and manage your bulk analysis history.',
+          variant: 'destructive',
+        });
+        navigate('/auth');
+        return;
+      }
+
+      await loadHistory(sessionData.session.user.id);
+    };
+
+    init();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isActive) return;
+      if (session?.user) {
+        loadHistory(session.user.id);
+      } else {
+        setHistory([]);
+        setCurrentAnalysis(null);
+        setIsLoadingHistory(false);
+        navigate('/auth');
+      }
+    });
+
+    return () => {
+      isActive = false;
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   useEffect(() => {
     if (currentAnalysis?.status === 'processing') {
@@ -81,11 +120,28 @@ export default function BulkAnalysis() {
     }
   }, [currentAnalysis]);
 
-  const loadHistory = async () => {
+  const loadHistory = async (userId?: string) => {
+    setIsLoadingHistory(true);
     try {
+      let uid = userId;
+      if (!uid) {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData.user) {
+          toast({
+            title: 'Sign in required',
+            description: 'Please sign in again to view your history.',
+            variant: 'destructive',
+          });
+          navigate('/auth');
+          return;
+        }
+        uid = userData.user.id;
+      }
+
       const { data, error } = await supabase
         .from('bulk_analyses')
         .select('*')
+        .eq('user_id', uid)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -93,6 +149,11 @@ export default function BulkAnalysis() {
       setHistory((data as unknown as BulkAnalysis[]) || []);
     } catch (error) {
       console.error('Error loading history:', error);
+      toast({
+        title: 'Could not load history',
+        description: 'Please refresh the page and try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoadingHistory(false);
     }
