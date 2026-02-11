@@ -1,16 +1,1 @@
-project_id = "wmednfcnjnlrtcoolkbu"
-
-[functions.analyze-startup]
-verify_jwt = false
-
-[functions.compare-startups]
-verify_jwt = false
-
-[functions.analyze-bulk-startups]
-verify_jwt = false
-
-[functions.generate-bulk-comparison]
-verify_jwt = false
-
-[functions.parse-pdf]
-verify_jwt = false
+project_id = "rxppdvnzcnfnbpjyscti"
