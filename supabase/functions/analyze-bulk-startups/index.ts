@@ -209,8 +209,24 @@ EXTRACT:
    - Primary sector (FinTech, HealthTech, EdTech, E-commerce, SaaS, etc.)
    - Sub-sector/technology tags (AI, B2B, Mobile, Blockchain, etc.)
 
-3. SCORES (0-10 integer, be objective):
-   - Team, Product, Market, Traction, Funding, Business Model, Overall
+3. SCORES (1-10 integer, apply consistently):
+
+SCORING RUBRIC:
+General Scale:
+- 1-3: Critical weakness / missing / fatal flaw (high risk of failure)
+- 4-6: Mediocre / average / partial (uncompelling; needs major fixes)
+- 7-8: Strong / good evidence (attractive, competitive)
+- 9-10: Outstanding / exceptional (top decile, clear advantage)
+
+Category-Specific:
+- Team: 1-3 no info/inexperienced/red flags; 4-6 some experience but gaps; 7-8 proven founders (exits, domain expertise); 9-10 exceptional track record
+- Product: 1-3 generic/no moat; 4-6 some features, easily replicable; 7-8 clear unique value/IP; 9-10 defensible moat (patents, network effects)
+- Market: 1-3 tiny TAM (<$500M)/shrinking; 4-6 decent ($1B-$10B)/slow growth; 7-8 large/growing ($10B+); 9-10 massive ($50B+ with tailwinds)
+- Traction: 1-3 none/anecdotal; 4-6 early signals, not scaling; 7-8 strong metrics (growing revenue/users); 9-10 explosive/validated PMF
+- Funding: 1-3 no funding/unclear use; 4-6 some funding but concerns; 7-8 well-funded with clear plan; 9-10 strong investors, efficient capital use
+- Business Model: 1-3 unclear/unsustainable; 4-6 viable but thin margins; 7-8 scalable, high-margin potential; 9-10 proven, recurring, capital-efficient
+
+ALWAYS include reasoning explaining the exact score (e.g., why 5 not 6). Be brutally honest.
 
 4. SUMMARY (1-3 sentences):
    - What they do + problem solved

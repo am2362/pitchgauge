@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Loader2, FileText, BarChart, AlertTriangle, MessageSquare, TrendingUp, History, FileInput, LogOut, GitCompare, FileDown, Settings } from "lucide-react";
+import { Upload, Loader2, FileText, BarChart, AlertTriangle, MessageSquare, TrendingUp, History, FileInput, LogOut, GitCompare, FileDown, Settings, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -539,6 +539,10 @@ const Index = () => {
               <Button variant="outline" onClick={() => navigate("/bulk-analysis")}>
                 <BarChart className="h-4 w-4 mr-2" />
                 Bulk Analysis
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/scoring-rubric")}>
+                <BookOpen className="h-4 w-4 mr-2" />
+                Scoring Rubric
               </Button>
               <Button variant="outline" onClick={() => navigate("/settings")}>
                 <Settings className="h-4 w-4 mr-2" />

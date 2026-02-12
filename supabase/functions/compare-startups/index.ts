@@ -67,6 +67,12 @@ serve(async (req) => {
     // Build comparison prompt
     const comparisonPrompt = `You are a venture capital analyst. Compare the following startup analyses and provide insights.
 
+SCORING CONTEXT (use this rubric when interpreting and comparing scores):
+- 1-3: Critical weakness / missing / fatal flaw (high risk of failure)
+- 4-6: Mediocre / average / partial (uncompelling; needs major fixes)
+- 7-8: Strong / good evidence (attractive, competitive)
+- 9-10: Outstanding / exceptional (top decile, clear advantage)
+
 Startups being compared: ${startupNames.join(', ')}
 
 ${analyses.map((analysis: any, idx: number) => `
