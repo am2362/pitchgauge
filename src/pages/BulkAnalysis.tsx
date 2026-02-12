@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Eye, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, Eye, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BulkUploadCard } from '@/components/bulk/BulkUploadCard';
@@ -11,14 +11,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import type { BulkAnalysis, ComparisonReport, BulkAnalysisResult } from '@/types/bulk-analysis';
 import { exportBulkAnalysisToExcel } from '@/lib/bulk-excel-export';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 // Chunked processing constants
 // Keep chunks small to avoid backend timeouts and free-tier rate limits.
 // We intentionally run *very* small chunks to avoid per-request timeouts.
 // Longer cooldowns happen *between* requests (frontend), not inside a single backend invocation.
 const CHUNK_SIZE = 1;
-const INITIAL_COOLDOWN_MS = 6000;
-const MIN_COOLDOWN_MS = 4000;
+const INITIAL_COOLDOWN_MS = 8000;
+const MIN_COOLDOWN_MS = 6000;
 const MAX_COOLDOWN_MS = 60000;
 
 function isSuccessfulBulkResult(r: any): boolean {
@@ -67,6 +68,7 @@ export default function BulkAnalysis() {
   const [currentAnalysis, setCurrentAnalysis] = useState<BulkAnalysis | null>(null);
   const [history, setHistory] = useState<BulkAnalysis[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -455,6 +457,95 @@ export default function BulkAnalysis() {
     }
   };
 
+  const handleRetryFailed = async () => {
+    if (!currentAnalysis?.results || !currentAnalysis.id) return;
+    
+    const failedResults = currentAnalysis.results.filter(r => !isSuccessfulBulkResult(r));
+    if (failedResults.length === 0) return;
+
+    setIsRetrying(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { navigate('/auth'); return; }
+
+      // Fetch the original pitches from metadata or re-use names with empty pitches
+      const { data: batch } = await supabase
+        .from('bulk_analyses')
+        .select('metadata')
+        .eq('id', currentAnalysis.id)
+        .single();
+
+      const originalPitches: Record<string, string> = (batch?.metadata as any)?.pitches || {};
+
+      const startupsToRetry = failedResults.map(r => ({
+        name: r.startupName,
+        pitch: originalPitches[r.startupName] || r.startupName
+      }));
+
+      const chunks = splitIntoChunks(startupsToRetry, CHUNK_SIZE);
+      const retryResults: BulkAnalysisResult[] = [];
+      let cooldownMs = INITIAL_COOLDOWN_MS * 1.5; // Longer cooldown for retries
+
+      for (let ci = 0; ci < chunks.length; ci++) {
+        const chunk = chunks[ci];
+        await supabase.auth.getSession(); // refresh token
+
+        let invokeData: any = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data, error } = await supabase.functions.invoke('analyze-bulk-startups', {
+            body: { batchId: currentAnalysis.id, startups: chunk, batchSize: 1, appendResults: true }
+          });
+          if (!error && data?.results) { invokeData = data; break; }
+          await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+        }
+
+        const chunkResults: BulkAnalysisResult[] = invokeData?.results
+          ? invokeData.results
+          : chunk.map(s => createFailedBulkResult(s.name, 'retry_failed', 'Retry failed'));
+
+        retryResults.push(...chunkResults);
+
+        if (ci < chunks.length - 1) {
+          await new Promise(r => setTimeout(r, cooldownMs + Math.random() * 800));
+        }
+      }
+
+      // Merge: replace failed entries with retry results
+      const retryMap = new Map(retryResults.map(r => [r.startupName, r]));
+      const mergedResults = currentAnalysis.results.map(r => {
+        const retried = retryMap.get(r.startupName);
+        return retried && isSuccessfulBulkResult(retried) ? retried : r;
+      });
+
+      // Update DB with merged results
+      await supabase
+        .from('bulk_analyses')
+        .update({ results: JSON.parse(JSON.stringify(mergedResults)), comparison_report: null })
+        .eq('id', currentAnalysis.id);
+
+      setCurrentAnalysis(prev => prev ? { ...prev, results: mergedResults, comparison_report: null } : null);
+
+      // Regenerate comparison
+      await generateComparison(currentAnalysis.id);
+
+      const newSuccessful = mergedResults.filter(isSuccessfulBulkResult).length;
+      const stillFailed = mergedResults.length - newSuccessful;
+      toast({
+        title: 'Retry Complete',
+        description: stillFailed > 0
+          ? `${newSuccessful} of ${mergedResults.length} now successful. ${stillFailed} still failed.`
+          : `All ${newSuccessful} startups analyzed successfully!`
+      });
+
+      loadHistory();
+    } catch (error) {
+      console.error('Retry failed:', error);
+      toast({ title: 'Retry Failed', description: 'Could not retry failed analyses.', variant: 'destructive' });
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
   const handleExport = async (batch: BulkAnalysis) => {
     if (!batch.results) return;
     try {
@@ -540,11 +631,25 @@ export default function BulkAnalysis() {
           />
         )}
 
-        {currentAnalysis?.status === 'completed' && currentAnalysis.results && (
+        {currentAnalysis?.status === 'completed' && currentAnalysis.results && (() => {
+          const failedResults = currentAnalysis.results.filter(r => !isSuccessfulBulkResult(r));
+          const successfulCount = currentAnalysis.results.length - failedResults.length;
+          return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Analysis Results</h2>
               <div className="flex gap-2">
+                {failedResults.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleRetryFailed()}
+                    disabled={isRetrying}
+                    className="gap-2"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
+                    Retry {failedResults.length} Failed
+                  </Button>
+                )}
                 <Button onClick={() => handleExport(currentAnalysis)} className="gap-2">
                   <Download className="h-4 w-4" />
                   Export to Excel
@@ -554,6 +659,26 @@ export default function BulkAnalysis() {
                 </Button>
               </div>
             </div>
+
+            {failedResults.length > 0 && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>{failedResults.length} startup{failedResults.length > 1 ? 's' : ''} failed analysis</AlertTitle>
+                <AlertDescription>
+                  <p className="mb-2">
+                    {successfulCount} of {currentAnalysis.results.length} startups were analyzed successfully.
+                    Failed startups are usually caused by AI rate limits. Click "Retry Failed" to re-analyze them.
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {failedResults.map(r => (
+                      <span key={r.startupName} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-destructive/10 text-destructive">
+                        {r.startupName}
+                      </span>
+                    ))}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
 
             {currentAnalysis.comparison_report && (
               <>
@@ -589,7 +714,8 @@ export default function BulkAnalysis() {
               </Card>
             )}
           </div>
-        )}
+          );
+        })()}
 
         <Card>
           <CardHeader>

@@ -54,7 +54,7 @@ export function SectorBreakdownChart({ sectorBreakdown }: SectorBreakdownChartPr
         </ResponsiveContainer>
 
         <div className="mt-4 grid grid-cols-2 gap-4">
-          {data.slice(0, 6).map((item, idx) => (
+          {data.map((item, idx) => (
             <div key={item.sector} className="flex items-center gap-2">
               <div 
                 className="w-3 h-3 rounded-full" 

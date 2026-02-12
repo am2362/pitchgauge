@@ -193,7 +193,7 @@ class RateLimitError extends Error {
   }
 }
 
-async function analyzeStartup(name: string, pitch: string, apiKey: string, useGeminiDirect = false): Promise<any> {
+async function analyzeStartup(name: string, pitch: string, apiKey: string, useGeminiDirect = false, retryCount = 0): Promise<any> {
   const systemPrompt = `You are analyzing a startup pitch. Extract structured information and be objective, concise, and deterministic.
 
 EXTRACT:
@@ -286,18 +286,21 @@ Return ONLY valid JSON with this structure:
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
-    // Log a short, safe snippet to help debugging without blowing up logs.
     const snippet = errorText ? errorText.slice(0, 800) : '(no body)';
     console.error('AI API error:', response.status, snippet);
 
-    // IMPORTANT: Do not do long sleeps/retries inside a single request.
-    // That causes whole-chunk timeouts and looks like "random" failures.
+    // Retry with exponential backoff on 429 (rate limit)
     if (response.status === 429) {
-      throw new RateLimitError('Rate limited');
+      const retryAttempt = (retryCount ?? 0);
+      if (retryAttempt < 3) {
+        const backoffMs = Math.pow(2, retryAttempt + 1) * 1000; // 2s, 4s, 8s
+        console.log(`Rate limited for ${name}, retry ${retryAttempt + 1}/3 after ${backoffMs}ms`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+        return analyzeStartup(name, pitch, apiKey, useGeminiDirect, retryAttempt + 1);
+      }
+      throw new RateLimitError('Rate limited after 3 retries');
     }
 
-    // If Gemini is misconfigured / model access is denied / key invalid, fall back to Lovable AI.
-    // This prevents "all analyses failed" when GEMINI_API_KEY exists but is not usable.
     if (useGeminiDirect && (response.status === 400 || response.status === 401 || response.status === 403)) {
       const fallbackKey = Deno.env.get('LOVABLE_API_KEY');
       if (fallbackKey) {
