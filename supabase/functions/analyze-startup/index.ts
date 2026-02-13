@@ -106,7 +106,7 @@ Return this exact JSON structure:
 
 {
   "startupName": "REQUIRED: Extract company name from pitch. Look in first few lines. Infer from context if needed. Return null only if impossible.",
-  "memo": "Format as:\n\nTeam Quality\nX/10\n[one factual sentence]\n\nMarket Size\nX/10\n[one factual sentence]\n\nProduct Differentiation\nX/10\n[one factual sentence]\n\nTraction\nX/10\n[one factual sentence]\n\nBusiness Model\nX/10\n[one factual sentence]\n\nCompetitive Landscape\nX/10\n[one factual sentence]",
+  "memo": "A 2-3 sentence executive summary of the startup's overall investment potential. Cover the strongest aspect, the biggest risk, and whether the startup is worth further diligence. Do NOT repeat individual category scores here.",
   "scorecard": {
     "team": { "score": 1-10, "reasoning": "1 factual sentence", "detailedExplanation": "2 factual sentences" },
     "marketSize": { "score": 1-10, "reasoning": "1 factual sentence", "detailedExplanation": "2 factual sentences" },
@@ -151,6 +151,8 @@ Category-Specific:
 - Traction: 1-3 none/anecdotal; 4-6 early signals, not scaling; 7-8 strong metrics (growing revenue/users); 9-10 explosive/validated PMF
 - Business Model: 1-3 unclear/unsustainable; 4-6 viable but thin margins; 7-8 scalable, high-margin potential; 9-10 proven, recurring, capital-efficient
 - Competitive Landscape: 1-3 saturated/no barriers; 4-6 competitive but some edge; 7-8 differentiated position; 9-10 minimal competition or dominant potential
+
+MISSING DATA RULE: If the pitch provides NO information about a category, score it 1 with reasoning "No information provided in pitch." Do NOT infer, assume, or guess. Only score based on what is explicitly stated.
 
 ALWAYS include reasoning explaining the exact score (e.g., why 5 not 6). Be brutally honest for early-stage pitches.`
           },
