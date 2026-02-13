@@ -1,53 +1,42 @@
 
-
-# Fix: Missing Data Scoring and Memo/Scorecard Overlap
+# Add "Single Pitch Analysis" Button to Top Navigation
 
 ## Problem
-1. When a pitch provides no information about a metric (e.g., no team details), the AI still assigns arbitrary scores instead of defaulting to 1.
-2. The "Memo" and "Scorecard" tabs show nearly identical content -- both list the same 6 categories with scores and reasoning.
+The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
 
 ## Solution
+Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-### 1. Enforce "1 mark only" rule for missing data in all prompts
-**Files:**
-- `supabase/functions/analyze-startup/index.ts`
-- `supabase/functions/analyze-bulk-startups/index.ts`
-- `supabase/functions/compare-startups/index.ts`
+## Implementation Details
 
-Add a clear rule to the system prompt:
+### File: `src/pages/Index.tsx`
 
+**What to change:**
+1. Add a new import for `FileText` icon (already imported on line 8)
+2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
+3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
+4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
+
+**Button placement:**
+- Insert as the **first button** in the top nav (line 530), before the Compare button
+- Use `FileText` icon (already imported)
+- Text: "Single Pitch Analysis"
+- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
+
+**Technical approach:**
 ```text
-MISSING DATA RULE: If the pitch provides NO information about a category, score it 1 with reasoning "No information provided in pitch." Do NOT infer, assume, or guess. Only score based on what is explicitly stated.
+1. Add useRef hook to create a ref for the pitch input card
+2. In the button's onClick, check if user is on "/" page
+   - If on "/", scroll to the ref using scrollIntoView()
+   - If not on "/", navigate to "/"
+3. Attach the ref to the Card element containing "Input Pitch"
 ```
 
-This will be added right after the scoring rubric in each edge function.
+## Files to Modify
+- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
-### 2. Transform memo into a brief executive summary
-**File:** `supabase/functions/analyze-startup/index.ts`
-
-Change the `memo` field in the prompt from repeating the 6 category scores to:
-
-```text
-"memo": "A 2-3 sentence executive summary of the startup's overall investment potential. Cover the strongest aspect, the biggest risk, and whether the startup is worth further diligence. Do NOT repeat individual category scores here."
-```
-
-### 3. Update the frontend memo tab label and display
-**File:** `src/pages/Index.tsx`
-
-- Rename the "Memo" tab to "Summary"
-- The display logic already handles string memos well, so no structural change needed -- just the label
-
-### 4. Update bulk analysis prompt similarly
-**File:** `supabase/functions/analyze-bulk-startups/index.ts`
-
-Apply the same memo change (brief summary instead of repeated scores) and missing data rule.
-
-## Files Modified
-- `supabase/functions/analyze-startup/index.ts` -- add missing data rule, change memo format
-- `supabase/functions/analyze-bulk-startups/index.ts` -- add missing data rule, change memo format
-- `supabase/functions/compare-startups/index.ts` -- add missing data rule
-- `src/pages/Index.tsx` -- rename Memo tab to Summary
-
-## Notes
-- Existing saved analyses will still display correctly since the memo field already supports string format
-- The scorecard remains the detailed breakdown; the summary becomes a quick investment perspective
+## Expected Result
+- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
+- Clicking it from any page navigates to "/"
+- Clicking it while already on "/" scrolls smoothly to the pitch input form
+- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
