@@ -722,7 +722,7 @@ const Index = () => {
             <Tabs defaultValue="scorecard" className="w-full">
               <TabsList className="grid w-full grid-cols-6 mb-8">
                 <TabsTrigger value="scorecard">Scorecard</TabsTrigger>
-                <TabsTrigger value="memo">Memo</TabsTrigger>
+                <TabsTrigger value="memo">Summary</TabsTrigger>
                 <TabsTrigger value="risks">Red Flags</TabsTrigger>
                 <TabsTrigger value="questions">Questions</TabsTrigger>
                 <TabsTrigger value="thesis">Thesis</TabsTrigger>

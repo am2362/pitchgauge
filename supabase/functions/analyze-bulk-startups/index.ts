@@ -226,6 +226,8 @@ Category-Specific:
 - Funding: 1-3 no funding/unclear use; 4-6 some funding but concerns; 7-8 well-funded with clear plan; 9-10 strong investors, efficient capital use
 - Business Model: 1-3 unclear/unsustainable; 4-6 viable but thin margins; 7-8 scalable, high-margin potential; 9-10 proven, recurring, capital-efficient
 
+MISSING DATA RULE: If the pitch provides NO information about a category, score it 1 with reasoning "No information provided in pitch." Do NOT infer, assume, or guess. Only score based on what is explicitly stated.
+
 ALWAYS include reasoning explaining the exact score (e.g., why 5 not 6). Be brutally honest.
 
 4. SUMMARY (1-3 sentences):

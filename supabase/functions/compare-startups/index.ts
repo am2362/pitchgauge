@@ -73,6 +73,8 @@ SCORING CONTEXT (use this rubric when interpreting and comparing scores):
 - 7-8: Strong / good evidence (attractive, competitive)
 - 9-10: Outstanding / exceptional (top decile, clear advantage)
 
+MISSING DATA RULE: If a startup's pitch provided NO information about a category, its score should be 1. Do NOT infer or assume missing data. Only evaluate based on what is explicitly stated.
+
 Startups being compared: ${startupNames.join(', ')}
 
 ${analyses.map((analysis: any, idx: number) => `
