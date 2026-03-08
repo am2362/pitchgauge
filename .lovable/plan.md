@@ -1,42 +1,43 @@
 
-# Add "Single Pitch Analysis" Button to Top Navigation
+
+# Match Live Comparison Output to Demo Format
 
 ## Problem
-The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
+The live Compare page (`Compare.tsx`) displays results in a different format than the demo (`DemoCompare.tsx`). The demo has a cleaner visual layout with ranking cards, accordion score breakdowns with progress bars, and per-startup strength/weakness cards. The live page uses a table-based layout inside a dialog.
 
-## Solution
-Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
+## Key Differences to Resolve
 
-## Implementation Details
+| Section | Live (Current) | Demo (Target) |
+|---------|---------------|---------------|
+| Rankings | Badge + text list | Visual cards with `#rank`, overall score, top strengths |
+| Score Breakdown | Table with collapsible cells | Accordion per startup with colored progress bars + reasoning |
+| Strengths/Weaknesses | Two-column grid (all strengths vs all weaknesses) | Per-startup cards with both strengths and weaknesses together |
+| Recommendation | Green box in dialog | Highlighted card with primary border |
+| Layout | Results in a Dialog popup | Results shown inline on page (and optionally in dialog) |
 
-### File: `src/pages/Index.tsx`
+## Changes
 
-**What to change:**
-1. Add a new import for `FileText` icon (already imported on line 8)
-2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
-3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
-4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
+### `src/pages/Compare.tsx`
 
-**Button placement:**
-- Insert as the **first button** in the top nav (line 530), before the Compare button
-- Use `FileText` icon (already imported)
-- Text: "Single Pitch Analysis"
-- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
+1. **Inline results section** (lines 617-688): Replace the current compact `comparisonInsights` card with the full demo-style layout:
+   - Rankings section with Trophy icon, rank numbers, overall score, top strengths
+   - Detailed Score Breakdown using Accordion per startup with progress bars and reasoning
+   - Per-startup Strengths & Weaknesses cards (ThumbsUp/ThumbsDown icons)
+   - Overall Recommendation highlighted card
 
-**Technical approach:**
-```text
-1. Add useRef hook to create a ref for the pitch input card
-2. In the button's onClick, check if user is on "/" page
-   - If on "/", scroll to the ref using scrollIntoView()
-   - If not on "/", navigate to "/"
-3. Attach the ref to the Card element containing "Input Pitch"
-```
+2. **Dialog content** (lines 832-1074): Update the dialog to use the same demo-style layout:
+   - Replace the table-based score comparison with Accordion + progress bars
+   - Replace the two-column strengths/weaknesses grid with per-startup cards
+   - Keep the dialog for "View Full Results" but make it match the demo visual style
 
-## Files to Modify
-- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
+3. **Add imports**: `Trophy`, `ThumbsUp`, `ThumbsDown`, `ArrowRight` from lucide-react; `Accordion` components from accordion UI
 
-## Expected Result
-- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
-- Clicking it from any page navigates to "/"
-- Clicking it while already on "/" scrolls smoothly to the pitch input form
-- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
+4. **Remove**: The old inline comparison table (lines 719-788) since scores will now be shown in the accordion format within the results sections
+
+5. **Helper function**: Add `getScoreBarColor()` matching the demo (green >= 8, blue >= 6, orange otherwise)
+
+### No changes needed to:
+- `DemoCompare.tsx` — already has the target format
+- `demo-data.ts` — already has the data
+- Edge functions — output format from AI doesn't change, only UI rendering changes
+
