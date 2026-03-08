@@ -316,25 +316,56 @@ export default function History() {
                   <p className="text-muted-foreground">{searchTerm ? `No analyses found matching "${searchTerm}"` : "No saved analyses found"}</p>
                 </Card>
               ) : (
-                filteredAnalyses.map((analysis) => (
-                  <Card key={analysis.id} className="p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-lg font-semibold">{analysis.startup_name || "Unnamed Startup"}</h3>
-                          <Badge variant="outline">Score: {getAverageScore(analysis.scorecard)}/10</Badge>
+                <>
+                  {paginate(filteredAnalyses, analysisPage).map((analysis) => (
+                    <Card key={analysis.id} className="p-6 hover:shadow-lg transition-shadow">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline" className="text-xs">Single</Badge>
+                            <h3 className="text-lg font-semibold">{analysis.startup_name || "Unnamed Startup"}</h3>
+                            <Badge variant="outline">Score: {getAverageScore(analysis.scorecard)}/10</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">{formatDate(analysis.created_at)}</p>
+                          <p className="text-sm line-clamp-2">{analysis.pitch_text?.slice(0, 200)}...</p>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">{formatDate(analysis.created_at)}</p>
-                        <p className="text-sm line-clamp-2">{analysis.pitch_text?.slice(0, 200)}...</p>
+                        <div className="flex gap-2 ml-4">
+                          <Button variant="outline" size="icon" onClick={() => setViewAnalysis(analysis)} title="View"><Eye className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => exportAnalysis(analysis)} title="Export PDF"><FileDown className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => { setDeleteId(analysis.id); setDeleteType("analysis"); }} title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button variant="outline" size="icon" onClick={() => setViewAnalysis(analysis)} title="View"><Eye className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon" onClick={() => exportAnalysis(analysis)} title="Export PDF"><FileDown className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon" onClick={() => { setDeleteId(analysis.id); setDeleteType("analysis"); }} title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                    </Card>
+                  ))}
+                  {isFree && filteredAnalyses.length > FREE_LIMIT && (
+                    <div className="relative mt-4">
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background z-10 flex items-end justify-center pb-6">
+                        <Card className="p-6 text-center shadow-lg">
+                          <Lock className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                          <p className="font-semibold mb-2">Upgrade for full history</p>
+                          <p className="text-sm text-muted-foreground mb-4">{filteredAnalyses.length - FREE_LIMIT} more items hidden</p>
+                          <Button onClick={() => startCheckout("pro")}>Upgrade to Pro</Button>
+                        </Card>
+                      </div>
+                      <div className="blur-sm pointer-events-none space-y-4">
+                        {filteredAnalyses.slice(FREE_LIMIT, FREE_LIMIT + 3).map((a) => (
+                          <Card key={a.id} className="p-6"><h3 className="text-lg font-semibold">{a.startup_name || "Unnamed"}</h3></Card>
+                        ))}
                       </div>
                     </div>
-                  </Card>
-                ))
+                  )}
+                  {!isFree && filteredAnalyses.length > PAGE_SIZE && (
+                    <Pagination className="mt-4">
+                      <PaginationContent>
+                        <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setAnalysisPage(p => Math.max(1, p - 1)); }} /></PaginationItem>
+                        {Array.from({ length: totalPages(filteredAnalyses.length) }, (_, i) => (
+                          <PaginationItem key={i}><PaginationLink href="#" isActive={analysisPage === i + 1} onClick={(e) => { e.preventDefault(); setAnalysisPage(i + 1); }}>{i + 1}</PaginationLink></PaginationItem>
+                        ))}
+                        <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setAnalysisPage(p => Math.min(totalPages(filteredAnalyses.length), p + 1)); }} /></PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </>
               )}
             </TabsContent>
 
@@ -345,30 +376,52 @@ export default function History() {
                   <p className="text-muted-foreground">{searchTerm ? `No comparisons found matching "${searchTerm}"` : "No saved comparisons found"}</p>
                 </Card>
               ) : (
-                filteredComparisons.map((comparison) => (
-                  <Card key={comparison.id} className="p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          {comparison.startup_names.map((name, idx) => (
-                            <Badge key={idx} variant="secondary">{name}</Badge>
-                          ))}
+                <>
+                  {paginate(filteredComparisons, comparisonPage).map((comparison) => (
+                    <Card key={comparison.id} className="p-6 hover:shadow-lg transition-shadow">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline" className="text-xs">Comparison</Badge>
+                            {comparison.startup_names.map((name, idx) => (
+                              <Badge key={idx} variant="secondary">{name}</Badge>
+                            ))}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{formatDate(comparison.created_at)}</p>
+                          {comparison.comparison_insights?.recommendation && (
+                            <p className="mt-2 text-sm"><span className="font-semibold">Recommendation:</span> {comparison.comparison_insights.recommendation.slice(0, 150)}...</p>
+                          )}
                         </div>
-                        <p className="text-sm text-muted-foreground">{formatDate(comparison.created_at)}</p>
-                        {comparison.comparison_insights?.recommendation && (
-                          <p className="mt-2 text-sm">
-                            <span className="font-semibold">Recommendation:</span> {comparison.comparison_insights.recommendation.slice(0, 150)}...
-                          </p>
-                        )}
+                        <div className="flex gap-2 ml-4">
+                          <Button variant="outline" size="icon" onClick={() => setViewComparison(comparison)} title="View"><Eye className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => exportComparison(comparison)} title="Export PDF"><FileDown className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => { setDeleteId(comparison.id); setDeleteType("comparison"); }} title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button variant="outline" size="icon" onClick={() => setViewComparison(comparison)} title="View"><Eye className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon" onClick={() => exportComparison(comparison)} title="Export PDF"><FileDown className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon" onClick={() => { setDeleteId(comparison.id); setDeleteType("comparison"); }} title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                    </Card>
+                  ))}
+                  {isFree && filteredComparisons.length > FREE_LIMIT && (
+                    <div className="relative mt-4">
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background z-10 flex items-end justify-center pb-6">
+                        <Card className="p-6 text-center shadow-lg"><Lock className="h-6 w-6 mx-auto mb-2 text-muted-foreground" /><p className="font-semibold mb-2">Upgrade for full history</p><Button onClick={() => startCheckout("pro")}>Upgrade to Pro</Button></Card>
+                      </div>
+                      <div className="blur-sm pointer-events-none space-y-4">
+                        {filteredComparisons.slice(FREE_LIMIT, FREE_LIMIT + 2).map((c) => (<Card key={c.id} className="p-6"><p className="text-sm text-muted-foreground">{formatDate(c.created_at)}</p></Card>))}
                       </div>
                     </div>
-                  </Card>
-                ))
+                  )}
+                  {!isFree && filteredComparisons.length > PAGE_SIZE && (
+                    <Pagination className="mt-4">
+                      <PaginationContent>
+                        <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setComparisonPage(p => Math.max(1, p - 1)); }} /></PaginationItem>
+                        {Array.from({ length: totalPages(filteredComparisons.length) }, (_, i) => (
+                          <PaginationItem key={i}><PaginationLink href="#" isActive={comparisonPage === i + 1} onClick={(e) => { e.preventDefault(); setComparisonPage(i + 1); }}>{i + 1}</PaginationLink></PaginationItem>
+                        ))}
+                        <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setComparisonPage(p => Math.min(totalPages(filteredComparisons.length), p + 1)); }} /></PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </>
               )}
             </TabsContent>
 
@@ -379,27 +432,49 @@ export default function History() {
                   <p className="text-muted-foreground">{searchTerm ? `No bulk analyses found matching "${searchTerm}"` : "No bulk analyses found"}</p>
                 </Card>
               ) : (
-                filteredBulk.map((bulk) => (
-                  <Card key={bulk.id} className="p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-lg font-semibold">{bulk.batch_name}</h3>
-                          <Badge variant={bulk.status === "completed" ? "default" : bulk.status === "failed" ? "destructive" : "secondary"}>
-                            {bulk.status}
-                          </Badge>
-                          <Badge variant="outline">{bulk.completed_startups}/{bulk.total_startups} startups</Badge>
+                <>
+                  {paginate(filteredBulk, bulkPage).map((bulk) => (
+                    <Card key={bulk.id} className="p-6 hover:shadow-lg transition-shadow">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline" className="text-xs">Bulk</Badge>
+                            <h3 className="text-lg font-semibold">{bulk.batch_name}</h3>
+                            <Badge variant={bulk.status === "completed" ? "default" : bulk.status === "failed" ? "destructive" : "secondary"}>{bulk.status}</Badge>
+                            <Badge variant="outline">{bulk.completed_startups}/{bulk.total_startups} startups</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{formatDate(bulk.created_at)}</p>
                         </div>
-                        <p className="text-sm text-muted-foreground">{formatDate(bulk.created_at)}</p>
+                        <div className="flex gap-2 ml-4">
+                          <Button variant="outline" size="icon" onClick={() => setViewBulk(bulk)} title="View"><Eye className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => exportBulk(bulk)} title="Export Excel"><FileDown className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => { setDeleteId(bulk.id); setDeleteType("bulk"); }} title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button variant="outline" size="icon" onClick={() => setViewBulk(bulk)} title="View"><Eye className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon" onClick={() => exportBulk(bulk)} title="Export Excel"><FileDown className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon" onClick={() => { setDeleteId(bulk.id); setDeleteType("bulk"); }} title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                    </Card>
+                  ))}
+                  {isFree && filteredBulk.length > FREE_LIMIT && (
+                    <div className="relative mt-4">
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background z-10 flex items-end justify-center pb-6">
+                        <Card className="p-6 text-center shadow-lg"><Lock className="h-6 w-6 mx-auto mb-2 text-muted-foreground" /><p className="font-semibold mb-2">Upgrade for full history</p><Button onClick={() => startCheckout("pro")}>Upgrade to Pro</Button></Card>
+                      </div>
+                      <div className="blur-sm pointer-events-none space-y-4">
+                        {filteredBulk.slice(FREE_LIMIT, FREE_LIMIT + 2).map((b) => (<Card key={b.id} className="p-6"><p className="text-sm text-muted-foreground">{formatDate(b.created_at)}</p></Card>))}
                       </div>
                     </div>
-                  </Card>
-                ))
+                  )}
+                  {!isFree && filteredBulk.length > PAGE_SIZE && (
+                    <Pagination className="mt-4">
+                      <PaginationContent>
+                        <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setBulkPage(p => Math.max(1, p - 1)); }} /></PaginationItem>
+                        {Array.from({ length: totalPages(filteredBulk.length) }, (_, i) => (
+                          <PaginationItem key={i}><PaginationLink href="#" isActive={bulkPage === i + 1} onClick={(e) => { e.preventDefault(); setBulkPage(i + 1); }}>{i + 1}</PaginationLink></PaginationItem>
+                        ))}
+                        <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setBulkPage(p => Math.min(totalPages(filteredBulk.length), p + 1)); }} /></PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </>
               )}
             </TabsContent>
           </Tabs>
