@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { DEMO_ANALYSIS_RESULT, DEMO_PDF_ANALYSIS_RESULT, DEMO_PITCH_TEXT, DEMO_STARTUP_NAME } from "@/lib/demo-data";
 import { DemoBanner } from "@/components/DemoBanner";
 import { DemoNav } from "@/components/DemoNav";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { useCountUp } from "@/hooks/useCountUp";
 
 interface ScoreItem {
   score: number;
