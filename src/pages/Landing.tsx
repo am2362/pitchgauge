@@ -81,7 +81,7 @@ const Landing = () => {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground/70 italic max-w-md">
-                PitchScore is designed as an initial screening tool to support — not replace — human investment judgement.
+                PitchGauge is designed as an initial screening tool to support — not replace — human investment judgement.
               </p>
             </div>
 
@@ -176,7 +176,7 @@ const Landing = () => {
             ))}
           </div>
           <p className="text-center text-sm text-muted-foreground mt-10 max-w-2xl mx-auto leading-relaxed">
-            PitchScore gives you a consistent, structured first pass on every pitch in seconds — so your team focuses only on what deserves a second look.
+            PitchGauge gives you a consistent, structured first pass on every pitch in seconds — so your team focuses only on what deserves a second look.
           </p>
         </div>
       </section>
@@ -229,7 +229,7 @@ const Landing = () => {
             <Badge variant="secondary" className="mb-4">Features</Badge>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Everything You Need to Evaluate Deal Flow</h2>
             <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
-              PitchScore gives investors a fast, structured first look at any pitch — so you spend less time on triage and more time on the deals worth pursuing.
+              PitchGauge gives investors a fast, structured first look at any pitch — so you spend less time on triage and more time on the deals worth pursuing.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
