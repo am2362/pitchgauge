@@ -8,6 +8,7 @@ import { ArrowLeft, User, Mail, Lock, Loader2, Crown } from "lucide-react";
 import { supabase } from "@/lib/supabase-external";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useState as useCheckoutState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { User as SupabaseUser } from "@supabase/supabase-js";
