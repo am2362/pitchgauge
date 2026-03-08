@@ -476,7 +476,7 @@ const Index = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/auth");
+    navigate("/");
   };
 
   const ScoreBar = ({ label, scoreItem }: { label: string; scoreItem: ScoreItem }) => {
