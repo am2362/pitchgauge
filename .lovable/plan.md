@@ -1,79 +1,42 @@
 
+# Add "Single Pitch Analysis" Button to Top Navigation
 
-# Add Subscription Tiers & Usage Tracking
+## Problem
+The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
 
-## Context
-The project already has Lovable Cloud (backend) with authentication, profiles, and analysis tables. What's needed: subscription management and usage tracking to enforce the Free/Pro/Scale tiers shown on the landing page.
+## Solution
+Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-## Database Changes (2 new tables + 1 migration)
+## Implementation Details
 
-### 1. `subscriptions` table
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | default gen_random_uuid() |
-| user_id | uuid NOT NULL | references auth.users, unique |
-| tier | text NOT NULL | 'free', 'pro', 'scale'; default 'free' |
-| status | text NOT NULL | 'active', 'canceled', 'expired'; default 'active' |
-| current_period_start | timestamptz | |
-| current_period_end | timestamptz | |
-| created_at / updated_at | timestamptz | |
+### File: `src/pages/Index.tsx`
 
-RLS: users can SELECT their own row. INSERT/UPDATE restricted to service role (managed by backend). Auto-create a `free` subscription row via the existing `handle_new_user` trigger.
+**What to change:**
+1. Add a new import for `FileText` icon (already imported on line 8)
+2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
+3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
+4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
 
-### 2. `usage_tracking` table
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | |
-| user_id | uuid NOT NULL | |
-| action_type | text NOT NULL | 'single_analysis', 'comparison', 'bulk_analysis' |
-| created_at | timestamptz | default now() |
-| metadata | jsonb | optional details |
+**Button placement:**
+- Insert as the **first button** in the top nav (line 530), before the Compare button
+- Use `FileText` icon (already imported)
+- Text: "Single Pitch Analysis"
+- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
 
-RLS: users can SELECT and INSERT their own rows.
+**Technical approach:**
+```text
+1. Add useRef hook to create a ref for the pitch input card
+2. In the button's onClick, check if user is on "/" page
+   - If on "/", scroll to the ref using scrollIntoView()
+   - If not on "/", navigate to "/"
+3. Attach the ref to the Card element containing "Input Pitch"
+```
 
-### 3. Database function: `get_daily_usage_count(p_action_type text)`
-Returns the count of actions for the current user today. Used by the frontend to check limits before invoking analysis.
+## Files to Modify
+- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
-### 4. Update `handle_new_user` trigger
-Add INSERT into `subscriptions` with tier='free' when a new user signs up.
-
-## Frontend Changes
-
-### `src/hooks/useSubscription.ts` (new)
-Custom hook that fetches the user's subscription tier and daily usage counts. Exposes `tier`, `canAnalyze`, `canCompare`, `canBulkAnalyze`, and `recordUsage()`.
-
-### `src/pages/Dashboard.tsx`
-- Import `useSubscription`
-- Before analysis, check `canAnalyze`; show upgrade prompt if limit reached
-- After successful analysis, call `recordUsage('single_analysis')`
-- Show current tier badge in header
-
-### `src/pages/Compare.tsx`
-- Gate comparison behind Pro/Scale tier
-- Record usage on comparison generation
-
-### `src/pages/BulkAnalysis.tsx`
-- Gate bulk analysis behind Scale tier
-- Record usage on bulk processing
-
-### `src/pages/Settings.tsx`
-- Add a "Subscription" section showing current tier, usage stats, and upgrade CTA
-
-## Tier Limits (enforced client-side + edge function validation)
-
-| Feature | Free | Pro ($29/mo) | Scale ($89/mo) |
-|---------|------|-------------|----------------|
-| Single analyses/day | 3 | Unlimited | Unlimited |
-| Comparison mode | No | Yes (up to 5) | Yes (up to 5) |
-| Bulk analysis | No | No | Yes (up to 100) |
-| History retention | None | 30 days | Unlimited |
-| Export formats | Basic JSON+PDF | Full | Full + Excel |
-
-## Files to Create/Modify
-- **Migration SQL** — create `subscriptions`, `usage_tracking` tables, `get_daily_usage_count` function, update trigger
-- **`src/hooks/useSubscription.ts`** — new hook
-- **`src/pages/Dashboard.tsx`** — usage gating + tier badge
-- **`src/pages/Compare.tsx`** — tier gating
-- **`src/pages/BulkAnalysis.tsx`** — tier gating
-- **`src/pages/Settings.tsx`** — subscription info section
-
+## Expected Result
+- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
+- Clicking it from any page navigates to "/"
+- Clicking it while already on "/" scrolls smoothly to the pitch input form
+- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout

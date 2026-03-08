@@ -4,9 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, Mail, Lock, Loader2 } from "lucide-react";
+import { ArrowLeft, User, Mail, Lock, Loader2, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/hooks/useSubscription";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { z } from "zod";
 
@@ -29,6 +32,7 @@ const Settings = () => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { tier, dailyAnalysisCount, remainingAnalyses, canCompare, canBulkAnalyze, isLoading: isSubLoading } = useSubscription();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -253,7 +257,69 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {/* Email Section */}
+          {/* Subscription Section */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Crown className="h-5 w-5 text-primary" />
+                <CardTitle>Subscription</CardTitle>
+              </div>
+              <CardDescription>Your current plan and usage</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isSubLoading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Loading...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium">Current Plan:</span>
+                    <Badge variant={tier === "free" ? "secondary" : "default"} className="capitalize text-sm">
+                      {tier}
+                    </Badge>
+                  </div>
+
+                  {tier === "free" && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Daily Analyses Used</span>
+                        <span className="font-medium">{dailyAnalysisCount} / 3</span>
+                      </div>
+                      <Progress value={(dailyAnalysisCount / 3) * 100} className="h-2" />
+                    </div>
+                  )}
+
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Single Analyses</span>
+                      <span>{tier === "free" ? `${remainingAnalyses} remaining today` : "Unlimited"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Comparison Mode</span>
+                      <span>{canCompare ? "✓ Available" : "✗ Pro required"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Bulk Analysis</span>
+                      <span>{canBulkAnalyze ? "✓ Available" : "✗ Scale required"}</span>
+                    </div>
+                  </div>
+
+                  {tier === "free" && (
+                    <Button className="w-full" onClick={() => navigate("/")}>
+                      Upgrade to Pro — $29/mo
+                    </Button>
+                  )}
+                  {tier === "pro" && (
+                    <Button variant="outline" className="w-full" onClick={() => navigate("/")}>
+                      Upgrade to Scale — $89/mo
+                    </Button>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">

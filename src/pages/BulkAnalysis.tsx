@@ -9,6 +9,7 @@ import { InvestmentRankingsTable } from '@/components/bulk/InvestmentRankingsTab
 import { SectorBreakdownChart } from '@/components/bulk/SectorBreakdownChart';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useSubscription } from '@/hooks/useSubscription';
 import type { BulkAnalysis, ComparisonReport, BulkAnalysisResult } from '@/types/bulk-analysis';
 import { exportBulkAnalysisToExcel } from '@/lib/bulk-excel-export';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -65,6 +66,7 @@ function createFailedBulkResult(startupName: string, errorType: string, errorMes
 
 export default function BulkAnalysis() {
   const navigate = useNavigate();
+  const { canBulkAnalyze, tier, recordUsage } = useSubscription();
   const [currentAnalysis, setCurrentAnalysis] = useState<BulkAnalysis | null>(null);
   const [history, setHistory] = useState<BulkAnalysis[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
@@ -205,6 +207,15 @@ export default function BulkAnalysis() {
   };
 
   const handleUploadComplete = async (startups: { name: string; pitch: string }[]) => {
+    if (!canBulkAnalyze) {
+      toast({
+        title: "Scale Feature",
+        description: "Bulk analysis requires a Scale subscription. Upgrade to unlock.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {

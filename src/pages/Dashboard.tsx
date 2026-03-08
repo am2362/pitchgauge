@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Loader2, FileText, BarChart, AlertTriangle, MessageSquare, TrendingUp, History, FileInput, LogOut, GitCompare, FileDown, Settings, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { User, Session } from "@supabase/supabase-js";
@@ -151,6 +152,7 @@ const Index = () => {
   const [extractedSlides, setExtractedSlides] = useState<SlideContent[] | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { tier, canAnalyze, remainingAnalyses, recordUsage, isLoading: isSubLoading } = useSubscription();
 
 
   // Extract startup name from pitch text (first line if it looks like a name)
@@ -345,6 +347,15 @@ const Index = () => {
   };
 
   const handleAnalyze = async () => {
+    if (!canAnalyze) {
+      toast({
+        title: "Daily Limit Reached",
+        description: "You've used all your free analyses today. Upgrade to Pro for unlimited analyses.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!pitchText.trim()) {
       toast({
         title: "Error",
@@ -376,6 +387,7 @@ const Index = () => {
       console.log('Startup Name from AI:', data.startupName);
       setResult(data);
       await saveAnalysis(data, pitchText);
+      await recordUsage('single_analysis');
       setStartupName("");
 
       toast({
@@ -527,6 +539,14 @@ const Index = () => {
               <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 PitchGauge
               </h1>
+              <Badge variant={tier === "free" ? "secondary" : "default"} className="ml-2 capitalize">
+                {tier}
+              </Badge>
+              {tier === "free" && (
+                <span className="text-xs text-muted-foreground ml-1">
+                  {remainingAnalyses} analyses left today
+                </span>
+              )}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => navigate("/compare")}>

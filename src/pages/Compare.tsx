@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/hooks/useSubscription";
 import { User } from "@supabase/supabase-js";
 import { ArrowLeft, Loader2, TrendingUp, Plus, X, FileDown, Save, History, Upload, Download, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +80,7 @@ export default function Compare() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { canCompare, tier, recordUsage } = useSubscription();
 
   const loadRecentComparisons = async () => {
     if (!user) return;
@@ -313,6 +315,15 @@ export default function Compare() {
   };
 
   const analyzePitch = async (id: number) => {
+    if (!canCompare) {
+      toast({
+        title: "Pro Feature",
+        description: "Comparison mode requires a Pro or Scale subscription. Upgrade to unlock.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const pitch = pitches.find(p => p.id === id);
     if (!pitch || !pitch.text.trim()) {
       toast({
@@ -407,6 +418,7 @@ export default function Compare() {
 
       setComparisonInsights(data);
       setShowComparisonDialog(true);
+      await recordUsage('comparison');
       toast({
         title: "Comparison Complete",
         description: "View full results in the dialog",
