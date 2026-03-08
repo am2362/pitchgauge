@@ -485,8 +485,12 @@ const Index = () => {
     navigate("/");
   };
 
+  const AnimatedScore = ({ score }: { score: number }) => {
+    const animated = useCountUp(score, 800, true);
+    return <>{animated}</>;
+  };
+
   const ScoreBar = ({ label, scoreItem }: { label: string; scoreItem: ScoreItem }) => {
-    // Safety check for undefined scoreItem
     if (!scoreItem || typeof scoreItem.score !== 'number') {
       return (
         <div className="space-y-3 p-4 bg-card/50 rounded-lg border border-border/50">
@@ -511,7 +515,7 @@ const Index = () => {
         <div className="flex justify-between items-center">
           <span className="font-semibold text-foreground">{label}</span>
           <span className={`text-lg font-bold ${scoreItem.score >= 7 ? 'text-green-500' : scoreItem.score >= 5 ? 'text-blue-500' : 'text-orange-500'}`}>
-            {scoreItem.score}/10
+            <AnimatedScore score={scoreItem.score} />/10
           </span>
         </div>
         <div className="h-3 bg-secondary rounded-full overflow-hidden">
