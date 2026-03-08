@@ -1,42 +1,65 @@
 
-# Add "Single Pitch Analysis" Button to Top Navigation
 
-## Problem
-The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
+# Complete Demo Mode — All 3 Pages with Static Data
 
-## Solution
-Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
+## Overview
 
-## Implementation Details
+Expand the demo from a single-page showcase into a full 3-page demo experience (Single Analysis, Comparison, Bulk Analysis) with animated progress flows, hardcoded results, and zero API calls. All pages share a yellow demo banner and a consistent demo nav bar.
 
-### File: `src/pages/Index.tsx`
+## Files to Create
 
-**What to change:**
-1. Add a new import for `FileText` icon (already imported on line 8)
-2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
-3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
-4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
+### 1. `src/lib/demo-data.ts` — Expand with all static data
+- **PDF demo result**: New `DEMO_PDF_ANALYSIS_RESULT` with the specific scores from the spec (Team 7, Market 9, Product 7, Traction 6, Business Model 8, Competitive 7), plus summary, red flags, questions, bull/bear case, and benchmark (72nd percentile)
+- **Comparison data**: `DEMO_COMPARISON_PITCHES` (3 startups: EcoTrack, FinFlow, MediSync with pitch text), `DEMO_COMPARISON_RESULTS` (3 full analysis results with specified scores), `DEMO_COMPARISON_INSIGHTS` (rankings, recommendation, strengths/weaknesses)
+- **Bulk data**: `DEMO_BULK_RESULTS` (10 startups with scores as specified), `DEMO_BULK_COMPARISON_REPORT` (rankings, sector breakdown, overall recommendation)
 
-**Button placement:**
-- Insert as the **first button** in the top nav (line 530), before the Compare button
-- Use `FileText` icon (already imported)
-- Text: "Single Pitch Analysis"
-- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
+### 2. `src/components/DemoBanner.tsx` — Shared yellow banner
+- Yellow background banner: "You are in demo mode — sign up free to analyse your own pitches"
+- Sign up button on right
 
-**Technical approach:**
-```text
-1. Add useRef hook to create a ref for the pitch input card
-2. In the button's onClick, check if user is on "/" page
-   - If on "/", scroll to the ref using scrollIntoView()
-   - If not on "/", navigate to "/"
-3. Attach the ref to the Card element containing "Input Pitch"
-```
+### 3. `src/pages/Demo.tsx` — Rewrite with PDF upload demo
+- Keep existing text input demo + results
+- Add "Try Demo: Upload Pitch Deck" button
+- When clicked: show fake file name "EcoTrack_PitchDeck.pdf (20 pages)"
+- Animate through 4 progress steps with specified timings (1s, 1.5s, 2s, 1s)
+- After animation, swap displayed results to `DEMO_PDF_ANALYSIS_RESULT`
+- All export buttons show "Sign up to access" toast
+- Yellow demo banner at top
+
+### 4. `src/pages/DemoCompare.tsx` — New demo comparison page
+- Demo nav with links to all 3 demo pages
+- "Load Demo" button that triggers 2-second "Analysing all startups..." animation
+- After animation, show 3 pre-filled pitches with static results
+- Scorecard comparison table, rankings (1st FinFlow, 2nd EcoTrack, 3rd MediSync)
+- Per-startup strengths/weaknesses
+- Overall recommendation text
+- All export/save buttons → "Sign up to access" toast
+
+### 5. `src/pages/DemoBulk.tsx` — New demo bulk analysis page
+- "Load Demo Excel" button
+- When clicked: show fake file "startups_batch_demo.xlsx"
+- 4-step animation: Upload (1s) → Reading 10 startups (1s) → Analysing with progress bar (3s) → Generating report (1s)
+- Show results: Investment rankings table (10 startups), sector breakdown chart
+- "Download Excel Results" button actually generates and downloads a real Excel file using ExcelJS with the 10 demo startups and their scores
+- "Export PDF" → "Sign up to export" toast
 
 ## Files to Modify
-- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
-## Expected Result
-- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
-- Clicking it from any page navigates to "/"
-- Clicking it while already on "/" scrolls smoothly to the pitch input form
-- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
+### 6. `src/App.tsx` — Add routes
+- `/demo/compare` → `DemoCompare`
+- `/demo/bulk` → `DemoBulk`
+- Keep `/demo` for single analysis
+
+### 7. Demo Nav (shared across all 3 demo pages)
+- Update the demo nav in `Demo.tsx` and replicate in new pages
+- Links: Single Analysis (`/demo`), Comparison (`/demo/compare`), Bulk (`/demo/bulk`)
+- Right side: Demo Mode badge + Sign Up button
+
+## Key Implementation Details
+
+- **Progress animations**: Use `useState` + `useEffect` with `setTimeout` chains to step through progress stages
+- **Progress bar in bulk**: Animate from 0→100% over 3 seconds using `setInterval`
+- **Excel download**: Use ExcelJS (already installed) to generate a real `.xlsx` with the 10 demo startups' scores
+- **Zero API calls**: No imports of supabase client, no fetch calls, no edge function invocations
+- **Reuse existing UI components**: `InvestmentRankingsTable`, `SectorBreakdownChart`, `Progress`, score bar patterns from existing Demo.tsx
+
