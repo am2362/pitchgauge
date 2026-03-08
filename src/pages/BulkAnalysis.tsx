@@ -13,6 +13,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import type { BulkAnalysis, ComparisonReport, BulkAnalysisResult } from '@/types/bulk-analysis';
 import { exportBulkAnalysisToExcel } from '@/lib/bulk-excel-export';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { UpgradePrompt } from '@/components/UpgradePrompt';
 
 // Chunked processing constants
 // Keep chunks small to avoid backend timeouts and free-tier rate limits.
