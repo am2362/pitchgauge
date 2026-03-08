@@ -16,6 +16,7 @@ import { exportBulkAnalysisToExcel } from '@/lib/bulk-excel-export';
 import { exportBulkAnalysisToPDF } from '@/lib/pdf-export';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { UpgradePrompt } from '@/components/UpgradePrompt';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 // Chunked processing constants
 // Keep chunks small to avoid backend timeouts and free-tier rate limits.
@@ -68,6 +69,7 @@ function createFailedBulkResult(startupName: string, errorType: string, errorMes
 }
 
 export default function BulkAnalysis() {
+  usePageMeta("Bulk Analysis | PitchGauge", "Batch-analyze multiple startup pitches at once with AI scoring.");
   const navigate = useNavigate();
   const { canBulkAnalyze, tier, recordUsage, startCheckout } = useSubscription();
   const [currentAnalysis, setCurrentAnalysis] = useState<BulkAnalysis | null>(null);

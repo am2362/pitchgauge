@@ -18,6 +18,9 @@ import { parseExcelFile, createExcelTemplate, ParsedStartupData } from "@/lib/ex
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { useCountUp } from "@/hooks/useCountUp";
+import { ComparisonSkeleton } from "@/components/AnalysisSkeletons";
 
 interface ScoreItem {
   score: number;
@@ -62,6 +65,7 @@ interface RecentComparison {
 }
 
 export default function Compare() {
+  usePageMeta("Compare Startups | PitchGauge", "Compare multiple startup pitches side-by-side with AI analysis.");
   const [user, setUser] = useState<User | null>(null);
   const [pitches, setPitches] = useState<PitchSlot[]>([
     { id: 1, name: "Startup A", text: "", analysis: null, loading: false },

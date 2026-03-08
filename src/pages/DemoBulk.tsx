@@ -12,6 +12,7 @@ import { DemoNav } from "@/components/DemoNav";
 import { InvestmentRankingsTable } from "@/components/bulk/InvestmentRankingsTable";
 import { SectorBreakdownChart } from "@/components/bulk/SectorBreakdownChart";
 import ExcelJS from "exceljs";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 type BulkStep = { msg: string; duration: number };
 
@@ -33,6 +34,7 @@ const METRIC_LABELS: Record<string, string> = {
 
 
 const DemoBulk = () => {
+  usePageMeta("Demo Bulk Analysis | PitchGauge", "Try PitchGauge's bulk startup analysis with sample data.");
   const navigate = useNavigate();
   const { toast } = useToast();
 

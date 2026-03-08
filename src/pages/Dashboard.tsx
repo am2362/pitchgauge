@@ -18,6 +18,10 @@ import { ChevronDown } from "lucide-react";
 import { exportAnalysisToPDF } from "@/lib/pdf-export";
 import ExtractedPitchSummary from "@/components/ExtractedPitchSummary";
 import type { SlideContent } from "@/lib/document-parser";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { useCountUp } from "@/hooks/useCountUp";
+import { AnalysisProgressSteps } from "@/components/AnalysisProgressSteps";
+import { ScorecardSkeleton } from "@/components/AnalysisSkeletons";
 
 interface ScoreItem {
   score: number;
@@ -139,6 +143,8 @@ Seeking: $500K pre-seed for manufacturing and product certification.`
 };
 
 const Index = () => {
+  usePageMeta("Dashboard | PitchGauge", "Analyze startup pitches with AI-powered scoring and detailed investment reports.");
+
   const [pitchText, setPitchText] = useState("");
   const [startupName, setStartupName] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -479,8 +485,12 @@ const Index = () => {
     navigate("/");
   };
 
+  const AnimatedScore = ({ score }: { score: number }) => {
+    const animated = useCountUp(score, 800, true);
+    return <>{animated}</>;
+  };
+
   const ScoreBar = ({ label, scoreItem }: { label: string; scoreItem: ScoreItem }) => {
-    // Safety check for undefined scoreItem
     if (!scoreItem || typeof scoreItem.score !== 'number') {
       return (
         <div className="space-y-3 p-4 bg-card/50 rounded-lg border border-border/50">
@@ -505,7 +515,7 @@ const Index = () => {
         <div className="flex justify-between items-center">
           <span className="font-semibold text-foreground">{label}</span>
           <span className={`text-lg font-bold ${scoreItem.score >= 7 ? 'text-green-500' : scoreItem.score >= 5 ? 'text-blue-500' : 'text-orange-500'}`}>
-            {scoreItem.score}/10
+            <AnimatedScore score={scoreItem.score} />/10
           </span>
         </div>
         <div className="h-3 bg-secondary rounded-full overflow-hidden">
@@ -690,8 +700,14 @@ const Index = () => {
           </div>
         )}
 
+        {/* Analysis progress steps */}
+        <AnalysisProgressSteps isActive={isAnalyzing} />
+
+        {/* Skeleton while analyzing */}
+        {isAnalyzing && !result && <ScorecardSkeleton />}
+
         {result && (
-          <Card className="mt-8 p-8 bg-card border-border shadow-lg">
+          <Card className="mt-8 p-8 bg-card border-border shadow-lg animate-fade-in">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-3xl font-bold text-foreground">Analysis Results</h2>
               <div className="flex gap-2">

@@ -9,8 +9,10 @@ import AppNavbar from "@/components/AppNavbar";
 import { supabase } from "@/lib/supabase-external";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useToast } from "@/hooks/use-toast";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const Billing = () => {
+  usePageMeta("Billing | PitchGauge", "Manage your PitchGauge subscription and billing.");
   const navigate = useNavigate();
   const { toast } = useToast();
   const {

@@ -1,72 +1,42 @@
 
+# Add "Single Pitch Analysis" Button to Top Navigation
 
-# Polish Audit — What's Done vs. Not Done
+## Problem
+The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
 
-## 1. Sticky top nav on landing page ✅ DONE
-Already implemented in `Landing.tsx` (line 36): `<nav className="sticky top-0 z-50 ...">` with Logo, nav links (How It Works, Features, Pricing, Scoring Guide), Login and Get Started buttons.
+## Solution
+Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-## 2. Loading skeleton states ❌ NOT DONE
-The `Skeleton` component exists in `src/components/ui/skeleton.tsx` but is **not used** on any analysis page (Dashboard, Compare, BulkAnalysis). No skeleton loading states are rendered while results load.
+## Implementation Details
 
-## 3. Progress indicator on Single Analysis page ⚠️ PARTIAL
-- PDF upload has a progress string (`pdfProgress` state: "Uploading PDF...", "Extracting text from PDF...").
-- But during the **AI analysis** itself (`isAnalyzing` state), there's just a `Loader2` spinner with no multi-step progress indicator ("Analysing pitch... Scoring criteria... Generating report...").
+### File: `src/pages/Index.tsx`
 
-## 4. Demo mode ✅ DONE
-Full demo mode exists: `/demo` page with pre-filled pitch data (`DEMO_ANALYSIS_RESULT`, `DEMO_PITCH_TEXT`), PDF upload simulation with animated steps, `DemoBanner`, `DemoNav`. Landing page has a "Try Demo" button linking to `/demo`. Also `/demo/compare` and `/demo/bulk`.
+**What to change:**
+1. Add a new import for `FileText` icon (already imported on line 8)
+2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
+3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
+4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
 
-## 5. Toast notification system ✅ DONE
-Toast notifications already in place for: analysis complete, PDF parsed, template loaded, analysis failed, file errors, daily limit reached. The toast system (`useToast` + `Toaster`) is wired up across all pages.
+**Button placement:**
+- Insert as the **first button** in the top nav (line 530), before the Compare button
+- Use `FileText` icon (already imported)
+- Text: "Single Pitch Analysis"
+- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
 
-## 6. Scorecard score count-up animation ❌ NOT DONE
-No count-up animation exists. Scores render statically when results load.
+**Technical approach:**
+```text
+1. Add useRef hook to create a ref for the pitch input card
+2. In the button's onClick, check if user is on "/" page
+   - If on "/", scroll to the ref using scrollIntoView()
+   - If not on "/", navigate to "/"
+3. Attach the ref to the Card element containing "Input Pitch"
+```
 
-## 7. Export as PDF on comparison page ✅ DONE
-`Compare.tsx` imports and uses `exportComparisonToPDF` from `pdf-export.ts`. The export button is wired up.
+## Files to Modify
+- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
-## 8. SEO meta titles/descriptions ❌ NOT DONE
-No `document.title` setting, no `<Helmet>`, no meta description management on any page. The `index.html` has a static title "PitchGauge" but no per-page SEO.
-
----
-
-# Implementation Plan — Remaining Items
-
-### A. Add skeleton loading states to analysis pages
-- **Dashboard.tsx**: When `isAnalyzing` is true and `result` is null, show skeleton cards for scorecard, memo, and red flags sections
-- **Compare.tsx**: Show skeleton cards per pitch slot while `loading` is true
-- **BulkAnalysis.tsx**: Show skeleton rows in the rankings table while processing
-
-### B. Add multi-step progress indicator during analysis
-- In `Dashboard.tsx`, replace the simple spinner during `isAnalyzing` with an animated stepper: "Analysing pitch...", "Scoring criteria...", "Generating report..." using timed intervals (similar to Demo.tsx's `PDF_STEPS` pattern)
-
-### C. Add scorecard count-up animation
-- Create a small `useCountUp` hook (or inline `useEffect` + `useState`) that animates from 0 to the target score over ~800ms using `requestAnimationFrame`
-- Apply to all score displays in Dashboard.tsx, Demo.tsx, Compare.tsx, and DemoCompare.tsx scorecard sections
-
-### D. Add per-page SEO meta titles/descriptions
-- Create a lightweight `usePageMeta(title, description)` hook that sets `document.title` and updates/creates `<meta name="description">` on mount
-- Apply to each page:
-  - `/` → "PitchGauge | AI Startup Pitch Analyzer for Investors"
-  - `/scoring-rubric` → "Scoring Methodology | PitchGauge"
-  - `/auth` → "Sign In | PitchGauge"
-  - `/dashboard` → "Dashboard | PitchGauge"
-  - `/compare` → "Compare Startups | PitchGauge"
-  - `/bulk-analysis` → "Bulk Analysis | PitchGauge"
-  - `/history` → "History | PitchGauge"
-  - `/billing` → "Billing | PitchGauge"
-  - `/settings` → "Settings | PitchGauge"
-  - `/demo` → "Demo | PitchGauge"
-
-Note: The user mentioned `/pricing` and `/scoring-guide` routes but these don't exist as standalone pages — pricing is a section on the landing page, and the scoring guide is at `/scoring-rubric`.
-
-### Files to create/modify
-1. **Create** `src/hooks/usePageMeta.ts` — lightweight hook
-2. **Create** `src/hooks/useCountUp.ts` — count-up animation hook
-3. **Modify** `src/pages/Dashboard.tsx` — add skeletons, multi-step progress, count-up, page meta
-4. **Modify** `src/pages/Compare.tsx` — add skeletons, count-up, page meta
-5. **Modify** `src/pages/BulkAnalysis.tsx` — add skeletons, page meta
-6. **Modify** `src/pages/Landing.tsx` — add page meta
-7. **Modify** `src/pages/Demo.tsx` — add count-up, page meta
-8. **Modify** `src/pages/DemoCompare.tsx` — add count-up, page meta
-9. **Modify** remaining pages (Auth, History, Settings, Billing, ScoringRubric) — add page meta
-
+## Expected Result
+- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
+- Clicking it from any page navigates to "/"
+- Clicking it while already on "/" scrolls smoothly to the pitch input form
+- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout

@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 interface ComparisonHistory {
   id: string;
@@ -68,6 +69,7 @@ interface BulkAnalysisHistory {
 }
 
 export default function History() {
+  usePageMeta("History | PitchGauge", "Browse and manage your past startup pitch analyses.");
   const [user, setUser] = useState<User | null>(null);
   const [comparisons, setComparisons] = useState<ComparisonHistory[]>([]);
   const [analyses, setAnalyses] = useState<AnalysisHistory[]>([]);

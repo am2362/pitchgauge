@@ -14,8 +14,11 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { DemoNav } from "@/components/DemoNav";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Progress } from "@/components/ui/progress";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { useCountUp } from "@/hooks/useCountUp";
 
 const DemoCompare = () => {
+  usePageMeta("Demo Compare | PitchGauge", "See how PitchGauge compares multiple startups side-by-side.");
   const navigate = useNavigate();
   const { toast } = useToast();
 

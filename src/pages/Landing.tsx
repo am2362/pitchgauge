@@ -22,8 +22,10 @@ import {
   Zap,
   Star,
 } from "lucide-react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const Landing = () => {
+  usePageMeta("PitchGauge | AI Startup Pitch Analyzer for Investors", "Score startup pitches with AI. Get detailed scorecards, red flags, and investment theses in seconds.");
   const navigate = useNavigate();
 
   const scrollTo = (id: string) => {
