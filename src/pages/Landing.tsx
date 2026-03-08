@@ -70,7 +70,7 @@ const Landing = () => {
                 <span className="text-primary">in Minutes</span>
               </h1>
               <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
-                Score pitches, compare deal flow, and bulk-process 100 startups at once — powered by AI built for investors.
+                Your AI-powered first layer of startup screening. Instantly triage deal flow, surface the signals that matter, and focus your attention where it counts — before your analysts dive deeper.
               </p>
               <div className="flex flex-wrap gap-3 pt-2">
                 <Button size="lg" className="gap-2" onClick={() => navigate("/auth")}>
