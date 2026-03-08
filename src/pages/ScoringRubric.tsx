@@ -2,9 +2,9 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp } from "lucide-react";
 import AppNavbar from "@/components/AppNavbar";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import logo from "@/assets/logo.png";
 
 const categories = [
   {
