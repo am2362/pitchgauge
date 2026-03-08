@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/hooks/useSubscription";
 import { User } from "@supabase/supabase-js";
 import { ArrowLeft, Loader2, TrendingUp, Plus, X, FileDown, Save, History, Upload, Download, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

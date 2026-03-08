@@ -9,6 +9,7 @@ import { InvestmentRankingsTable } from '@/components/bulk/InvestmentRankingsTab
 import { SectorBreakdownChart } from '@/components/bulk/SectorBreakdownChart';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useSubscription } from '@/hooks/useSubscription';
 import type { BulkAnalysis, ComparisonReport, BulkAnalysisResult } from '@/types/bulk-analysis';
 import { exportBulkAnalysisToExcel } from '@/lib/bulk-excel-export';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
