@@ -367,16 +367,18 @@ const Index = () => {
       return;
     }
 
-    if (!pitchText.trim()) {
+    const textToAnalyze = pdfExtractedText || pitchText.trim();
+    
+    if (!textToAnalyze) {
       toast({
         title: "Error",
-        description: "Please enter pitch text",
+        description: "Please enter pitch text or upload a PDF",
         variant: "destructive",
       });
       return;
     }
 
-    if (pitchText.trim().length < 50) {
+    if (textToAnalyze.length < 50) {
       toast({
         title: "Pitch too short",
         description: "Please provide at least 50 characters",
@@ -390,7 +392,7 @@ const Index = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("analyze-startup", {
-        body: { text: pitchText },
+        body: { text: textToAnalyze },
       });
 
       if (error) throw error;
