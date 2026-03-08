@@ -70,11 +70,11 @@ export function useSubscription() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      await supabase.from("usage_tracking").insert({
+      await supabase.from("usage_tracking").insert([{
         user_id: user.id,
         action_type: actionType,
         metadata: metadata || null,
-      });
+      }]);
 
       // Refresh counts
       if (actionType === "single_analysis") {
