@@ -18,6 +18,7 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 import { useCountUp } from "@/hooks/useCountUp";
 
 const DemoCompare = () => {
+  usePageMeta("Demo Compare | PitchGauge", "See how PitchGauge compares multiple startups side-by-side.");
   const navigate = useNavigate();
   const { toast } = useToast();
 
