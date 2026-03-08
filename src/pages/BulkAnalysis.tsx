@@ -665,7 +665,7 @@ export default function BulkAnalysis() {
       <div className="container mx-auto p-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Bulk Startup Analysis</h1>
-          <p className="text-muted-foreground">Analyze up to 1000 startup pitches at once</p>
+          <p className="text-muted-foreground">Analyze up to 100 startup pitches at once</p>
         </div>
 
         {!currentAnalysis && <BulkUploadCard onUploadComplete={handleUploadComplete} />}

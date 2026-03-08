@@ -95,7 +95,7 @@ export function BulkUploadCard({ onUploadComplete }: BulkUploadCardProps) {
       <CardHeader>
         <CardTitle>Upload Startup Pitches</CardTitle>
         <CardDescription>
-          Upload an Excel file with up to 1000 startup pitches for bulk analysis
+          Upload an Excel file with up to 100 startup pitches for bulk analysis
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -143,7 +143,7 @@ export function BulkUploadCard({ onUploadComplete }: BulkUploadCardProps) {
 
         <div className="text-sm text-muted-foreground space-y-1">
           <p>• Maximum file size: 20MB</p>
-          <p>• Maximum startups: 1000</p>
+          <p>• Maximum startups: 100</p>
           <p>• Required columns: Startup Name, Written Pitch</p>
         </div>
       </CardContent>
