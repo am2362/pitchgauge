@@ -288,7 +288,7 @@ const Landing = () => {
                 desc: "For active angel investors",
                 features: [
                   "Unlimited single analyses",
-                  "Comparison mode (up to 5)",
+                  "Comparison mode (up to 10)",
                   "Full download options",
                   "30-day history",
                 ],
