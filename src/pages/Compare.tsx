@@ -513,6 +513,64 @@ export default function Compare() {
     return "text-red-500";
   };
 
+  const getScoreBarColor = (score: number) => {
+    if (score >= 8) return "bg-green-500";
+    if (score >= 6) return "bg-blue-500";
+    return "bg-orange-500";
+  };
+
+  const scorecardLabels: Record<string, string> = {
+    team: "Team", marketSize: "Market", productDifferentiation: "Product",
+    traction: "Traction", businessModel: "Business Model", competitiveLandscape: "Competition",
+  };
+
+  const getOverallScore = (analysis: AnalysisResult) => {
+    const keys = scorecardKeys as Array<keyof Scorecard>;
+    return keys.reduce((sum, k) => sum + analysis.scorecard[k].score, 0) / keys.length;
+  };
+
+  const renderScoreBreakdownAccordion = (analyzedPitches: PitchSlot[]) => (
+    <Accordion type="multiple" className="space-y-3">
+      {analyzedPitches.map((pitch) => (
+        <AccordionItem key={pitch.id} value={pitch.name} className="border rounded-lg px-4">
+          <AccordionTrigger className="hover:no-underline">
+            <div className="flex items-center gap-3">
+              <span className="font-bold text-foreground">{pitch.name}</span>
+              <Badge variant="outline" className="text-xs">
+                {getOverallScore(pitch.analysis!) > 7 ? "Strong" : "Moderate"}
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-4 pt-2">
+              {scorecardKeys.map((key) => {
+                const entry = pitch.analysis!.scorecard[key];
+                return (
+                  <div key={key} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">{scorecardLabels[key]}</span>
+                      <span className={`text-sm font-bold ${getScoreColor(entry.score)}`}>{entry.score}/10</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-secondary">
+                      <div
+                        className={`h-full rounded-full transition-all ${getScoreBarColor(entry.score)}`}
+                        style={{ width: `${entry.score * 10}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">{entry.reasoning}</p>
+                    {entry.detailedExplanation && (
+                      <p className="text-xs text-muted-foreground/70 italic">{entry.detailedExplanation}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
+  );
+
   const scorecardKeys: Array<keyof Scorecard> = ['team', 'marketSize', 'traction', 'productDifferentiation', 'businessModel', 'competitiveLandscape'];
 
   const getComparison = () => {
