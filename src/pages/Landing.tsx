@@ -72,8 +72,8 @@ const Landing = () => {
                 <Button size="lg" className="gap-2" onClick={() => navigate("/auth")}>
                   Start for Free <ArrowRight className="h-4 w-4" />
                 </Button>
-                <Button size="lg" variant="outline" className="gap-2" onClick={() => scrollTo("how-it-works")}>
-                  See How It Works
+                <Button size="lg" variant="outline" className="gap-2" onClick={() => navigate("/demo")}>
+                  Try Demo
                 </Button>
               </div>
             </div>
