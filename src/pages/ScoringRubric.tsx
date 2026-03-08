@@ -67,15 +67,11 @@ const ScoringRubric = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
-      <div className="container max-w-5xl mx-auto px-4 py-12">
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-6 w-6 text-primary" />
-            <h1 className="text-3xl font-bold text-foreground">Scoring Rubric</h1>
-          </div>
+      <AppNavbar />
+      <div className="container max-w-5xl mx-auto px-4 py-8">
+        <div className="flex items-center gap-2 mb-8">
+          <TrendingUp className="h-6 w-6 text-primary" />
+          <h1 className="text-3xl font-bold text-foreground">Scoring Rubric</h1>
         </div>
 
         <Card className="p-6 mb-8 bg-card border-border">

@@ -53,13 +53,9 @@ const Billing = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
-      <div className="container max-w-2xl mx-auto px-4 py-12">
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-3xl font-bold text-foreground">Billing</h1>
-        </div>
+      <AppNavbar />
+      <div className="container max-w-2xl mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold text-foreground mb-8">Billing</h1>
 
         <div className="space-y-6">
           {/* Current Plan */}

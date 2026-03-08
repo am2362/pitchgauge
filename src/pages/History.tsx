@@ -237,23 +237,34 @@ export default function History() {
     .filter(b => searchTerm === "" || b.batch_name.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => sortBy === "date" ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime() : a.batch_name.localeCompare(b.batch_name));
 
+  const { tier, startCheckout } = useSubscription();
+  const FREE_LIMIT = 5;
+  const PAGE_SIZE = 20;
+  const [analysisPage, setAnalysisPage] = useState(1);
+  const [comparisonPage, setComparisonPage] = useState(1);
+  const [bulkPage, setBulkPage] = useState(1);
+
+  const isFree = tier === "free";
+
+  const paginate = <T,>(items: T[], page: number): T[] => {
+    if (isFree) return items.slice(0, FREE_LIMIT);
+    const start = (page - 1) * PAGE_SIZE;
+    return items.slice(start, start + PAGE_SIZE);
+  };
+
+  const totalPages = (count: number) => Math.max(1, Math.ceil(count / PAGE_SIZE));
+
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                Analysis History
-              </h1>
-              <p className="text-muted-foreground mt-1">View and manage your saved analyses</p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
+      <AppNavbar />
+      <div className="max-w-6xl mx-auto p-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Analysis History
+          </h1>
+          <p className="text-muted-foreground mt-1">View and manage your saved analyses</p>
         </div>
 
         {/* Search and Filter */}
