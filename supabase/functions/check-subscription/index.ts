@@ -90,8 +90,18 @@ serve(async (req) => {
     else if (currentPriceId === scalePriceId) tier = "scale";
     else tier = "pro"; // fallback for unknown price
 
-    const subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-    const subscriptionStart = new Date(subscription.current_period_start * 1000).toISOString();
+    // Safe date conversion: handle both unix timestamps and ISO strings
+    const safeDateConvert = (val: unknown): string | null => {
+      try {
+        if (val == null) return null;
+        if (typeof val === "number") return new Date(val * 1000).toISOString();
+        if (typeof val === "string") return new Date(val).toISOString();
+        return null;
+      } catch { return null; }
+    };
+
+    const subscriptionEnd = safeDateConvert(subscription.current_period_end);
+    const subscriptionStart = safeDateConvert(subscription.current_period_start);
 
     logStep("Active subscription found", { tier, subscriptionEnd });
 
