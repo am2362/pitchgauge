@@ -1,8 +1,9 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Lock, ArrowRight, FileText, GitCompare, Layers } from "lucide-react";
+import { Lock, ArrowRight, FileText, GitCompare, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/logo.png";
 
 export function DemoNav() {
   const navigate = useNavigate();
