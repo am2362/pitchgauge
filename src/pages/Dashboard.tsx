@@ -399,9 +399,13 @@ const Index = () => {
       console.log('AI Response:', data);
       console.log('Startup Name from AI:', data.startupName);
       setResult(data);
-      await saveAnalysis(data, pitchText);
+      await saveAnalysis(data, textToAnalyze);
       await recordUsage('single_analysis');
       setStartupName("");
+      // Clear PDF state after successful analysis
+      setPdfExtractedText(null);
+      setPdfFileName(null);
+      setPdfPageCount(null);
 
       toast({
         title: "Analysis complete",
