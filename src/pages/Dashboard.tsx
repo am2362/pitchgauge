@@ -148,6 +148,9 @@ const Index = () => {
   const [pitchText, setPitchText] = useState("");
   const [startupName, setStartupName] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfExtractedText, setPdfExtractedText] = useState<string | null>(null);
+  const [pdfFileName, setPdfFileName] = useState<string | null>(null);
+  const [pdfPageCount, setPdfPageCount] = useState<number | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isPdfParsing, setIsPdfParsing] = useState(false);
   const [pdfProgress, setPdfProgress] = useState("");
