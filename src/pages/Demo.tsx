@@ -39,22 +39,24 @@ const Demo = () => {
   const [activeResult, setActiveResult] = useState<"text" | "pdf">("text");
   const [pdfUploading, setPdfUploading] = useState(false);
   const [pdfStepIndex, setPdfStepIndex] = useState(-1);
-  const [pdfDone, setPdfDone] = useState(false);
+  const [pdfReady, setPdfReady] = useState(false);
+  const [pdfAnalyzed, setPdfAnalyzed] = useState(false);
+  const [isDemoAnalyzing, setIsDemoAnalyzing] = useState(false);
 
-  const result = activeResult === "pdf" && pdfDone ? DEMO_PDF_ANALYSIS_RESULT : DEMO_ANALYSIS_RESULT;
+  const result = activeResult === "pdf" && pdfAnalyzed ? DEMO_PDF_ANALYSIS_RESULT : DEMO_ANALYSIS_RESULT;
 
   const handlePdfDemo = useCallback(() => {
     setPdfUploading(true);
     setPdfStepIndex(0);
-    setPdfDone(false);
+    setPdfReady(false);
+    setPdfAnalyzed(false);
   }, []);
 
   useEffect(() => {
     if (!pdfUploading || pdfStepIndex < 0) return;
     if (pdfStepIndex >= PDF_STEPS.length) {
       setPdfUploading(false);
-      setPdfDone(true);
-      setActiveResult("pdf");
+      setPdfReady(true);
       return;
     }
     const timer = setTimeout(() => {
@@ -62,6 +64,17 @@ const Demo = () => {
     }, PDF_STEPS[pdfStepIndex].delay);
     return () => clearTimeout(timer);
   }, [pdfUploading, pdfStepIndex]);
+
+  const handleDemoAnalyze = useCallback(() => {
+    if (pdfReady && !pdfAnalyzed) {
+      setIsDemoAnalyzing(true);
+      setTimeout(() => {
+        setIsDemoAnalyzing(false);
+        setPdfAnalyzed(true);
+        setActiveResult("pdf");
+      }, 2000);
+    }
+  }, [pdfReady, pdfAnalyzed]);
 
   const handleSignupPrompt = () => {
     toast({ title: "Demo Mode", description: "Sign up for a free account to access this feature!" });
