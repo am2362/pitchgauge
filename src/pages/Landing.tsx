@@ -122,26 +122,62 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* SOCIAL PROOF */}
+      {/* USE CASES */}
       <section className="border-y border-border bg-muted/30">
-        <div className="container max-w-6xl mx-auto px-4 py-8">
-          <p className="text-center text-sm text-muted-foreground mb-6">
-            Used by investors analyzing thousands of pitches
+        <div className="container max-w-6xl mx-auto px-4 py-10">
+          <p className="text-center text-sm font-semibold text-foreground mb-5">
+            Built for investors who move fast
           </p>
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-14 opacity-50">
-            {[
-              { icon: Building2, label: "VC Fund" },
-              { icon: Users, label: "Angel Network" },
-              { icon: Sparkles, label: "Accelerator" },
-              { icon: Briefcase, label: "Family Office" },
-              { icon: Shield, label: "Syndicate" },
-            ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-2 text-muted-foreground">
-                <Icon className="h-5 w-5" />
-                <span className="text-sm font-medium">{label}</span>
-              </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            {["VC Deal Flow Screening", "Angel First-Pass Analysis", "Accelerator Batch Shortlisting", "Family Office Deal Review"].map((label) => (
+              <Badge key={label} variant="secondary" className="text-xs px-4 py-2">
+                {label}
+              </Badge>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* THE PROBLEM */}
+      <section className="scroll-mt-20">
+        <div className="container max-w-6xl mx-auto px-4 py-20 md:py-28">
+          <div className="text-center mb-14">
+            <Badge variant="secondary" className="mb-4">The Problem</Badge>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">The average VC sees 1,000+ pitches a year.</h2>
+            <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
+              Most get dismissed in minutes. Not because they weren't good — but because there wasn't enough time to look properly.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: Layers,
+                title: "Deal flow overload",
+                desc: "Hundreds of decks land in your inbox every month. Manually screening each one is slow, inconsistent, and exhausting.",
+              },
+              {
+                icon: Users,
+                title: "Inconsistent evaluation",
+                desc: "Different analysts score the same pitch differently. Without a structured framework, good deals slip through the cracks.",
+              },
+              {
+                icon: Clock,
+                title: "Time spent on the wrong deals",
+                desc: "Hours spent on pitches that could have been ruled out in minutes — time that should go to due diligence on your best prospects.",
+              },
+            ].map(({ icon: Icon, title, desc }) => (
+              <Card key={title} className="p-6 border-border bg-card">
+                <div className="w-12 h-12 rounded-lg bg-destructive/10 flex items-center justify-center mb-5">
+                  <Icon className="h-6 w-6 text-destructive" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">{title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+              </Card>
+            ))}
+          </div>
+          <p className="text-center text-sm text-muted-foreground mt-10 max-w-2xl mx-auto leading-relaxed">
+            PitchScore gives you a consistent, structured first pass on every pitch in seconds — so your team focuses only on what deserves a second look.
+          </p>
         </div>
       </section>
 
