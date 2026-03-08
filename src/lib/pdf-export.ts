@@ -130,7 +130,16 @@ export const exportAnalysisToPDF = (analysis: AnalysisResult, startupName: strin
     addSection('Bear Case', analysis.investmentThesis.bearCase);
   }
 
-  // Save PDF
+  // Benchmarking
+  if (analysis.benchmarking) {
+    addText('Benchmarking', 16, true);
+    addText(`Overall Percentile: ${analysis.benchmarking.overallPercentile}`, 11, true);
+    addText(`Stage: ${analysis.benchmarking.stageContext}`, 10, false);
+    addText(analysis.benchmarking.comparisonNotes, 10, false);
+    yPosition += 5;
+  }
+
+  addPitchGaugeFooter(pdf);
   pdf.save(`${startupName.replace(/\s+/g, '_')}_Analysis_${Date.now()}.pdf`);
 };
 
