@@ -1,38 +1,42 @@
 
-
-# Create Stripe Webhook Edge Function
+# Add "Single Pitch Analysis" Button to Top Navigation
 
 ## Problem
-1. No `stripe-webhook` edge function exists yet.
-2. The `check-subscription` function intermittently returns `{"error":"Invalid time value"}` -- likely because the Stripe API version `2025-08-27.basil` returns `current_period_end` in a different format (ISO string instead of unix timestamp), causing `new Date(subscription.current_period_end * 1000)` to fail.
+The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
 
-## Plan
+## Solution
+Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-### 1. Create `supabase/functions/stripe-webhook/index.ts`
-- Reads raw request body and `stripe-signature` header
-- Verifies signature using `STRIPE_WEBHOOK_SECRET`
-- Handles `checkout.session.completed` event:
-  - Extracts `user_id` and `tier` from session metadata (set during checkout)
-  - Updates the `subscriptions` table with the new tier, status, and period dates
-- Handles `customer.subscription.deleted` to reset tier to `free`
-- Returns 200 for unhandled event types
+## Implementation Details
 
-### 2. Add webhook config to `supabase/config.toml`
-```toml
-[functions.stripe-webhook]
-verify_jwt = false
+### File: `src/pages/Index.tsx`
+
+**What to change:**
+1. Add a new import for `FileText` icon (already imported on line 8)
+2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
+3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
+4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
+
+**Button placement:**
+- Insert as the **first button** in the top nav (line 530), before the Compare button
+- Use `FileText` icon (already imported)
+- Text: "Single Pitch Analysis"
+- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
+
+**Technical approach:**
+```text
+1. Add useRef hook to create a ref for the pitch input card
+2. In the button's onClick, check if user is on "/" page
+   - If on "/", scroll to the ref using scrollIntoView()
+   - If not on "/", navigate to "/"
+3. Attach the ref to the Card element containing "Input Pitch"
 ```
 
-### 3. Fix `check-subscription` "Invalid time value" bug
-- The Stripe API version `2025-08-27.basil` may return `current_period_end` as an ISO string or different type
-- Add a safe date conversion: check if the value is a number (unix seconds) or string before converting
-- Wrap the date conversion in try/catch to prevent the entire function from crashing
+## Files to Modify
+- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
-## Technical Details
-
-The webhook function will:
-- Use `stripe.webhooks.constructEventAsync()` for signature verification
-- Use `supabaseAdmin` (service role) to update the `subscriptions` table (since users can't UPDATE it via RLS)
-- Map price IDs to tiers using `STRIPE_PRO_PRICE_ID` and `STRIPE_SCALE_PRICE_ID` env vars
-- For `checkout.session.completed`: retrieve the full subscription from Stripe to get period dates, then upsert into `subscriptions`
-
+## Expected Result
+- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
+- Clicking it from any page navigates to "/"
+- Clicking it while already on "/" scrolls smoothly to the pitch input form
+- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
