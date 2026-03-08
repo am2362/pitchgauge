@@ -24,7 +24,7 @@ export default function Auth() {
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/");
+        navigate("/dashboard");
       }
     });
   }, [navigate]);
@@ -86,7 +86,7 @@ export default function Auth() {
         title: "Success!",
         description: "Account created successfully. You can now log in.",
       });
-      navigate("/");
+      navigate("/dashboard");
     }
   };
 
@@ -111,7 +111,7 @@ export default function Auth() {
         variant: "destructive",
       });
     } else {
-      navigate("/");
+      navigate("/dashboard");
     }
   };
 
