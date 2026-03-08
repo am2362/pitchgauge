@@ -153,20 +153,22 @@ serve(async (req) => {
       );
     }
 
-    // Verify user
+    // Verify token claims (works with signing-keys)
     const supabaseAuth = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
       global: { headers: { Authorization: authHeader } }
     });
 
-    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
-    if (userError || !user) {
+    const token = authHeader.replace('Bearer ', '').trim();
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    const userId = claimsData?.claims?.sub;
+
+    if (claimsError || !userId) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = user.id;
     console.log(`Authenticated user: ${userId}`);
 
     // Parse multipart form data

@@ -4,7 +4,7 @@ import { validateBulkComparisonInput, sanitizeErrorMessage } from '../_shared/va
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
@@ -26,20 +26,22 @@ serve(async (req) => {
       );
     }
 
-    // Verify user
+    // Verify token claims (works with signing-keys)
     const supabaseAuth = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
       global: { headers: { Authorization: authHeader } }
     });
 
-    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
-    if (userError || !user) {
+    const token = authHeader.replace('Bearer ', '').trim();
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    const userId = claimsData?.claims?.sub;
+
+    if (claimsError || !userId) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = user.id;
     console.log(`Authenticated user: ${userId}`);
 
     if (!LOVABLE_API_KEY) {
