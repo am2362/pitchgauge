@@ -11,6 +11,7 @@ import History from "./pages/History";
 import BulkAnalysis from "./pages/BulkAnalysis";
 import Settings from "./pages/Settings";
 import ScoringRubric from "./pages/ScoringRubric";
+import Billing from "./pages/Billing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
