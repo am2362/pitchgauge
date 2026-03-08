@@ -376,7 +376,7 @@ const Landing = () => {
           <div className="grid md:grid-cols-2 gap-8 items-start">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
+                <img src={logo} alt="PitchGauge" className="h-5 w-5" />
                 <span className="font-bold">PitchGauge</span>
               </div>
               <p className="text-sm text-muted-foreground max-w-xs">
