@@ -176,7 +176,7 @@ const Landing = () => {
             ))}
           </div>
           <p className="text-center text-sm text-muted-foreground mt-10 max-w-2xl mx-auto leading-relaxed">
-            PitchScore gives you a consistent, structured first pass on every pitch in seconds — so your team focuses only on what deserves a second look.
+            PitchGauge gives you a consistent, structured first pass on every pitch in seconds — so your team focuses only on what deserves a second look.
           </p>
         </div>
       </section>
