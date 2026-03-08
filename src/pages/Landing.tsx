@@ -13,7 +13,6 @@ import {
   Users,
   Building2,
   Briefcase,
-  TrendingUp,
   ArrowRight,
   ChevronRight,
   Sparkles,
@@ -25,6 +24,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import logo from "@/assets/logo.png";
 
 const Landing = () => {
   usePageMeta("PitchGauge | AI Startup Pitch Analyzer for Investors", "Score startup pitches with AI. Get detailed scorecards, red flags, and investment theses in seconds.");
