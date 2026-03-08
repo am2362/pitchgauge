@@ -285,10 +285,10 @@ const Settings = () => {
                   {tier === "free" && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Daily Analyses Used</span>
-                        <span className="font-medium">{dailyAnalysisCount} / 3</span>
+                        <span className="text-muted-foreground">Monthly Analyses Used</span>
+                        <span className="font-medium">{monthlyAnalysisCount} / 3</span>
                       </div>
-                      <Progress value={(dailyAnalysisCount / 3) * 100} className="h-2" />
+                      <Progress value={(monthlyAnalysisCount / 3) * 100} className="h-2" />
                     </div>
                   )}
 
