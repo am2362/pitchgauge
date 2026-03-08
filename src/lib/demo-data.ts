@@ -222,12 +222,12 @@ export const DEMO_COMPARISON_RESULTS = [
     startupName: "MediSync",
     memo: { "Executive Summary": "MediSync is a high-potential AI diagnostics platform with strong IP and clinical validation path, but faces significant regulatory and commercialisation hurdles.", "Key Strengths": "Strong Stanford Medical School founding team, proprietary computer vision models, clear clinical validation pathway.", "Primary Concerns": "FDA clearance timeline uncertainty, slow hospital sales cycles, unclear reimbursement model.", "Investment Recommendation": "Requires regulatory clarity before committing capital. Monitor for FDA progress." },
     scorecard: {
-      team: { score: 8, reasoning: "Experienced medical AI team from Stanford Medical School. Strong research credentials and clinical network. Needs commercial leadership." },
-      marketSize: { score: 8, reasoning: "AI medical diagnostics market projected at $45B by 2030. Radiology AI segment growing 30%+ annually." },
-      productDifferentiation: { score: 8, reasoning: "Proprietary computer vision models with published clinical accuracy data. Strong IP position with 3 patent applications." },
-      traction: { score: 5, reasoning: "3 hospital pilot partnerships but no revenue. Pending FDA 510(k) clearance. Clinical validation in progress." },
-      businessModel: { score: 6, reasoning: "Per-scan SaaS model planned but reimbursement pathway unclear. Hospital procurement cycles of 12-18 months." },
-      competitiveLandscape: { score: 6, reasoning: "Growing field with funded competitors (Viz.ai, Aidoc). Differentiation through cancer-specific focus." },
+      team: { score: 8, reasoning: "Founding team includes two NHS clinicians and a serial healthtech entrepreneur with one successful exit. Strong clinical advisory board." },
+      marketSize: { score: 8, reasoning: "AI diagnostics market forecast to reach $45B by 2030. NHS and private hospital digitisation budgets growing significantly post-pandemic." },
+      productDifferentiation: { score: 8, reasoning: "Proprietary diagnostic AI achieving 94% accuracy in clinical trials, outperforming junior radiologists. CE marked for 3 diagnostic categories." },
+      traction: { score: 5, reasoning: "2 NHS trust pilots live with 6-month data collection phase. No paid revenue yet. Letter of intent signed with 1 private hospital group." },
+      businessModel: { score: 6, reasoning: "Per-scan licensing model with hospital system integrations. Reimbursement pathway through NHS tariff system still being established." },
+      competitiveLandscape: { score: 6, reasoning: "Competing with Zebra Medical, Viz.ai, and internal hospital AI projects. Strong IP position but regulatory approval timelines create risk." },
     },
     redFlags: [
       { severity: "high" as const, issue: "Regulatory approval risk", explanation: "FDA 510(k) clearance timeline is uncertain and could take 12-24 months." },
