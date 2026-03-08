@@ -14,12 +14,14 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { z } from "zod";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const displayNameSchema = z.string().min(1, "Display name is required").max(100, "Display name must be less than 100 characters");
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const Settings = () => {
+  usePageMeta("Settings | PitchGauge", "Manage your PitchGauge account settings and preferences.");
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [currentEmail, setCurrentEmail] = useState("");

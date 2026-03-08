@@ -8,11 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, TrendingUp } from "lucide-react";
 import { z } from "zod";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 export default function Auth() {
+  usePageMeta("Sign In | PitchGauge", "Sign in or create your PitchGauge account to analyze startup pitches.");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
