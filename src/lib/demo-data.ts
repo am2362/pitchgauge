@@ -3,6 +3,103 @@ import type { BulkAnalysisResult, ComparisonReport } from "@/types/bulk-analysis
 
 export const DEMO_STARTUP_NAME = "EcoTrack";
 
+// ============================================================
+// TEXT INPUT DEMO — FinFlow
+// ============================================================
+export const DEMO_TEXT_STARTUP_NAME = "FinFlow";
+
+export const DEMO_TEXT_PITCH_TEXT = `FinFlow is a B2B payments infrastructure platform helping mid-market companies automate cross-border transactions. We integrate directly with existing ERP systems via API, reducing failed payments by 40% and cutting reconciliation time from days to minutes. Founded by ex-Stripe and Plaid engineers, we currently process $2M monthly with 12 enterprise clients at $180k MRR growing 35% month on month.`;
+
+export const DEMO_TEXT_ANALYSIS_RESULT = {
+  startupName: "FinFlow",
+  memo: {
+    "Executive Summary": "FinFlow is a compelling B2B payments play targeting the underserved mid-market segment. Strong founding team with deep payments domain expertise from Stripe and Plaid. Impressive early traction with clear monetisation and strong gross margins.",
+    "Key Strengths": "Exceptional team pedigree from Stripe and Plaid. Clear product-market fit demonstrated by 35% MoM growth and 12 enterprise clients. API-first ERP integration creates meaningful switching costs. 40% reduction in failed payments is a quantifiable and compelling value proposition.",
+    "Primary Concerns": "Highly competitive payments infrastructure market. Cross-border complexity adds regulatory overhead. Enterprise sales cycles may slow growth if pipeline is thin.",
+    "Investment Recommendation": "FinFlow is a strong Series A candidate. The combination of elite team, proven traction, and a clear mid-market gap makes this a compelling opportunity. Recommend proceeding to deep-dive due diligence on unit economics and competitive defensibility.",
+  },
+  scorecard: {
+    team: {
+      score: 9,
+      reasoning: "Founding team from Stripe and Plaid brings world-class payments infrastructure experience. Deep domain expertise in the exact problem they're solving.",
+      detailedExplanation: "Ex-Stripe and Plaid engineers understand payments infrastructure at a fundamental level. This pedigree provides credibility with enterprise buyers and deep technical knowledge of payment rails, compliance, and integration challenges.",
+    },
+    marketSize: {
+      score: 9,
+      reasoning: "Global B2B cross-border payments market exceeds $150T annually. Mid-market segment is massively underserved by current solutions focused on enterprise or SMB.",
+      detailedExplanation: "The cross-border B2B payments market is enormous and growing with globalisation. Mid-market companies are stuck between expensive enterprise solutions and limited SMB tools, creating a clear whitespace opportunity.",
+    },
+    productDifferentiation: {
+      score: 8,
+      reasoning: "Direct ERP integration via API is a strong differentiator. 40% reduction in failed payments and real-time reconciliation are measurable value propositions.",
+      detailedExplanation: "The ERP-native approach creates deep integration and switching costs. Quantifiable metrics (40% fewer failed payments, days to minutes reconciliation) make the sales pitch concrete and defensible.",
+    },
+    traction: {
+      score: 8,
+      reasoning: "$180K MRR with 12 enterprise clients and 35% MoM growth is exceptional early traction. $2M monthly processing volume validates product-market fit.",
+      detailedExplanation: "35% MoM growth at $180K MRR is impressive velocity. 12 enterprise clients provides a meaningful reference base. Processing volume of $2M/month demonstrates real usage, not just contracts.",
+    },
+    businessModel: {
+      score: 9,
+      reasoning: "Payments infrastructure with transaction-based revenue creates strong recurring economics. Enterprise clients provide predictable, high-value contracts.",
+      detailedExplanation: "Transaction-based revenue scales with customer growth. Enterprise contracts provide stability and expansion potential. Dual revenue streams (platform fees + transaction fees) create strong unit economics.",
+    },
+    competitiveLandscape: {
+      score: 7,
+      reasoning: "Highly competitive space with Stripe, Adyen, and established players. Mid-market positioning provides differentiation but moat is not yet deep.",
+      detailedExplanation: "Stripe and Adyen dominate payments infrastructure but focus on different segments. FinFlow's mid-market, ERP-integrated approach is differentiated but larger players could replicate with sufficient focus.",
+    },
+  },
+  redFlags: [
+    {
+      severity: "high" as const,
+      issue: "Highly competitive space with well-funded incumbents",
+      explanation: "Stripe, Adyen, and other well-funded players could move into the mid-market cross-border segment with superior resources and brand recognition.",
+    },
+    {
+      severity: "medium" as const,
+      issue: "Regulatory complexity across jurisdictions",
+      explanation: "Cross-border payments involve navigating multiple regulatory frameworks, licensing requirements, and compliance obligations that increase with geographic expansion.",
+    },
+    {
+      severity: "medium" as const,
+      issue: "Enterprise sales cycles could slow growth",
+      explanation: "Enterprise procurement processes can take 3-9 months. Heavy reliance on enterprise clients means growth could be lumpy and pipeline-dependent.",
+    },
+  ],
+  followUpQuestions: {
+    team: [
+      "How do you plan to defend against Stripe moving downmarket?",
+      "What key hires are planned for the next 12 months?",
+    ],
+    market: [
+      "What is your geographic expansion priority?",
+      "Which verticals are showing strongest demand?",
+    ],
+    product: [
+      "What does your integration timeline look like for new ERP systems?",
+      "How do you handle currency conversion and FX risk?",
+    ],
+    traction: [
+      "What is your net revenue retention rate?",
+      "What does the pipeline look like for Q3-Q4?",
+    ],
+    financials: [
+      "What are your CAC and payback period?",
+      "What are gross margins on transaction revenue vs platform fees?",
+    ],
+  },
+  investmentThesis: {
+    bullCase: "Mid-market payments infrastructure is genuinely underserved. Strong team execution could capture significant market share before larger players respond. Dual revenue streams provide strong unit economics.",
+    bearCase: "Stripe or Adyen could replicate mid-market focus with superior resources. Regulatory changes could increase compliance costs significantly.",
+  },
+  benchmarking: {
+    overallPercentile: "85th percentile overall",
+    stageContext: "Series A stage. Exceptional traction and team scores place this well above stage peers.",
+    comparisonNotes: "Exceptional traction and team scores place this well above stage peers. Growth rate of 35% MoM significantly exceeds the median 15-20% for B2B payments startups at Series A.",
+  },
+};
+
 export const DEMO_PITCH_TEXT = `EcoTrack — B2B Carbon Tracking SaaS
 
 Problem: Mid-market enterprises (500–5,000 employees) face increasing regulatory pressure to report Scope 1, 2, and 3 carbon emissions. Current solutions are either enterprise-priced (Persefoni, Watershed at $100K+/yr) or spreadsheet-based — leaving a massive gap.

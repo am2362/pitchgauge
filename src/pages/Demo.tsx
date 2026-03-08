@@ -10,7 +10,12 @@ import { FileText, AlertTriangle, MessageSquare, Lock, ArrowRight, Upload, Loade
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { DEMO_ANALYSIS_RESULT, DEMO_PDF_ANALYSIS_RESULT, DEMO_PITCH_TEXT, DEMO_STARTUP_NAME } from "@/lib/demo-data";
+import {
+  DEMO_TEXT_STARTUP_NAME,
+  DEMO_TEXT_PITCH_TEXT,
+  DEMO_TEXT_ANALYSIS_RESULT,
+  DEMO_PDF_ANALYSIS_RESULT,
+} from "@/lib/demo-data";
 import { DemoBanner } from "@/components/DemoBanner";
 import { DemoNav } from "@/components/DemoNav";
 import { usePageMeta } from "@/hooks/usePageMeta";
@@ -31,6 +36,38 @@ const PDF_STEPS: PdfStep[] = [
   { msg: "Generating scorecard...", delay: 1000 },
 ];
 
+const AnimatedScore = ({ score }: { score: number }) => {
+  const animated = useCountUp(score, 800, true);
+  return <>{animated}</>;
+};
+
+const ScoreBar = ({ label, scoreItem }: { label: string; scoreItem: ScoreItem }) => {
+  const getScoreColor = (score: number) => {
+    if (score >= 8) return "from-green-500 to-emerald-500";
+    if (score >= 6) return "from-blue-500 to-cyan-500";
+    if (score >= 4) return "from-yellow-500 to-orange-500";
+    return "from-red-500 to-pink-500";
+  };
+
+  return (
+    <div className="space-y-3 p-4 bg-card/50 rounded-lg border border-border/50">
+      <div className="flex justify-between items-center">
+        <span className="font-semibold text-foreground">{label}</span>
+        <span className={`text-lg font-bold ${scoreItem.score >= 7 ? 'text-green-500' : scoreItem.score >= 5 ? 'text-blue-500' : 'text-orange-500'}`}>
+          <AnimatedScore score={scoreItem.score} />/10
+        </span>
+      </div>
+      <div className="h-3 bg-secondary rounded-full overflow-hidden">
+        <div
+          className={`h-full bg-gradient-to-r ${getScoreColor(scoreItem.score)} transition-all duration-700`}
+          style={{ width: `${(scoreItem.score / 10) * 100}%` }}
+        />
+      </div>
+      <p className="text-sm text-muted-foreground leading-relaxed">{scoreItem.reasoning}</p>
+    </div>
+  );
+};
+
 const Demo = () => {
   usePageMeta("Demo | PitchGauge", "Try PitchGauge's AI pitch analysis with a sample startup — no signup required.");
   const navigate = useNavigate();
@@ -43,7 +80,7 @@ const Demo = () => {
   const [pdfAnalyzed, setPdfAnalyzed] = useState(false);
   const [isDemoAnalyzing, setIsDemoAnalyzing] = useState(false);
 
-  const result = activeResult === "pdf" && pdfAnalyzed ? DEMO_PDF_ANALYSIS_RESULT : DEMO_ANALYSIS_RESULT;
+  const result = activeResult === "pdf" ? DEMO_PDF_ANALYSIS_RESULT : DEMO_TEXT_ANALYSIS_RESULT;
 
   const handlePdfDemo = useCallback(() => {
     setPdfUploading(true);
@@ -80,38 +117,6 @@ const Demo = () => {
     toast({ title: "Demo Mode", description: "Sign up for a free account to access this feature!" });
   };
 
-  const AnimatedScore = ({ score }: { score: number }) => {
-    const animated = useCountUp(score, 800, true);
-    return <>{animated}</>;
-  };
-
-  const ScoreBar = ({ label, scoreItem }: { label: string; scoreItem: ScoreItem }) => {
-    const getScoreColor = (score: number) => {
-      if (score >= 8) return "from-green-500 to-emerald-500";
-      if (score >= 6) return "from-blue-500 to-cyan-500";
-      if (score >= 4) return "from-yellow-500 to-orange-500";
-      return "from-red-500 to-pink-500";
-    };
-
-    return (
-      <div className="space-y-3 p-4 bg-card/50 rounded-lg border border-border/50">
-        <div className="flex justify-between items-center">
-          <span className="font-semibold text-foreground">{label}</span>
-          <span className={`text-lg font-bold ${scoreItem.score >= 7 ? 'text-green-500' : scoreItem.score >= 5 ? 'text-blue-500' : 'text-orange-500'}`}>
-            <AnimatedScore score={scoreItem.score} />/10
-          </span>
-        </div>
-        <div className="h-3 bg-secondary rounded-full overflow-hidden">
-          <div
-            className={`h-full bg-gradient-to-r ${getScoreColor(scoreItem.score)} transition-all duration-700`}
-            style={{ width: `${(scoreItem.score / 10) * 100}%` }}
-          />
-        </div>
-        <p className="text-sm text-muted-foreground leading-relaxed">{scoreItem.reasoning}</p>
-      </div>
-    );
-  };
-
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "critical": case "high": return "destructive" as const;
@@ -132,45 +137,57 @@ const Demo = () => {
         </header>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Input side */}
-          <div className="space-y-6">
-            <Card className="p-8 bg-card border-border shadow-lg">
-              <div className="flex items-center gap-3 mb-6">
-                <FileText className="h-6 w-6 text-primary" />
-                <h2 className="text-2xl font-bold text-foreground">Input Pitch</h2>
+          {/* Card 1: Text Input Demo — FinFlow */}
+          <Card
+            className={`p-8 bg-card border-border shadow-lg cursor-pointer transition-all ${activeResult === "text" ? "ring-2 ring-primary" : "opacity-80 hover:opacity-100"}`}
+            onClick={() => setActiveResult("text")}
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <FileText className="h-6 w-6 text-primary" />
+              <h2 className="text-xl font-bold text-foreground">Demo: Paste Pitch Text</h2>
+              {activeResult === "text" && <Badge variant="default" className="ml-auto">Active</Badge>}
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">Startup Name</label>
+                <Input value={DEMO_TEXT_STARTUP_NAME} readOnly className="w-full opacity-75" />
               </div>
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Startup Name</label>
-                  <Input value={DEMO_STARTUP_NAME} readOnly className="w-full mb-4 opacity-75" />
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">Pitch Text</label>
+                <Textarea value={DEMO_TEXT_PITCH_TEXT} readOnly className="min-h-[180px] bg-background border-border resize-none opacity-75" />
+              </div>
+              <Separator />
+              <Button onClick={handleSignupPrompt} className="w-full h-12 text-lg font-semibold">
+                <Lock className="mr-2 h-5 w-5" /> Sign Up to Analyze Your Own Pitches
+              </Button>
+            </div>
+          </Card>
+
+          {/* Card 2: PDF Upload Demo — EcoTrack */}
+          <Card
+            className={`p-8 bg-card border-border shadow-lg cursor-pointer transition-all ${activeResult === "pdf" && pdfAnalyzed ? "ring-2 ring-primary" : "opacity-80 hover:opacity-100"}`}
+            onClick={() => { if (pdfAnalyzed) setActiveResult("pdf"); }}
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <Upload className="h-6 w-6 text-primary" />
+              <h2 className="text-xl font-bold text-foreground">Demo: Upload Pitch Deck PDF</h2>
+              {activeResult === "pdf" && pdfAnalyzed && <Badge variant="default" className="ml-auto">Active</Badge>}
+            </div>
+
+            {pdfReady ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                  <FileText className="h-8 w-8 text-primary shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-foreground">EcoTrack_PitchDeck.pdf</p>
+                    <p className="text-xs text-muted-foreground">20 pages extracted · Ready for analysis</p>
+                  </div>
+                  {pdfAnalyzed && <Badge variant="secondary" className="ml-auto">Analyzed</Badge>}
                 </div>
-
-                {pdfReady ? (
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                      PDF Uploaded — Ready to Analyze
-                    </label>
-                    <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
-                      <FileText className="h-8 w-8 text-primary shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-foreground">EcoTrack_PitchDeck.pdf</p>
-                        <p className="text-xs text-muted-foreground">20 pages extracted · Ready for analysis</p>
-                      </div>
-                      {pdfAnalyzed && <Badge variant="secondary" className="ml-auto">Analyzed</Badge>}
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground mb-2 block">Pitch Text</label>
-                    <Textarea value={DEMO_PITCH_TEXT} readOnly className="min-h-[200px] bg-background border-border resize-none opacity-75" />
-                  </div>
-                )}
-
                 <Separator />
-
-                {pdfReady && !pdfAnalyzed ? (
+                {!pdfAnalyzed ? (
                   <Button
-                    onClick={handleDemoAnalyze}
+                    onClick={(e) => { e.stopPropagation(); handleDemoAnalyze(); }}
                     disabled={isDemoAnalyzing}
                     className="w-full h-12 text-lg font-semibold"
                   >
@@ -189,53 +206,33 @@ const Demo = () => {
                   </Button>
                 )}
               </div>
-            </Card>
-
-            {/* PDF Upload Demo */}
-            {!pdfReady && (
-              <Card className="p-8 bg-card border-border shadow-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  <Upload className="h-6 w-6 text-primary" />
-                  <h2 className="text-xl font-bold text-foreground">Try Demo: Upload Pitch Deck</h2>
+            ) : !pdfUploading ? (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">Upload a sample pitch deck to see how PDF analysis works.</p>
+                <Button onClick={(e) => { e.stopPropagation(); handlePdfDemo(); }} variant="outline" className="w-full h-12 gap-2">
+                  <Upload className="h-5 w-5" /> Upload EcoTrack Pitch Deck (Demo)
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border">
+                  <FileText className="h-5 w-5 text-primary shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">EcoTrack_PitchDeck.pdf</p>
+                    <p className="text-xs text-muted-foreground">20 pages</p>
+                  </div>
                 </div>
-
-                {!pdfUploading && (
-                  <Button onClick={handlePdfDemo} variant="outline" className="w-full h-12 gap-2">
-                    <Upload className="h-5 w-5" /> Upload EcoTrack Pitch Deck (Demo)
-                  </Button>
-                )}
-
-                {pdfUploading && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border">
-                      <FileText className="h-5 w-5 text-primary shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground">EcoTrack_PitchDeck.pdf</p>
-                        <p className="text-xs text-muted-foreground">20 pages</p>
-                      </div>
+                {pdfStepIndex >= 0 && pdfStepIndex < PDF_STEPS.length && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      <span className="text-sm font-medium text-foreground">{PDF_STEPS[pdfStepIndex].msg}</span>
                     </div>
-
-                    {pdfStepIndex >= 0 && pdfStepIndex < PDF_STEPS.length && (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                          <span className="text-sm font-medium text-foreground">{PDF_STEPS[pdfStepIndex].msg}</span>
-                        </div>
-                        <Progress value={((pdfStepIndex + 1) / PDF_STEPS.length) * 100} className="h-2" />
-                      </div>
-                    )}
+                    <Progress value={((pdfStepIndex + 1) / PDF_STEPS.length) * 100} className="h-2" />
                   </div>
                 )}
-              </Card>
+              </div>
             )}
-          </div>
-
-          {/* History side */}
-          <Card className="p-8 bg-card border-border shadow-lg flex flex-col items-center justify-center text-center">
-            <Lock className="h-10 w-10 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-bold text-foreground mb-2">Analysis History</h3>
-            <p className="text-muted-foreground mb-6">Create an account to save and revisit your analyses</p>
-            <Button variant="outline" onClick={() => navigate("/auth")}>Sign Up to Save Analyses</Button>
           </Card>
         </div>
 
@@ -244,7 +241,9 @@ const Demo = () => {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold text-foreground">
               Analysis Results — {result.startupName}
-              {activeResult === "pdf" && <Badge variant="secondary" className="ml-3">PDF Upload</Badge>}
+              <Badge variant="secondary" className="ml-3">
+                {activeResult === "pdf" ? "PDF Upload" : "Text Input"}
+              </Badge>
             </h2>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleSignupPrompt} className="gap-1"><Lock className="h-3 w-3" /> Export</Button>
