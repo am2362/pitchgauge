@@ -1,42 +1,42 @@
 
-# Add "Single Pitch Analysis" Button to Top Navigation
 
-## Problem
-The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
+# Migrate to External Supabase Client
 
-## Solution
-Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
+## Overview
+Create a new Supabase client file pointing to external credentials, update all 8 files that import the auto-generated client, and provide the complete SQL migration script.
 
-## Implementation Details
+## 1. Create `src/lib/supabase-external.ts`
+New file that creates a Supabase client using `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` environment variables (which map to the user's external Supabase project credentials already stored as secrets).
 
-### File: `src/pages/Index.tsx`
+## 2. Update imports in 7 files
+Replace `import { supabase } from "@/integrations/supabase/client"` with `import { supabase } from "@/lib/supabase-external"` in:
+- `src/pages/Auth.tsx`
+- `src/pages/Dashboard.tsx`
+- `src/pages/Compare.tsx`
+- `src/pages/History.tsx`
+- `src/pages/BulkAnalysis.tsx`
+- `src/pages/Settings.tsx`
+- `src/hooks/useSubscription.ts`
+- `src/lib/document-parser.ts`
 
-**What to change:**
-1. Add a new import for `FileText` icon (already imported on line 8)
-2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
-3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
-4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
+## 3. Complete SQL Migration Script
+Provide as a code block for the user to copy and run in their Supabase SQL Editor. Includes:
 
-**Button placement:**
-- Insert as the **first button** in the top nav (line 530), before the Compare button
-- Use `FileText` icon (already imported)
-- Text: "Single Pitch Analysis"
-- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
+**Tables**: `profiles`, `subscriptions`, `usage_tracking`, `startup_analyses`, `comparison_analyses`, `bulk_analyses` — all with exact column types/defaults matching current schema.
 
-**Technical approach:**
-```text
-1. Add useRef hook to create a ref for the pitch input card
-2. In the button's onClick, check if user is on "/" page
-   - If on "/", scroll to the ref using scrollIntoView()
-   - If not on "/", navigate to "/"
-3. Attach the ref to the Card element containing "Input Pitch"
-```
+**RLS Policies**: All existing SELECT/INSERT/UPDATE/DELETE policies per table.
 
-## Files to Modify
-- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
+**Functions**:
+- `handle_new_user()` — trigger function creating profile + free subscription on signup
+- `get_daily_usage_count(p_action_type)` — returns today's usage count
+- `append_bulk_analysis_results(p_batch_id, p_results)` — appends results to bulk batch
+- `update_updated_at_column()` — auto-updates `updated_at`
 
-## Expected Result
-- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
-- Clicking it from any page navigates to "/"
-- Clicking it while already on "/" scrolls smoothly to the pitch input form
-- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
+**Triggers**:
+- `on_auth_user_created` on `auth.users` → calls `handle_new_user()`
+- `update_subscriptions_updated_at` on `subscriptions`
+- `update_profiles_updated_at` on `profiles`
+- `update_bulk_analyses_updated_at` on `bulk_analyses`
+
+No edge function changes needed — they use `SUPABASE_URL`/`SUPABASE_ANON_KEY` from the Deno runtime environment automatically.
+
