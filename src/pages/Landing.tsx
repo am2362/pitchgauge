@@ -37,7 +37,7 @@ const Landing = () => {
         <div className="container max-w-6xl mx-auto flex items-center justify-between h-16 px-4">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold tracking-tight">PitchScore</span>
+            <span className="text-lg font-bold tracking-tight">PitchGauge</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
             <button onClick={() => scrollTo("how-it-works")} className="hover:text-foreground transition-colors">How It Works</button>
