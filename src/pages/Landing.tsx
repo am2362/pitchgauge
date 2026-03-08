@@ -277,7 +277,7 @@ const Landing = () => {
                 price: "$0",
                 period: "/mo",
                 desc: "For casual exploration",
-                features: ["3 single analyses/day", "Basic JSON + PDF download", "No history"],
+                features: ["3 single analyses/month", "Basic JSON + PDF download", "No history"],
                 cta: "Get Started Free",
                 highlight: false,
               },

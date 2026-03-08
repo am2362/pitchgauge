@@ -1,36 +1,42 @@
 
+# Add "Single Pitch Analysis" Button to Top Navigation
 
-# Change Free Tier Limit from 3/day to 3/month
+## Problem
+The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
 
-## Summary
-The free tier currently limits users to 3 analyses **per day**. This needs to change to 3 analyses **per month** across the entire stack.
+## Solution
+Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-## Changes
+## Implementation Details
 
-### 1. Database function — replace `get_daily_usage_count` with `get_monthly_usage_count`
-Create a new migration that:
-- Creates `get_monthly_usage_count(p_action_type text)` — same logic but filters `created_at >= date_trunc('month', now() AT TIME ZONE 'UTC')` instead of the current day.
-- The old function can remain (harmless) but we'll stop calling it.
+### File: `src/pages/Index.tsx`
 
-### 2. `src/hooks/useSubscription.ts`
-- Rename all `daily*` references to `monthly*` (`dailyAnalysisCount` → `monthlyAnalysisCount`, `dailyAnalyses` → `monthlyAnalyses`, etc.)
-- Call `get_monthly_usage_count` RPC instead of `get_daily_usage_count`
-- Update `TIER_LIMITS.free` to `{ monthlyAnalyses: 3, ... }`
-- Update exported property names accordingly
+**What to change:**
+1. Add a new import for `FileText` icon (already imported on line 8)
+2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
+3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
+4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
 
-### 3. `src/pages/Billing.tsx`
-- Change "Daily Analyses Used" → "Monthly Analyses Used"
-- Reference `monthlyAnalysisCount` instead of `dailyAnalysisCount`
+**Button placement:**
+- Insert as the **first button** in the top nav (line 530), before the Compare button
+- Use `FileText` icon (already imported)
+- Text: "Single Pitch Analysis"
+- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
 
-### 4. `src/pages/Settings.tsx`
-- Same label/variable rename as Billing
+**Technical approach:**
+```text
+1. Add useRef hook to create a ref for the pitch input card
+2. In the button's onClick, check if user is on "/" page
+   - If on "/", scroll to the ref using scrollIntoView()
+   - If not on "/", navigate to "/"
+3. Attach the ref to the Card element containing "Input Pitch"
+```
 
-### 5. `src/pages/Dashboard.tsx`
-- Change toast from "Daily Limit Reached" / "today" → "Monthly Limit Reached" / "this month"
+## Files to Modify
+- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
-### 6. `src/pages/Landing.tsx` (line 280)
-- Change `"3 single analyses/day"` → `"3 single analyses/month"`
-
-### 7. All consumers of `useSubscription`
-Update any destructured `dailyAnalysisCount` to `monthlyAnalysisCount`. Affected files: Billing, Settings, Dashboard, and any other pages referencing it.
-
+## Expected Result
+- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
+- Clicking it from any page navigates to "/"
+- Clicking it while already on "/" scrolls smoothly to the pitch input form
+- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout

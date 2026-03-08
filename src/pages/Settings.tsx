@@ -36,7 +36,7 @@ const Settings = () => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { tier, dailyAnalysisCount, remainingAnalyses, canCompare, canBulkAnalyze, isLoading: isSubLoading, startCheckout } = useSubscription();
+  const { tier, monthlyAnalysisCount, remainingAnalyses, canCompare, canBulkAnalyze, isLoading: isSubLoading, startCheckout } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useCheckoutState<string | null>(null);
 
   useEffect(() => {
@@ -285,17 +285,17 @@ const Settings = () => {
                   {tier === "free" && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Daily Analyses Used</span>
-                        <span className="font-medium">{dailyAnalysisCount} / 3</span>
+                        <span className="text-muted-foreground">Monthly Analyses Used</span>
+                        <span className="font-medium">{monthlyAnalysisCount} / 3</span>
                       </div>
-                      <Progress value={(dailyAnalysisCount / 3) * 100} className="h-2" />
+                      <Progress value={(monthlyAnalysisCount / 3) * 100} className="h-2" />
                     </div>
                   )}
 
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Single Analyses</span>
-                      <span>{tier === "free" ? `${remainingAnalyses} remaining today` : "Unlimited"}</span>
+                      <span>{tier === "free" ? `${remainingAnalyses} remaining this month` : "Unlimited"}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Comparison Mode</span>

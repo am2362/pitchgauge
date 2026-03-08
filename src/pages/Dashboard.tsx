@@ -360,8 +360,8 @@ const Index = () => {
   const handleAnalyze = async () => {
     if (!canAnalyze) {
       toast({
-        title: "Daily Limit Reached",
-        description: "You've used all your free analyses today. Upgrade to Pro for unlimited analyses.",
+        title: "Monthly Limit Reached",
+        description: "You've used all your free analyses this month. Upgrade to Pro for unlimited analyses.",
         variant: "destructive",
       });
       return;
@@ -561,7 +561,7 @@ const Index = () => {
           </p>
           {tier === "free" && (
             <p className="text-sm text-muted-foreground">
-              {remainingAnalyses} analyses left today
+              {remainingAnalyses} analyses left this month
             </p>
           )}
         </header>

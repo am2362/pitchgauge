@@ -7,14 +7,14 @@ interface SubscriptionState {
   tier: SubscriptionTier;
   status: string;
   isLoading: boolean;
-  dailyAnalysisCount: number;
+  monthlyAnalysisCount: number;
   subscriptionEnd: string | null;
 }
 
 const TIER_LIMITS = {
-  free: { dailyAnalyses: 3, canCompare: false, canBulkAnalyze: false },
-  pro: { dailyAnalyses: Infinity, canCompare: true, canBulkAnalyze: false },
-  scale: { dailyAnalyses: Infinity, canCompare: true, canBulkAnalyze: true },
+  free: { monthlyAnalyses: 3, canCompare: false, canBulkAnalyze: false },
+  pro: { monthlyAnalyses: Infinity, canCompare: true, canBulkAnalyze: false },
+  scale: { monthlyAnalyses: Infinity, canCompare: true, canBulkAnalyze: true },
 } as const;
 
 const ADMIN_WHITELIST = [
@@ -28,7 +28,7 @@ export function useSubscription() {
     tier: "free",
     status: "active",
     isLoading: true,
-    dailyAnalysisCount: 0,
+    monthlyAnalysisCount: 0,
     subscriptionEnd: null,
   });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -42,7 +42,7 @@ export function useSubscription() {
       }
 
       if (session.user.email && ADMIN_WHITELIST.includes(session.user.email)) {
-        setState({ tier: "scale", status: "active", isLoading: false, dailyAnalysisCount: 0, subscriptionEnd: null });
+        setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, subscriptionEnd: null });
         return;
       }
 
@@ -52,7 +52,6 @@ export function useSubscription() {
 
       if (error) {
         console.error("Error checking subscription:", error);
-        // Fallback to DB query
         await loadFromDB(session.user.id, session.user.email ?? undefined);
         return;
       }
@@ -60,15 +59,14 @@ export function useSubscription() {
       const tier = (data?.tier as SubscriptionTier) || "free";
       const subscriptionEnd = data?.subscription_end || null;
 
-      // Also get daily usage count
-      const usageResult = await supabase.rpc("get_daily_usage_count", { p_action_type: "single_analysis" });
-      const dailyAnalysisCount = (usageResult.data as number) || 0;
+      const usageResult = await supabase.rpc("get_monthly_usage_count", { p_action_type: "single_analysis" });
+      const monthlyAnalysisCount = (usageResult.data as number) || 0;
 
       setState({
         tier,
         status: "active",
         isLoading: false,
-        dailyAnalysisCount,
+        monthlyAnalysisCount,
         subscriptionEnd,
       });
     } catch (error) {
@@ -80,7 +78,7 @@ export function useSubscription() {
   const loadFromDB = useCallback(async (userId: string, email?: string) => {
     try {
       if (email && ADMIN_WHITELIST.includes(email)) {
-        setState({ tier: "scale", status: "active", isLoading: false, dailyAnalysisCount: 0, subscriptionEnd: null });
+        setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, subscriptionEnd: null });
         return;
       }
       const [subResult, usageResult] = await Promise.all([
@@ -89,15 +87,15 @@ export function useSubscription() {
           .select("tier, status, current_period_end")
           .eq("user_id", userId)
           .single(),
-        supabase.rpc("get_daily_usage_count", { p_action_type: "single_analysis" }),
+        supabase.rpc("get_monthly_usage_count", { p_action_type: "single_analysis" }),
       ]);
 
       const tier = (subResult.data?.tier as SubscriptionTier) || "free";
       const status = subResult.data?.status || "active";
-      const dailyAnalysisCount = (usageResult.data as number) || 0;
+      const monthlyAnalysisCount = (usageResult.data as number) || 0;
       const subscriptionEnd = subResult.data?.current_period_end || null;
 
-      setState({ tier, status, isLoading: false, dailyAnalysisCount, subscriptionEnd });
+      setState({ tier, status, isLoading: false, monthlyAnalysisCount, subscriptionEnd });
     } catch (error) {
       console.error("Error loading subscription from DB:", error);
       setState(s => ({ ...s, isLoading: false }));
@@ -107,7 +105,6 @@ export function useSubscription() {
   useEffect(() => {
     syncWithStripe();
 
-    // Refresh every 60s
     intervalRef.current = setInterval(syncWithStripe, 60000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -116,11 +113,11 @@ export function useSubscription() {
 
   const limits = TIER_LIMITS[state.tier];
 
-  const canAnalyze = state.tier !== "free" || state.dailyAnalysisCount < limits.dailyAnalyses;
+  const canAnalyze = state.tier !== "free" || state.monthlyAnalysisCount < limits.monthlyAnalyses;
   const canCompare = limits.canCompare;
   const canBulkAnalyze = limits.canBulkAnalyze;
   const remainingAnalyses = state.tier === "free"
-    ? Math.max(0, limits.dailyAnalyses - state.dailyAnalysisCount)
+    ? Math.max(0, limits.monthlyAnalyses - state.monthlyAnalysisCount)
     : Infinity;
 
   const recordUsage = useCallback(async (actionType: string, metadata?: Record<string, string>) => {
@@ -135,7 +132,7 @@ export function useSubscription() {
       }]);
 
       if (actionType === "single_analysis") {
-        setState(s => ({ ...s, dailyAnalysisCount: s.dailyAnalysisCount + 1 }));
+        setState(s => ({ ...s, monthlyAnalysisCount: s.monthlyAnalysisCount + 1 }));
       }
     } catch (error) {
       console.error("Error recording usage:", error);
@@ -185,7 +182,7 @@ export function useSubscription() {
     tier: state.tier,
     status: state.status,
     isLoading: state.isLoading,
-    dailyAnalysisCount: state.dailyAnalysisCount,
+    monthlyAnalysisCount: state.monthlyAnalysisCount,
     subscriptionEnd: state.subscriptionEnd,
     canAnalyze,
     canCompare,
