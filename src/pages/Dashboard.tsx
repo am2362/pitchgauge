@@ -586,33 +586,64 @@ const Index = () => {
                 />
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  Paste Startup Pitch or Load Template
-                </label>
-                
-                <div className="flex gap-2 mb-3 flex-wrap">
-                  <Button variant="outline" size="sm" onClick={() => loadTemplate('saas')} className="text-xs">
-                    <FileInput className="h-3 w-3 mr-1" />
-                    SaaS Example
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => loadTemplate('marketplace')} className="text-xs">
-                    <FileInput className="h-3 w-3 mr-1" />
-                    Marketplace Example
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => loadTemplate('hardware')} className="text-xs">
-                    <FileInput className="h-3 w-3 mr-1" />
-                    Hardware Example
-                  </Button>
+              {pdfExtractedText ? (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    PDF Uploaded — Ready to Analyze
+                  </label>
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                    <FileText className="h-8 w-8 text-primary shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">{pdfFileName || "Pitch Deck"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {pdfPageCount ? `${pdfPageCount} pages extracted` : "Text extracted"} · Ready for analysis
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setPdfExtractedText(null);
+                        setPdfFileName(null);
+                        setPdfPageCount(null);
+                        setExtractedPitchSummary(null);
+                        setExtractedSlides(null);
+                      }}
+                      className="text-xs text-muted-foreground"
+                    >
+                      Remove
+                    </Button>
+                  </div>
                 </div>
+              ) : (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Paste Startup Pitch or Load Template
+                  </label>
+                  
+                  <div className="flex gap-2 mb-3 flex-wrap">
+                    <Button variant="outline" size="sm" onClick={() => loadTemplate('saas')} className="text-xs">
+                      <FileInput className="h-3 w-3 mr-1" />
+                      SaaS Example
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => loadTemplate('marketplace')} className="text-xs">
+                      <FileInput className="h-3 w-3 mr-1" />
+                      Marketplace Example
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => loadTemplate('hardware')} className="text-xs">
+                      <FileInput className="h-3 w-3 mr-1" />
+                      Hardware Example
+                    </Button>
+                  </div>
 
-                <Textarea
-                  value={pitchText}
-                  onChange={(e) => setPitchText(e.target.value)}
-                  placeholder="Paste your startup pitch here... Include: Problem, Solution, Market Size, Traction, Team, Business Model, and what you're seeking."
-                  className="min-h-[300px] bg-background border-border resize-none"
-                />
-              </div>
+                  <Textarea
+                    value={pitchText}
+                    onChange={(e) => setPitchText(e.target.value)}
+                    placeholder="Paste your startup pitch here... Include: Problem, Solution, Market Size, Traction, Team, Business Model, and what you're seeking."
+                    className="min-h-[300px] bg-background border-border resize-none"
+                  />
+                </div>
+              )}
 
               <Separator />
 
