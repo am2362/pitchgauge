@@ -77,8 +77,12 @@ export function useSubscription() {
     }
   }, []);
 
-  const loadFromDB = useCallback(async (userId: string) => {
+  const loadFromDB = useCallback(async (userId: string, email?: string) => {
     try {
+      if (email && ADMIN_WHITELIST.includes(email)) {
+        setState({ tier: "scale", status: "active", isLoading: false, dailyAnalysisCount: 0, subscriptionEnd: null });
+        return;
+      }
       const [subResult, usageResult] = await Promise.all([
         supabase
           .from("subscriptions")
