@@ -561,7 +561,7 @@ const Index = () => {
         </header>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          <Card ref={pitchInputRef} className="p-8 bg-card border-border shadow-lg">
+          <Card className="p-8 bg-card border-border shadow-lg">
             <div className="flex items-center gap-3 mb-6">
               <FileText className="h-6 w-6 text-primary" />
               <h2 className="text-2xl font-bold text-foreground">Input Pitch</h2>
