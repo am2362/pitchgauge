@@ -18,6 +18,9 @@ import { parseExcelFile, createExcelTemplate, ParsedStartupData } from "@/lib/ex
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { useCountUp } from "@/hooks/useCountUp";
+import { ComparisonSkeleton } from "@/components/AnalysisSkeletons";
 
 interface ScoreItem {
   score: number;
