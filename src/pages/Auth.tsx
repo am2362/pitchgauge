@@ -123,7 +123,7 @@ export default function Auth() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <TrendingUp className="h-10 w-10 text-primary" />
+            <img src={logo} alt="PitchGauge" className="h-10 w-10" />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               PitchGauge
             </h1>
