@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -151,7 +151,7 @@ const Index = () => {
   const [extractedSlides, setExtractedSlides] = useState<SlideContent[] | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const pitchInputRef = useRef<HTMLDivElement>(null);
+
 
   // Extract startup name from pitch text (first line if it looks like a name)
   const extractStartupName = (pitchText: string): string | null => {
@@ -529,10 +529,6 @@ const Index = () => {
               </h1>
             </div>
             <div className="flex gap-2">
-              <Button variant="default" onClick={() => pitchInputRef.current?.scrollIntoView({ behavior: 'smooth' })}>
-                <FileText className="h-4 w-4 mr-2" />
-                Single Pitch Analysis
-              </Button>
               <Button variant="outline" onClick={() => navigate("/compare")}>
                 <GitCompare className="h-4 w-4 mr-2" />
                 Compare
@@ -565,7 +561,7 @@ const Index = () => {
         </header>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          <Card ref={pitchInputRef} className="p-8 bg-card border-border shadow-lg">
+          <Card className="p-8 bg-card border-border shadow-lg">
             <div className="flex items-center gap-3 mb-6">
               <FileText className="h-6 w-6 text-primary" />
               <h2 className="text-2xl font-bold text-foreground">Input Pitch</h2>
