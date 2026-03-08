@@ -80,7 +80,7 @@ export default function Compare() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { canCompare, tier, recordUsage } = useSubscription();
+  const { canCompare, tier, recordUsage, startCheckout } = useSubscription();
 
   const loadRecentComparisons = async () => {
     if (!user) return;
