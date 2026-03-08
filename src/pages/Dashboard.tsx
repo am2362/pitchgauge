@@ -650,7 +650,7 @@ const Index = () => {
 
               <Button
                 onClick={handleAnalyze}
-                disabled={isAnalyzing || !pitchText.trim()}
+                disabled={isAnalyzing || (!pitchText.trim() && !pdfExtractedText)}
                 className="w-full h-12 text-lg font-semibold"
               >
                 {isAnalyzing ? (
