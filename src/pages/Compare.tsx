@@ -819,11 +819,6 @@ export default function Compare() {
                 className="min-h-[150px] mb-4"
                 disabled={pitch.loading || !!pitch.analysis}
               />
-              {!pitch.analysis && (
-                <Button onClick={() => analyzePitch(pitch.id)} disabled={pitch.loading || !pitch.text.trim()}>
-                  {pitch.loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Analyzing...</> : "Analyze"}
-                </Button>
-              )}
             </Card>
           ))}
         </div>
