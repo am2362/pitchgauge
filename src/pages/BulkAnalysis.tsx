@@ -207,6 +207,15 @@ export default function BulkAnalysis() {
   };
 
   const handleUploadComplete = async (startups: { name: string; pitch: string }[]) => {
+    if (!canBulkAnalyze) {
+      toast({
+        title: "Scale Feature",
+        description: "Bulk analysis requires a Scale subscription. Upgrade to unlock.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
