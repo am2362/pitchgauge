@@ -203,12 +203,12 @@ export const DEMO_COMPARISON_RESULTS = [
     startupName: "FinFlow",
     memo: { "Executive Summary": "FinFlow is a high-traction payments infrastructure play with proven team and scalable model.", "Key Strengths": "Ex-Stripe/Plaid founding team, $180k MRR, 120+ customers, high processing volume.", "Primary Concerns": "Highly competitive fintech space, regulatory complexity across markets.", "Investment Recommendation": "Strongest investment opportunity in this cohort. Proceed to term sheet." },
     scorecard: {
-      team: { score: 9, reasoning: "Exceptional founding team with Stripe and Plaid alumni. Deep payments domain expertise and proven ability to ship enterprise-grade infrastructure." },
-      marketSize: { score: 9, reasoning: "Global B2B payments market exceeds $120T annually. Even capturing a tiny fraction represents a massive opportunity." },
-      productDifferentiation: { score: 8, reasoning: "Embedded payments with unified invoicing and reconciliation. Developer-first API approach with superior documentation." },
-      traction: { score: 8, reasoning: "$180k MRR with 120+ business customers and $45M monthly processing volume. Strong growth trajectory." },
-      businessModel: { score: 9, reasoning: "Transaction-based revenue with SaaS floor. Take rate of 0.4% on volume plus platform fees. Net revenue retention above 130%." },
-      competitiveLandscape: { score: 7, reasoning: "Competitive space (Stripe, Adyen, Square) but strong differentiation in mid-market B2B vertical." },
+      team: { score: 9, reasoning: "Co-founders previously built and scaled payments infrastructure at Stripe and Plaid. Deep regulatory and technical expertise across 3 continents." },
+      marketSize: { score: 9, reasoning: "Global B2B payments market exceeds $120 trillion annually with significant inefficiencies. Strong regulatory tailwinds pushing businesses away from legacy banking rails." },
+      productDifferentiation: { score: 8, reasoning: "API-first architecture with seamless integration into existing ERP systems. Proprietary reconciliation engine reduces failed payments by 40%." },
+      traction: { score: 8, reasoning: "$180k MRR with 35% month-on-month growth. 12 enterprise clients signed in last 6 months with 97% retention rate." },
+      businessModel: { score: 9, reasoning: "Transaction fee plus SaaS subscription creates dual revenue streams. Gross margins at 78% with clear path to profitability at $500k MRR." },
+      competitiveLandscape: { score: 7, reasoning: "Competing against well-funded players like Stripe, Adyen, and Rapyd. Differentiated on mid-market focus and regional compliance tooling." },
     },
     redFlags: [
       { severity: "medium" as const, issue: "Competitive fintech landscape", explanation: "Well-funded incumbents with deep moats." },
