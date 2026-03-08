@@ -672,50 +672,97 @@ export default function Compare() {
         </div>
 
         {comparisonInsights && (
-          <Card className="p-6 mb-6 bg-accent/10 border-accent">
-            <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              AI-Powered Comparative Analysis
-            </h3>
-            
+          <div className="space-y-6 mb-6 animate-fade-in">
+            {/* Rankings */}
             {comparisonInsights.rankings && (
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">Investment Rankings</h4>
-                <div className="space-y-2">
-                  {comparisonInsights.rankings.map((ranking: any) => (
-                    <div key={ranking.startupName} className="flex items-start gap-2">
-                      <Badge variant="outline" className="mt-1">#{ranking.rank}</Badge>
-                      <div>
-                        <p className="font-medium">{ranking.startupName}</p>
-                        <p className="text-sm text-muted-foreground">{ranking.reasoning}</p>
+              <Card className="p-6">
+                <h2 className="text-xl font-bold mb-4 text-foreground flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-primary" /> Investment Rankings
+                </h2>
+                <div className="space-y-3">
+                  {comparisonInsights.rankings.map((ranking: any) => {
+                    const pitch = pitches.find(p => p.name === ranking.startupName);
+                    const avg = pitch?.analysis ? getOverallScore(pitch.analysis) : null;
+                    return (
+                      <div key={ranking.startupName} className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30">
+                        <span className="text-2xl font-extrabold text-primary w-8">#{ranking.rank}</span>
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground">{ranking.startupName}</p>
+                          <p className="text-xs text-muted-foreground">{ranking.reasoning}</p>
+                        </div>
+                        {avg !== null && (
+                          <span className={`text-xl font-bold ${getScoreColor(Math.round(avg))}`}>{avg.toFixed(1)}/10</span>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
+              </Card>
+            )}
+
+            {/* Detailed Score Breakdown */}
+            <Card className="p-6">
+              <h2 className="text-xl font-bold mb-4 text-foreground">Detailed Score Breakdown</h2>
+              {renderScoreBreakdownAccordion(pitches.filter(p => p.analysis))}
+            </Card>
+
+            {/* Strengths & Weaknesses per startup */}
+            {comparisonInsights?.comparativeInsights?.strengths && (
+              <div className="grid md:grid-cols-{Math.min(pitches.filter(p => p.analysis).length, 3)} gap-4">
+                {pitches.filter(p => p.analysis).map(pitch => {
+                  const strengths = comparisonInsights.comparativeInsights.strengths[pitch.name];
+                  const weaknesses = comparisonInsights.comparativeInsights.weaknesses[pitch.name];
+                  if (!strengths && !weaknesses) return null;
+                  return (
+                    <Card key={pitch.id} className="p-5">
+                      <h3 className="font-bold text-foreground mb-3">{pitch.name}</h3>
+                      <div className="space-y-3">
+                        {strengths && (
+                          <div>
+                            <p className="text-xs font-semibold text-green-600 flex items-center gap-1 mb-1">
+                              <ThumbsUp className="h-3 w-3" /> Strengths
+                            </p>
+                            <p className="text-xs text-muted-foreground">{typeof strengths === 'string' ? strengths : Array.isArray(strengths) ? strengths.map((s: string, i: number) => <span key={i} className="block">• {s}</span>) : null}</p>
+                          </div>
+                        )}
+                        {weaknesses && (
+                          <div>
+                            <p className="text-xs font-semibold text-red-500 flex items-center gap-1 mb-1">
+                              <ThumbsDown className="h-3 w-3" /> Weaknesses
+                            </p>
+                            <p className="text-xs text-muted-foreground">{typeof weaknesses === 'string' ? weaknesses : Array.isArray(weaknesses) ? weaknesses.map((w: string, i: number) => <span key={i} className="block">• {w}</span>) : null}</p>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
+            )}
+
+            {/* Overall Recommendation */}
+            {comparisonInsights.investmentRecommendation && (
+              <Card className="p-6 border-primary/30 bg-primary/5">
+                <h2 className="text-xl font-bold mb-3 text-foreground">Overall Recommendation</h2>
+                <p className="text-muted-foreground leading-relaxed">{comparisonInsights.investmentRecommendation}</p>
+              </Card>
             )}
 
             {comparisonInsights.comparativeInsights?.relativePerspective && (
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">Overall Perspective</h4>
-                <p className="text-sm text-muted-foreground">{comparisonInsights.comparativeInsights.relativePerspective}</p>
-              </div>
+              <Card className="p-6">
+                <h2 className="text-xl font-bold mb-3 text-foreground">Overall Perspective</h2>
+                <p className="text-muted-foreground leading-relaxed">{comparisonInsights.comparativeInsights.relativePerspective}</p>
+              </Card>
             )}
 
-            {comparisonInsights.investmentRecommendation && (
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">Investment Recommendation</h4>
-                <p className="text-sm text-muted-foreground">{comparisonInsights.investmentRecommendation}</p>
-              </div>
-            )}
-
-            <div className="flex justify-center mt-4">
+            {/* Action buttons */}
+            <div className="flex justify-center gap-3">
               <Button onClick={() => setShowComparisonDialog(true)} size="lg">
                 <TrendingUp className="h-5 w-5 mr-2" />
                 View Full Comparison Results
               </Button>
             </div>
-          </Card>
+          </div>
         )}
         
         {comparisons && comparisons.length > 0 && !comparisonInsights && (
