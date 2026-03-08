@@ -331,7 +331,7 @@ const Landing = () => {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
-                <span className="font-bold">PitchScore</span>
+                <span className="font-bold">PitchGauge</span>
               </div>
               <p className="text-sm text-muted-foreground max-w-xs">
                 AI-powered pitch intelligence for modern investors.
