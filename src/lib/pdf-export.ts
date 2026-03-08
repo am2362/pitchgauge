@@ -301,6 +301,7 @@ export const exportPitchSummaryToPDF = (
   }
 
   // Save PDF
+  addPitchGaugeFooter(pdf);
   const fileName = startupName 
     ? `${startupName.replace(/\s+/g, '_')}_Pitch_Summary_${Date.now()}.pdf`
     : `Pitch_Summary_${Date.now()}.pdf`;
