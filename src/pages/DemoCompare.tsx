@@ -206,8 +206,12 @@ const DemoCompare = () => {
 
             {/* Export buttons */}
             <div className="flex justify-center gap-3">
-              <Button variant="outline" onClick={handleSignupPrompt} className="gap-1">
-                <Lock className="h-3 w-3" /> Export PDF
+              <Button
+                variant="outline"
+                onClick={() => exportDemoComparisonToPDF(DEMO_COMPARISON_RESULTS, DEMO_COMPARISON_INSIGHTS)}
+                className="gap-1"
+              >
+                <Download className="h-3 w-3" /> Export PDF
               </Button>
               <Button variant="outline" onClick={handleSignupPrompt} className="gap-1">
                 <Lock className="h-3 w-3" /> Save Comparison

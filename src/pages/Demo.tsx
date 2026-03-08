@@ -247,7 +247,18 @@ const Demo = () => {
               </Badge>
             </h2>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleSignupPrompt} className="gap-1"><Lock className="h-3 w-3" /> Export</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportDemoAnalysisToPDF(
+                  result as any,
+                  result.startupName || "Startup",
+                  activeResult === "text" ? "PitchScore_FinFlow_Analysis.pdf" : "PitchGauge_EcoTrack_Analysis.pdf"
+                )}
+                className="gap-1"
+              >
+                <Download className="h-3 w-3" /> Download PDF
+              </Button>
               <Badge variant="secondary" className="gap-1"><Lock className="h-3 w-3" /> Demo</Badge>
             </div>
           </div>
