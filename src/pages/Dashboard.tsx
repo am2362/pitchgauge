@@ -534,19 +534,23 @@ const Index = () => {
       <div className="container max-w-7xl mx-auto px-4 py-12">
         <header className="text-center mb-12 space-y-4">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-8 w-8 text-primary" />
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                PitchGauge
-              </h1>
-              <Badge variant={tier === "free" ? "secondary" : "default"} className="ml-2 capitalize">
-                {tier}
-              </Badge>
-              {tier === "free" && (
-                <span className="text-xs text-muted-foreground ml-1">
-                  {remainingAnalyses} analyses left today
-                </span>
-              )}
+            <div className="flex flex-col items-start">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-8 w-8 text-primary" />
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  PitchGauge
+                </h1>
+              </div>
+              <div className="flex items-center gap-2 ml-10">
+                <Badge variant={tier === "free" ? "secondary" : "default"} className="capitalize">
+                  {tier}
+                </Badge>
+                {tier === "free" && (
+                  <span className="text-xs text-muted-foreground">
+                    {remainingAnalyses} analyses left today
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button variant="outline" onClick={() => navigate("/compare")}>
