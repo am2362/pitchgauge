@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp } from "lucide-react";
 import AppNavbar from "@/components/AppNavbar";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const categories = [
   {
