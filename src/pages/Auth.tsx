@@ -86,7 +86,7 @@ export default function Auth() {
         title: "Success!",
         description: "Account created successfully. You can now log in.",
       });
-      navigate("/");
+      navigate("/dashboard");
     }
   };
 
