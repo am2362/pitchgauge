@@ -144,57 +144,90 @@ const Demo = () => {
                   <label className="text-sm font-medium text-muted-foreground mb-2 block">Startup Name</label>
                   <Input value={DEMO_STARTUP_NAME} readOnly className="w-full mb-4 opacity-75" />
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Pitch Text</label>
-                  <Textarea value={DEMO_PITCH_TEXT} readOnly className="min-h-[200px] bg-background border-border resize-none opacity-75" />
-                </div>
+
+                {pdfReady ? (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                      PDF Uploaded — Ready to Analyze
+                    </label>
+                    <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                      <FileText className="h-8 w-8 text-primary shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-foreground">EcoTrack_PitchDeck.pdf</p>
+                        <p className="text-xs text-muted-foreground">20 pages extracted · Ready for analysis</p>
+                      </div>
+                      {pdfAnalyzed && <Badge variant="secondary" className="ml-auto">Analyzed</Badge>}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-2 block">Pitch Text</label>
+                    <Textarea value={DEMO_PITCH_TEXT} readOnly className="min-h-[200px] bg-background border-border resize-none opacity-75" />
+                  </div>
+                )}
+
                 <Separator />
-                <Button onClick={handleSignupPrompt} className="w-full h-12 text-lg font-semibold">
-                  <Lock className="mr-2 h-5 w-5" /> Sign Up to Analyze Your Own Pitches
-                </Button>
+
+                {pdfReady && !pdfAnalyzed ? (
+                  <Button
+                    onClick={handleDemoAnalyze}
+                    disabled={isDemoAnalyzing}
+                    className="w-full h-12 text-lg font-semibold"
+                  >
+                    {isDemoAnalyzing ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Analyzing with AI...
+                      </>
+                    ) : (
+                      "Generate Analysis"
+                    )}
+                  </Button>
+                ) : (
+                  <Button onClick={handleSignupPrompt} className="w-full h-12 text-lg font-semibold">
+                    <Lock className="mr-2 h-5 w-5" /> Sign Up to Analyze Your Own Pitches
+                  </Button>
+                )}
               </div>
             </Card>
 
             {/* PDF Upload Demo */}
-            <Card className="p-8 bg-card border-border shadow-lg">
-              <div className="flex items-center gap-3 mb-4">
-                <Upload className="h-6 w-6 text-primary" />
-                <h2 className="text-xl font-bold text-foreground">Try Demo: Upload Pitch Deck</h2>
-              </div>
-
-              {!pdfUploading && !pdfDone && (
-                <Button onClick={handlePdfDemo} variant="outline" className="w-full h-12 gap-2">
-                  <Upload className="h-5 w-5" /> Upload EcoTrack Pitch Deck (Demo)
-                </Button>
-              )}
-
-              {(pdfUploading || pdfDone) && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border">
-                    <FileText className="h-5 w-5 text-primary shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">EcoTrack_PitchDeck.pdf</p>
-                      <p className="text-xs text-muted-foreground">20 pages</p>
-                    </div>
-                    {pdfDone && <Badge variant="secondary" className="ml-auto">Complete</Badge>}
-                  </div>
-
-                  {pdfUploading && pdfStepIndex >= 0 && pdfStepIndex < PDF_STEPS.length && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                        <span className="text-sm font-medium text-foreground">{PDF_STEPS[pdfStepIndex].msg}</span>
-                      </div>
-                      <Progress value={((pdfStepIndex + 1) / PDF_STEPS.length) * 100} className="h-2" />
-                    </div>
-                  )}
-
-                  {pdfDone && (
-                    <p className="text-sm text-green-600 font-medium">✓ Analysis complete — results loaded below</p>
-                  )}
+            {!pdfReady && (
+              <Card className="p-8 bg-card border-border shadow-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <Upload className="h-6 w-6 text-primary" />
+                  <h2 className="text-xl font-bold text-foreground">Try Demo: Upload Pitch Deck</h2>
                 </div>
-              )}
-            </Card>
+
+                {!pdfUploading && (
+                  <Button onClick={handlePdfDemo} variant="outline" className="w-full h-12 gap-2">
+                    <Upload className="h-5 w-5" /> Upload EcoTrack Pitch Deck (Demo)
+                  </Button>
+                )}
+
+                {pdfUploading && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border">
+                      <FileText className="h-5 w-5 text-primary shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">EcoTrack_PitchDeck.pdf</p>
+                        <p className="text-xs text-muted-foreground">20 pages</p>
+                      </div>
+                    </div>
+
+                    {pdfStepIndex >= 0 && pdfStepIndex < PDF_STEPS.length && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          <span className="text-sm font-medium text-foreground">{PDF_STEPS[pdfStepIndex].msg}</span>
+                        </div>
+                        <Progress value={((pdfStepIndex + 1) / PDF_STEPS.length) * 100} className="h-2" />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
+            )}
           </div>
 
           {/* History side */}
