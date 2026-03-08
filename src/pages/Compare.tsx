@@ -154,6 +154,10 @@ export default function Compare() {
   }, [user]);
 
   const addPitch = () => {
+    if (pitches.length >= 10) {
+      toast({ title: "Maximum 10 startups allowed", description: "You've reached the comparison limit.", variant: "destructive" });
+      return;
+    }
     setPitches([...pitches, {
       id: pitches.length + 1,
       name: `Startup ${String.fromCharCode(65 + pitches.length)}`,
