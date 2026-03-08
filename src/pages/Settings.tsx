@@ -202,7 +202,7 @@ const Settings = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
       <div className="container max-w-2xl mx-auto px-4 py-12">
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-3xl font-bold text-foreground">Settings</h1>
