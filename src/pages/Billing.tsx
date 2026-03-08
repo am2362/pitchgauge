@@ -147,7 +147,7 @@ const Billing = () => {
                         <h3 className="font-semibold flex items-center gap-2"><Crown className="h-4 w-4 text-primary" /> Pro</h3>
                         <p className="text-sm text-muted-foreground">Unlimited analyses + Comparison mode</p>
                       </div>
-                      <span className="text-lg font-bold">$29<span className="text-sm font-normal text-muted-foreground">/mo</span></span>
+                      <span className="text-lg font-bold">$39<span className="text-sm font-normal text-muted-foreground">/mo</span></span>
                     </div>
                     <Button className="w-full" onClick={() => handleUpgrade("pro")} disabled={checkoutLoading === "pro"}>
                       {checkoutLoading === "pro" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
