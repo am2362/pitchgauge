@@ -162,7 +162,7 @@ const Billing = () => {
                       <h3 className="font-semibold flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> Scale</h3>
                       <p className="text-sm text-muted-foreground">Everything in Pro + Bulk analysis</p>
                     </div>
-                    <span className="text-lg font-bold">$89<span className="text-sm font-normal text-muted-foreground">/mo</span></span>
+                    <span className="text-lg font-bold">$99<span className="text-sm font-normal text-muted-foreground">/mo</span></span>
                   </div>
                   <Button className="w-full" onClick={() => handleUpgrade("scale")} disabled={checkoutLoading === "scale"}>
                     {checkoutLoading === "scale" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

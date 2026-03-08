@@ -52,7 +52,7 @@ export function UpgradePrompt({ requiredTier, currentTier, featureName, onUpgrad
               disabled={isLoading}
             >
               <Crown className="h-4 w-4" />
-              Or upgrade to Pro — $29/mo
+              Or upgrade to Pro — $39/mo
             </Button>
           )}
         </CardContent>

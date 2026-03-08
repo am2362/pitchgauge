@@ -316,7 +316,7 @@ const Settings = () => {
                   {tier === "pro" && (
                     <Button variant="outline" className="w-full" onClick={async () => { setCheckoutLoading("scale"); try { await startCheckout("scale"); } catch {} finally { setCheckoutLoading(null); } }} disabled={checkoutLoading === "scale"}>
                       {checkoutLoading === "scale" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Upgrade to Scale — $89/mo
+                      Upgrade to Scale — $99/mo
                     </Button>
                   )}
                   <Button variant="link" className="w-full" onClick={() => navigate("/billing")}>
