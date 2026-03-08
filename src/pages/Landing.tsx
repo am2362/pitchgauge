@@ -229,7 +229,7 @@ const Landing = () => {
             <Badge variant="secondary" className="mb-4">Features</Badge>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Everything You Need to Evaluate Deal Flow</h2>
             <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
-              PitchScore gives investors a fast, structured first look at any pitch — so you spend less time on triage and more time on the deals worth pursuing.
+              PitchGauge gives investors a fast, structured first look at any pitch — so you spend less time on triage and more time on the deals worth pursuing.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
