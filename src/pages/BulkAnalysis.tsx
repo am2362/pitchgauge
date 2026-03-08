@@ -577,6 +577,23 @@ export default function BulkAnalysis() {
     }
   };
 
+  const handleExportPDF = (batch: BulkAnalysis) => {
+    if (!batch.results) return;
+    try {
+      exportBulkAnalysisToPDF(batch.results, batch.comparison_report, batch.batch_name);
+      toast({
+        title: "PDF Exported",
+        description: "PDF report has been downloaded."
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Could not export PDF",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleDelete = async (batchId: string) => {
     try {
       const { error } = await supabase
