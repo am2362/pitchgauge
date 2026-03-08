@@ -13,7 +13,6 @@ import {
   Users,
   Building2,
   Briefcase,
-  TrendingUp,
   ArrowRight,
   ChevronRight,
   Sparkles,
@@ -25,6 +24,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import logo from "@/assets/logo.png";
 
 const Landing = () => {
   usePageMeta("PitchGauge | AI Startup Pitch Analyzer for Investors", "Score startup pitches with AI. Get detailed scorecards, red flags, and investment theses in seconds.");
@@ -40,7 +40,7 @@ const Landing = () => {
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="container max-w-6xl mx-auto flex items-center justify-between h-16 px-4">
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-6 w-6 text-primary" />
+            <img src={logo} alt="PitchGauge" className="h-6 w-6" />
             <span className="text-lg font-bold tracking-tight">PitchGauge</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
@@ -376,7 +376,7 @@ const Landing = () => {
           <div className="grid md:grid-cols-2 gap-8 items-start">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
+                <img src={logo} alt="PitchGauge" className="h-5 w-5" />
                 <span className="font-bold">PitchGauge</span>
               </div>
               <p className="text-sm text-muted-foreground max-w-xs">

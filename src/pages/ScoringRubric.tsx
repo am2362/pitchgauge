@@ -2,9 +2,9 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp } from "lucide-react";
 import AppNavbar from "@/components/AppNavbar";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import logo from "@/assets/logo.png";
 
 const categories = [
   {
@@ -72,7 +72,7 @@ const ScoringRubric = () => {
       <AppNavbar />
       <div className="container max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center gap-2 mb-8">
-          <TrendingUp className="h-6 w-6 text-primary" />
+          <img src={logo} alt="PitchGauge" className="h-6 w-6" />
           <h1 className="text-3xl font-bold text-foreground">Scoring Rubric</h1>
         </div>
 

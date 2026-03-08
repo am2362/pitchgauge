@@ -1,8 +1,9 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Lock, ArrowRight, FileText, GitCompare, Layers } from "lucide-react";
+import { Lock, ArrowRight, FileText, GitCompare, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/logo.png";
 
 export function DemoNav() {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ export function DemoNav() {
       <div className="container max-w-7xl mx-auto flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <button onClick={() => navigate("/")} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <TrendingUp className="h-6 w-6 text-primary" />
+            <img src={logo} alt="PitchGauge" className="h-6 w-6" />
             <span className="text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               PitchGauge
             </span>
