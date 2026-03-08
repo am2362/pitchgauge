@@ -12,7 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TrendingUp, FileText, GitCompare, BarChart, History, User, CreditCard, Settings, LogOut, ChevronDown } from "lucide-react";
+import { FileText, GitCompare, BarChart, History, User, CreditCard, Settings, LogOut, ChevronDown } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const navLinks = [
   { label: "Single Analysis", path: "/dashboard", icon: FileText },
