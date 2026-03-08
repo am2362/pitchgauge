@@ -184,12 +184,12 @@ export const DEMO_COMPARISON_RESULTS = [
     startupName: "EcoTrack",
     memo: { "Executive Summary": "Strong market thesis in ESG compliance. Early traction but large TAM.", "Key Strengths": "Large addressable market, strong regulatory tailwinds, automated compliance tooling.", "Primary Concerns": "Early revenue, competitive market, long sales cycles.", "Investment Recommendation": "High potential watch for next round." },
     scorecard: {
-      team: { score: 7, reasoning: "Strong domain expertise in sustainability and enterprise SaaS." },
-      marketSize: { score: 9, reasoning: "ESG compliance market projected to exceed $60B by 2030." },
-      productDifferentiation: { score: 7, reasoning: "Automated supply chain carbon accounting is differentiated but replicable." },
-      traction: { score: 6, reasoning: "Early stage with $12k MRR and pilot customers." },
-      businessModel: { score: 8, reasoning: "Tiered SaaS with 80%+ gross margins and expansion potential." },
-      competitiveLandscape: { score: 7, reasoning: "Mid-market focus differentiates from enterprise incumbents." },
+      team: { score: 7, reasoning: "CEO has 8 years in enterprise SaaS sales, CTO holds PhD in environmental science. Team lacks a seasoned CFO for upcoming fundraise." },
+      marketSize: { score: 9, reasoning: "Global carbon management software market projected to reach $15B by 2027. Mandatory ESG reporting regulations accelerating enterprise adoption." },
+      productDifferentiation: { score: 7, reasoning: "Automated carbon accounting across Scope 1, 2, and 3 emissions with 200+ data integrations. Reporting module still in beta with limited customisation." },
+      traction: { score: 6, reasoning: "$12k MRR across 8 pilot customers. Pipeline of $400k ARR but enterprise sales cycles averaging 9 months." },
+      businessModel: { score: 8, reasoning: "Annual SaaS contracts with usage-based pricing above base tier. Strong expansion revenue potential as reporting requirements grow." },
+      competitiveLandscape: { score: 7, reasoning: "Market has well-funded incumbents Watershed and Persefoni but EcoTrack differentiates on price point and implementation speed for mid-market." },
     },
     redFlags: [
       { severity: "medium" as const, issue: "Early traction", explanation: "Limited revenue base for Series A." },
