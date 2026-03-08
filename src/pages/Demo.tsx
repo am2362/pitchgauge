@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, BarChart, AlertTriangle, MessageSquare, TrendingUp, FileDown, Lock, ArrowRight } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { FileText, AlertTriangle, MessageSquare, Lock, ArrowRight, Upload, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { DEMO_ANALYSIS_RESULT, DEMO_PITCH_TEXT, DEMO_STARTUP_NAME } from "@/lib/demo-data";
+import { DEMO_ANALYSIS_RESULT, DEMO_PDF_ANALYSIS_RESULT, DEMO_PITCH_TEXT, DEMO_STARTUP_NAME } from "@/lib/demo-data";
+import { DemoBanner } from "@/components/DemoBanner";
+import { DemoNav } from "@/components/DemoNav";
 
 interface ScoreItem {
   score: number;
@@ -17,16 +20,48 @@ interface ScoreItem {
   detailedExplanation?: string;
 }
 
+type PdfStep = { msg: string; delay: number };
+
+const PDF_STEPS: PdfStep[] = [
+  { msg: "Uploading PDF...", delay: 1000 },
+  { msg: "Extracting text from 20 pages...", delay: 1500 },
+  { msg: "Analysing pitch content...", delay: 2000 },
+  { msg: "Generating scorecard...", delay: 1000 },
+];
+
 const Demo = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const result = DEMO_ANALYSIS_RESULT;
 
-  const handleAnalyzeAttempt = () => {
-    toast({
-      title: "Demo Mode",
-      description: "Sign up for a free account to analyze your own pitches!",
-    });
+  const [activeResult, setActiveResult] = useState<"text" | "pdf">("text");
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfStepIndex, setPdfStepIndex] = useState(-1);
+  const [pdfDone, setPdfDone] = useState(false);
+
+  const result = activeResult === "pdf" && pdfDone ? DEMO_PDF_ANALYSIS_RESULT : DEMO_ANALYSIS_RESULT;
+
+  const handlePdfDemo = useCallback(() => {
+    setPdfUploading(true);
+    setPdfStepIndex(0);
+    setPdfDone(false);
+  }, []);
+
+  useEffect(() => {
+    if (!pdfUploading || pdfStepIndex < 0) return;
+    if (pdfStepIndex >= PDF_STEPS.length) {
+      setPdfUploading(false);
+      setPdfDone(true);
+      setActiveResult("pdf");
+      return;
+    }
+    const timer = setTimeout(() => {
+      setPdfStepIndex((i) => i + 1);
+    }, PDF_STEPS[pdfStepIndex].delay);
+    return () => clearTimeout(timer);
+  }, [pdfUploading, pdfStepIndex]);
+
+  const handleSignupPrompt = () => {
+    toast({ title: "Demo Mode", description: "Sign up for a free account to access this feature!" });
   };
 
   const ScoreBar = ({ label, scoreItem }: { label: string; scoreItem: ScoreItem }) => {
@@ -58,8 +93,7 @@ const Demo = () => {
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case "critical": return "destructive" as const;
-      case "high": return "destructive" as const;
+      case "critical": case "high": return "destructive" as const;
       case "medium": return "secondary" as const;
       default: return "outline" as const;
     }
@@ -67,104 +101,101 @@ const Demo = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
-      {/* Demo Nav */}
-      <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container max-w-7xl mx-auto flex h-14 items-center justify-between px-4">
-          <button onClick={() => navigate("/")} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <TrendingUp className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              PitchGauge
-            </span>
-          </button>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="gap-1">
-              <Lock className="h-3 w-3" />
-              Demo Mode
-            </Badge>
-            <Button size="sm" onClick={() => navigate("/auth")} className="gap-1.5">
-              Sign Up Free <ArrowRight className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      </nav>
+      <DemoBanner />
+      <DemoNav />
 
       <div className="container max-w-7xl mx-auto px-4 py-8">
-        {/* Demo banner */}
-        <Card className="p-4 mb-8 border-primary/30 bg-primary/5">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <Lock className="h-5 w-5 text-primary" />
-              <div>
-                <p className="font-semibold text-foreground">You're viewing a demo analysis</p>
-                <p className="text-sm text-muted-foreground">Sign up for free to analyze your own startup pitches</p>
-              </div>
-            </div>
-            <Button onClick={() => navigate("/auth")} className="gap-1.5">
-              Get Started <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </Card>
-
         <header className="text-center mb-8 space-y-2">
-          <h2 className="text-2xl font-bold text-foreground">Single Pitch Analysis</h2>
-          <p className="text-muted-foreground">
-            AI-Powered Comprehensive Startup Pitch Analysis
-          </p>
+          <h1 className="text-2xl font-bold text-foreground">Single Pitch Analysis</h1>
+          <p className="text-muted-foreground">AI-Powered Comprehensive Startup Pitch Analysis</p>
         </header>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Input side — read-only with demo pitch */}
-          <Card className="p-8 bg-card border-border shadow-lg">
-            <div className="flex items-center gap-3 mb-6">
-              <FileText className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl font-bold text-foreground">Input Pitch</h2>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  Startup Name
-                </label>
-                <Input value={DEMO_STARTUP_NAME} readOnly className="w-full mb-4 opacity-75" />
+          {/* Input side */}
+          <div className="space-y-6">
+            <Card className="p-8 bg-card border-border shadow-lg">
+              <div className="flex items-center gap-3 mb-6">
+                <FileText className="h-6 w-6 text-primary" />
+                <h2 className="text-2xl font-bold text-foreground">Input Pitch</h2>
               </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  Pitch Text
-                </label>
-                <Textarea
-                  value={DEMO_PITCH_TEXT}
-                  readOnly
-                  className="min-h-[300px] bg-background border-border resize-none opacity-75"
-                />
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Startup Name</label>
+                  <Input value={DEMO_STARTUP_NAME} readOnly className="w-full mb-4 opacity-75" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Pitch Text</label>
+                  <Textarea value={DEMO_PITCH_TEXT} readOnly className="min-h-[200px] bg-background border-border resize-none opacity-75" />
+                </div>
+                <Separator />
+                <Button onClick={handleSignupPrompt} className="w-full h-12 text-lg font-semibold">
+                  <Lock className="mr-2 h-5 w-5" /> Sign Up to Analyze Your Own Pitches
+                </Button>
               </div>
-              <Separator />
-              <Button onClick={handleAnalyzeAttempt} className="w-full h-12 text-lg font-semibold">
-                <Lock className="mr-2 h-5 w-5" />
-                Sign Up to Analyze Your Own Pitches
-              </Button>
-            </div>
-          </Card>
+            </Card>
 
-          {/* History side — empty with CTA */}
+            {/* PDF Upload Demo */}
+            <Card className="p-8 bg-card border-border shadow-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <Upload className="h-6 w-6 text-primary" />
+                <h2 className="text-xl font-bold text-foreground">Try Demo: Upload Pitch Deck</h2>
+              </div>
+
+              {!pdfUploading && !pdfDone && (
+                <Button onClick={handlePdfDemo} variant="outline" className="w-full h-12 gap-2">
+                  <Upload className="h-5 w-5" /> Upload EcoTrack Pitch Deck (Demo)
+                </Button>
+              )}
+
+              {(pdfUploading || pdfDone) && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border">
+                    <FileText className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">EcoTrack_PitchDeck.pdf</p>
+                      <p className="text-xs text-muted-foreground">20 pages</p>
+                    </div>
+                    {pdfDone && <Badge variant="secondary" className="ml-auto">Complete</Badge>}
+                  </div>
+
+                  {pdfUploading && pdfStepIndex >= 0 && pdfStepIndex < PDF_STEPS.length && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <span className="text-sm font-medium text-foreground">{PDF_STEPS[pdfStepIndex].msg}</span>
+                      </div>
+                      <Progress value={((pdfStepIndex + 1) / PDF_STEPS.length) * 100} className="h-2" />
+                    </div>
+                  )}
+
+                  {pdfDone && (
+                    <p className="text-sm text-green-600 font-medium">✓ Analysis complete — results loaded below</p>
+                  )}
+                </div>
+              )}
+            </Card>
+          </div>
+
+          {/* History side */}
           <Card className="p-8 bg-card border-border shadow-lg flex flex-col items-center justify-center text-center">
             <Lock className="h-10 w-10 text-muted-foreground mb-4" />
             <h3 className="text-xl font-bold text-foreground mb-2">Analysis History</h3>
             <p className="text-muted-foreground mb-6">Create an account to save and revisit your analyses</p>
-            <Button variant="outline" onClick={() => navigate("/auth")}>
-              Sign Up to Save Analyses
-            </Button>
+            <Button variant="outline" onClick={() => navigate("/auth")}>Sign Up to Save Analyses</Button>
           </Card>
         </div>
 
         {/* Results */}
-        <Card className="mt-8 p-8 bg-card border-border shadow-lg">
+        <Card className="mt-8 p-8 bg-card border-border shadow-lg animate-fade-in">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold text-foreground">
-              Analysis Results — {DEMO_STARTUP_NAME}
+              Analysis Results — {result.startupName}
+              {activeResult === "pdf" && <Badge variant="secondary" className="ml-3">PDF Upload</Badge>}
             </h2>
-            <Badge variant="secondary" className="gap-1">
-              <Lock className="h-3 w-3" /> Demo
-            </Badge>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleSignupPrompt} className="gap-1"><Lock className="h-3 w-3" /> Export</Button>
+              <Badge variant="secondary" className="gap-1"><Lock className="h-3 w-3" /> Demo</Badge>
+            </div>
           </div>
 
           <Tabs defaultValue="scorecard" className="w-full">
@@ -187,15 +218,13 @@ const Demo = () => {
             </TabsContent>
 
             <TabsContent value="memo">
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <div className="space-y-4">
-                  {Object.entries(result.memo).map(([section, content]) => (
-                    <div key={section} className="mb-4">
-                      <h3 className="text-lg font-semibold mb-2 text-foreground">{section}</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{content}</p>
-                    </div>
-                  ))}
-                </div>
+              <div className="space-y-4">
+                {Object.entries(result.memo).map(([section, content]) => (
+                  <div key={section} className="mb-4">
+                    <h3 className="text-lg font-semibold mb-2 text-foreground">{section}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{content}</p>
+                  </div>
+                ))}
               </div>
             </TabsContent>
 
@@ -270,9 +299,7 @@ const Demo = () => {
             <Button size="lg" onClick={() => navigate("/auth")} className="gap-2">
               Start for Free <ArrowRight className="h-4 w-4" />
             </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/")}>
-              Back to Home
-            </Button>
+            <Button size="lg" variant="outline" onClick={() => navigate("/")}>Back to Home</Button>
           </div>
         </Card>
       </div>

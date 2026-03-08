@@ -14,6 +14,8 @@ import ScoringRubric from "./pages/ScoringRubric";
 import Billing from "./pages/Billing";
 import NotFound from "./pages/NotFound";
 import Demo from "./pages/Demo";
+import DemoCompare from "./pages/DemoCompare";
+import DemoBulk from "./pages/DemoBulk";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -28,6 +30,8 @@ const App = () => (
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/demo" element={<Demo />} />
+          <Route path="/demo/compare" element={<DemoCompare />} />
+          <Route path="/demo/bulk" element={<DemoBulk />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/compare" element={<ProtectedRoute><Compare /></ProtectedRoute>} />
           <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
