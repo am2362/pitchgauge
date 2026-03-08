@@ -310,7 +310,7 @@ const Settings = () => {
                   {tier === "free" && (
                     <Button className="w-full" onClick={async () => { setCheckoutLoading("pro"); try { await startCheckout("pro"); } catch {} finally { setCheckoutLoading(null); } }} disabled={checkoutLoading === "pro"}>
                       {checkoutLoading === "pro" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Upgrade to Pro — $29/mo
+                      Upgrade to Pro — $39/mo
                     </Button>
                   )}
                   {tier === "pro" && (
