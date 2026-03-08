@@ -236,6 +236,7 @@ export const exportComparisonToPDF = (comparisonData: ComparisonData) => {
     yPosition += 5;
   });
 
+  addPitchGaugeFooter(pdf);
   pdf.save(`Comparison_${comparisonData.startupNames.join('_vs_')}_${Date.now()}.pdf`);
 };
 
