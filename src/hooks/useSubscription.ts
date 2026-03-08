@@ -17,6 +17,12 @@ const TIER_LIMITS = {
   scale: { dailyAnalyses: Infinity, canCompare: true, canBulkAnalyze: true },
 } as const;
 
+const ADMIN_WHITELIST = [
+  "amandayung808@gmail.com",
+  "amandaywy2015@gmail.com",
+  "c74661985@gmail.com",
+];
+
 export function useSubscription() {
   const [state, setState] = useState<SubscriptionState>({
     tier: "free",
@@ -35,6 +41,11 @@ export function useSubscription() {
         return;
       }
 
+      if (session.user.email && ADMIN_WHITELIST.includes(session.user.email)) {
+        setState({ tier: "scale", status: "active", isLoading: false, dailyAnalysisCount: 0, subscriptionEnd: null });
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("check-subscription", {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
@@ -42,7 +53,7 @@ export function useSubscription() {
       if (error) {
         console.error("Error checking subscription:", error);
         // Fallback to DB query
-        await loadFromDB(session.user.id);
+        await loadFromDB(session.user.id, session.user.email ?? undefined);
         return;
       }
 
@@ -66,8 +77,12 @@ export function useSubscription() {
     }
   }, []);
 
-  const loadFromDB = useCallback(async (userId: string) => {
+  const loadFromDB = useCallback(async (userId: string, email?: string) => {
     try {
+      if (email && ADMIN_WHITELIST.includes(email)) {
+        setState({ tier: "scale", status: "active", isLoading: false, dailyAnalysisCount: 0, subscriptionEnd: null });
+        return;
+      }
       const [subResult, usageResult] = await Promise.all([
         supabase
           .from("subscriptions")
