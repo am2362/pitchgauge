@@ -1,40 +1,42 @@
 
+# Add "Single Pitch Analysis" Button to Top Navigation
 
-# Ensure All Analyses Save to History and Can Be Retrieved
+## Problem
+The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
 
-## Current State
+## Solution
+Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-| Feature | Auto-saves? | In History page? | Can view/restore? |
-|---------|------------|------------------|-------------------|
-| Single Analysis (Index) | Yes, auto-saves after analyze | Yes (Analyses tab) | No -- only export/delete |
-| Comparison (Compare) | Manual "Save" button | Yes (Comparisons tab) | No -- only export/delete |
-| Bulk Analysis (BulkAnalysis) | Yes, to `bulk_analyses` table | **No -- missing from History** | No |
+## Implementation Details
 
-## Gaps to Fix
+### File: `src/pages/Index.tsx`
 
-1. **Bulk analyses are not shown in History page** -- the `bulk_analyses` table is never queried on the History page
-2. **No "View" action on any history item** -- users can only export PDF or delete, but cannot view/restore the full analysis details
-3. **Comparison auto-save** -- comparisons require a manual "Save" click; consider auto-saving after generation
+**What to change:**
+1. Add a new import for `FileText` icon (already imported on line 8)
+2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
+3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
+4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
 
-## Plan
+**Button placement:**
+- Insert as the **first button** in the top nav (line 530), before the Compare button
+- Use `FileText` icon (already imported)
+- Text: "Single Pitch Analysis"
+- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
 
-### 1. Add Bulk Analyses tab to History page (`src/pages/History.tsx`)
-- Add a `BulkAnalysisHistory` interface matching the `bulk_analyses` table schema
-- Load `bulk_analyses` in `loadHistory()` alongside the other two queries
-- Add a third tab "Bulk Analyses" showing batch name, date, startup count, status, and score summary
-- Support delete and export (reuse existing `exportBulkAnalysisToExcel`)
-- Support search filtering on batch name
+**Technical approach:**
+```text
+1. Add useRef hook to create a ref for the pitch input card
+2. In the button's onClick, check if user is on "/" page
+   - If on "/", scroll to the ref using scrollIntoView()
+   - If not on "/", navigate to "/"
+3. Attach the ref to the Card element containing "Input Pitch"
+```
 
-### 2. Add "View" buttons to all history items (`src/pages/History.tsx`)
-- **Single Analyses**: Add an Eye/View icon button that opens a Dialog showing the full analysis (scorecard, memo, red flags, follow-up questions, investment thesis, benchmarking) -- similar to how Index.tsx renders results
-- **Comparisons**: Add a View button that opens a Dialog showing the full comparison (rankings, insights, detailed scores, strengths/weaknesses) -- reuse Compare page's dialog layout
-- **Bulk Analyses**: Add a View button that navigates to `/bulk-analysis` with state, or opens a dialog with rankings table
+## Files to Modify
+- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
-### 3. Auto-save comparisons after generation (`src/pages/Compare.tsx`)
-- Call `saveComparison()` automatically after `generateComparisonInsights()` completes successfully, so users don't lose results if they forget to click Save
-- Keep the manual Save button for re-saving updated results
-
-### Files to modify
-- **`src/pages/History.tsx`** -- Major changes: add bulk analyses loading, add View dialogs for all three types, add third tab
-- **`src/pages/Compare.tsx`** -- Minor: auto-save after comparison generation
-
+## Expected Result
+- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
+- Clicking it from any page navigates to "/"
+- Clicking it while already on "/" scrolls smoothly to the pitch input form
+- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout

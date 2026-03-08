@@ -411,6 +411,25 @@ export default function Compare() {
         title: "Comparison Complete",
         description: "View full results in the dialog",
       });
+
+      // Auto-save after successful comparison generation
+      const analyzed2 = pitches.filter(p => p.analysis);
+      if (analyzed2.length >= 2 && user) {
+        try {
+          const comparisonData: any = {
+            user_id: user.id,
+            startup_names: analyzed2.map(p => p.name),
+            pitches: analyzed2.map(p => p.text),
+            analyses: analyzed2.map(p => p.analysis),
+            comparison_insights: data,
+          };
+          await supabase.from("comparison_analyses").insert([comparisonData]);
+          loadRecentComparisons();
+        } catch (saveErr) {
+          // Silent fail for auto-save
+          console.error("Auto-save comparison failed:", saveErr);
+        }
+      }
     } catch (error: any) {
       toast({
         title: "Comparison Failed",
