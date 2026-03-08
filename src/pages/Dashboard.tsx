@@ -143,6 +143,8 @@ Seeking: $500K pre-seed for manufacturing and product certification.`
 };
 
 const Index = () => {
+  usePageMeta("Dashboard | PitchGauge", "Analyze startup pitches with AI-powered scoring and detailed investment reports.");
+
   const [pitchText, setPitchText] = useState("");
   const [startupName, setStartupName] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
