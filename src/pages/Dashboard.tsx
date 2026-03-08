@@ -289,9 +289,12 @@ const Index = () => {
       const { default: parseDocument } = await import("@/lib/document-parser");
       const parsedContent = await parseDocument(file);
       
-      // Use cleaned text if available, otherwise use raw text
+      // Store extracted text internally — don't show in textarea
       const textToUse = parsedContent.cleanedText || parsedContent.text;
-      setPitchText(textToUse);
+      setPdfExtractedText(textToUse);
+      setPdfFileName(file.name);
+      setPdfPageCount(parsedContent.pages || null);
+      setPitchText(""); // Clear textarea — PDF text is stored separately
       setStartupName("");
       setPdfFile(null);
       
@@ -303,9 +306,7 @@ const Index = () => {
       
       toast({
         title: "PDF parsed successfully",
-        description: parsedContent.pitchSummary 
-          ? `Extracted & cleaned ${parsedContent.slides?.length || 0} slides. Review and click 'Generate Analysis'.`
-          : `Extracted text from ${parsedContent.pages || 'multiple'} page(s). Review and click 'Generate Analysis'.`,
+        description: `Extracted content from ${parsedContent.pages || 'multiple'} page(s). Click 'Generate Analysis' to evaluate.`,
       });
     } catch (error: any) {
       toast({
