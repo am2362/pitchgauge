@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
 
-// Try external env vars first, fall back to Lovable Cloud defaults
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Use non-colliding env var names to avoid .env override from Lovable Cloud
+const supabaseUrl = import.meta.env.VITE_EXTERNAL_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_EXTERNAL_SUPABASE_ANON_KEY;
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
