@@ -36,7 +36,7 @@ const Settings = () => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { tier, dailyAnalysisCount, remainingAnalyses, canCompare, canBulkAnalyze, isLoading: isSubLoading, startCheckout } = useSubscription();
+  const { tier, monthlyAnalysisCount, remainingAnalyses, canCompare, canBulkAnalyze, isLoading: isSubLoading, startCheckout } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useCheckoutState<string | null>(null);
 
   useEffect(() => {
