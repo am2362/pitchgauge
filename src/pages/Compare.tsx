@@ -886,211 +886,86 @@ export default function Compare() {
             </DialogHeader>
 
             <div className="space-y-6">
-              {/* Investment Rankings Section */}
+              {/* Rankings */}
               {comparisonInsights?.rankings && (
                 <div>
-                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                    🏆 Investment Rankings
-                  </h3>
+                  <h2 className="text-xl font-bold mb-4 text-foreground flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-primary" /> Investment Rankings
+                  </h2>
                   <div className="space-y-3">
-                    {comparisonInsights.rankings.map((ranking: any) => (
-                      <div key={ranking.startupName} className="flex items-start gap-3 p-3 bg-secondary/20 rounded-lg">
-                        <Badge variant={ranking.rank === 1 ? "default" : "outline"} className="mt-1 text-lg">
-                          #{ranking.rank}
-                        </Badge>
-                        <div className="flex-1">
-                          <div className="font-semibold text-base">
-                            {(() => {
-                              const pitch = pitches.find(p => p.name === ranking.startupName);
-                              return pitch ? renderEditableName(pitch) : ranking.startupName;
-                            })()}
+                    {comparisonInsights.rankings.map((ranking: any) => {
+                      const pitch = pitches.find(p => p.name === ranking.startupName);
+                      const avg = pitch?.analysis ? getOverallScore(pitch.analysis) : null;
+                      return (
+                        <div key={ranking.startupName} className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30">
+                          <span className="text-2xl font-extrabold text-primary w-8">#{ranking.rank}</span>
+                          <div className="flex-1">
+                            <p className="font-semibold text-foreground">{ranking.startupName}</p>
+                            <p className="text-xs text-muted-foreground">{ranking.reasoning}</p>
                           </div>
-                          <p className="text-sm text-muted-foreground mt-1">{ranking.reasoning}</p>
+                          {avg !== null && (
+                            <span className={`text-xl font-bold ${getScoreColor(Math.round(avg))}`}>{avg.toFixed(1)}/10</span>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
-              {/* Overall Perspective Section */}
-              {comparisonInsights?.comparativeInsights?.relativePerspective && (
-                <div>
-                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                    🔍 Overall Perspective
-                  </h3>
-                  <div className="p-4 bg-accent/10 rounded-lg border border-accent">
-                    <p className="text-sm leading-relaxed">
-                      {comparisonInsights.comparativeInsights.relativePerspective}
-                    </p>
-                  </div>
-                </div>
-              )}
+              {/* Detailed Score Breakdown */}
+              <div>
+                <h2 className="text-xl font-bold mb-4 text-foreground">Detailed Score Breakdown</h2>
+                {renderScoreBreakdownAccordion(pitches.filter(p => p.analysis))}
+              </div>
 
-              {/* Investment Recommendation Section */}
-              {comparisonInsights?.investmentRecommendation && (
-                <div>
-                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                    💡 Investment Recommendation
-                  </h3>
-                  <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                    <p className="text-sm leading-relaxed">
-                      {comparisonInsights.investmentRecommendation}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Detailed Comparison Table */}
-              {pitches.filter(p => p.analysis).length >= 2 && (
-                <div>
-                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                    📊 Detailed Score Comparison
-                  </h3>
-                  <div className="overflow-x-auto border rounded-lg">
-                    <table className="w-full">
-                      <thead className="bg-secondary/30">
-                        <tr className="border-b">
-                          <th className="text-left p-3 font-semibold sticky left-0 bg-secondary/30">Metric</th>
-                          {pitches.filter(p => p.analysis).map(pitch => (
-                            <th key={pitch.id} className="text-center p-3 font-semibold min-w-[200px]">
-                              {editingNameId === pitch.id ? (
-                                <Input
-                                  value={tempName}
-                                  onChange={(e) => setTempName(e.target.value)}
-                                  onBlur={() => {
-                                    updatePitchName(pitch.id, tempName);
-                                    setEditingNameId(null);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      updatePitchName(pitch.id, tempName);
-                                      setEditingNameId(null);
-                                    }
-                                    if (e.key === 'Escape') {
-                                      setEditingNameId(null);
-                                    }
-                                  }}
-                                  className="w-full text-center"
-                                  autoFocus
-                                />
-                              ) : (
-                                <div 
-                                  className="cursor-pointer hover:bg-secondary/20 rounded px-2 py-1 flex items-center justify-center gap-1"
-                                  onClick={() => {
-                                    setEditingNameId(pitch.id);
-                                    setTempName(pitch.name);
-                                  }}
-                                >
-                                  {pitch.name}
-                                  <Edit className="h-3 w-3 opacity-50" />
-                                </div>
-                              )}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {scorecardKeys.map(key => (
-                          <tr key={key} className="border-b hover:bg-secondary/10">
-                            <td className="p-3 font-medium capitalize align-top sticky left-0 bg-background">
-                              {key.replace(/([A-Z])/g, ' $1').trim()}
-                            </td>
-                            {pitches.filter(p => p.analysis).map(pitch => {
-                              const scoreItem = pitch.analysis!.scorecard[key];
-                              const score = scoreItem.score;
-                              const maxScore = Math.max(...pitches.filter(p => p.analysis).map(p => p.analysis!.scorecard[key].score));
-                              return (
-                                <td key={pitch.id} className="p-3 align-top">
-                                  <div className="space-y-2">
-                                    <div className="text-center">
-                                      <span className={`text-xl font-bold ${getScoreColor(score)} ${score === maxScore ? 'underline decoration-2' : ''}`}>
-                                        {score}/10
-                                      </span>
-                                    </div>
-                                    {scoreItem.reasoning && (
-                                      <p className="text-xs text-muted-foreground text-left">
-                                        {scoreItem.reasoning}
-                                      </p>
-                                    )}
-                                    {scoreItem.detailedExplanation && (
-                                      <Collapsible>
-                                        <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-                                          More details <ChevronDown className="h-3 w-3" />
-                                        </CollapsibleTrigger>
-                                        <CollapsibleContent className="text-xs text-muted-foreground mt-2 text-left">
-                                          {scoreItem.detailedExplanation}
-                                        </CollapsibleContent>
-                                      </Collapsible>
-                                    )}
-                                  </div>
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                        <tr className="border-t-2 border-primary/30 bg-secondary/20">
-                          <td className="p-3 font-bold text-foreground sticky left-0 bg-secondary/20">Overall Score</td>
-                          {pitches.filter(p => p.analysis).map(pitch => {
-                            const keys = scorecardKeys as Array<keyof typeof pitch.analysis.scorecard>;
-                            const avg = keys.reduce((sum, k) => sum + pitch.analysis!.scorecard[k].score, 0) / keys.length;
-                            const allAvgs = pitches.filter(p => p.analysis).map(p => keys.reduce((s, k) => s + p.analysis!.scorecard[k].score, 0) / keys.length);
-                            const maxAvg = Math.max(...allAvgs);
-                            return (
-                              <td key={pitch.id} className="p-3 text-center">
-                                <span className={`text-xl font-bold ${getScoreColor(Math.round(avg))} ${avg === maxAvg ? 'underline decoration-2' : ''}`}>
-                                  {avg.toFixed(1)}/10
-                                </span>
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Comparative Strengths & Weaknesses */}
+              {/* Per-startup Strengths & Weaknesses */}
               {comparisonInsights?.comparativeInsights?.strengths && (
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="font-semibold text-lg mb-3 text-green-600 dark:text-green-400">
-                      ✅ Key Strengths
-                    </h3>
-                    <div className="space-y-2">
-                      {Object.entries(comparisonInsights.comparativeInsights.strengths).map(([name, strength]: [string, any]) => (
-                        <div key={name} className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                          <div className="font-medium text-sm">
-                            {(() => {
-                              const pitch = pitches.find(p => p.name === name);
-                              return pitch ? renderEditableName(pitch) : name;
-                            })()}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">{strength}</p>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {pitches.filter(p => p.analysis).map(pitch => {
+                    const strengths = comparisonInsights.comparativeInsights.strengths[pitch.name];
+                    const weaknesses = comparisonInsights.comparativeInsights.weaknesses?.[pitch.name];
+                    if (!strengths && !weaknesses) return null;
+                    return (
+                      <Card key={pitch.id} className="p-5">
+                        <h3 className="font-bold text-foreground mb-3">{pitch.name}</h3>
+                        <div className="space-y-3">
+                          {strengths && (
+                            <div>
+                              <p className="text-xs font-semibold text-green-600 flex items-center gap-1 mb-1">
+                                <ThumbsUp className="h-3 w-3" /> Strengths
+                              </p>
+                              <p className="text-xs text-muted-foreground">{typeof strengths === 'string' ? strengths : Array.isArray(strengths) ? strengths.map((s: string, i: number) => <span key={i} className="block">• {s}</span>) : null}</p>
+                            </div>
+                          )}
+                          {weaknesses && (
+                            <div>
+                              <p className="text-xs font-semibold text-red-500 flex items-center gap-1 mb-1">
+                                <ThumbsDown className="h-3 w-3" /> Weaknesses
+                              </p>
+                              <p className="text-xs text-muted-foreground">{typeof weaknesses === 'string' ? weaknesses : Array.isArray(weaknesses) ? weaknesses.map((w: string, i: number) => <span key={i} className="block">• {w}</span>) : null}</p>
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg mb-3 text-red-600 dark:text-red-400">
-                      ⚠️ Key Weaknesses
-                    </h3>
-                    <div className="space-y-2">
-                      {Object.entries(comparisonInsights.comparativeInsights.weaknesses).map(([name, weakness]: [string, any]) => (
-                        <div key={name} className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                          <div className="font-medium text-sm">
-                            {(() => {
-                              const pitch = pitches.find(p => p.name === name);
-                              return pitch ? renderEditableName(pitch) : name;
-                            })()}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">{weakness}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                      </Card>
+                    );
+                  })}
                 </div>
+              )}
+
+              {/* Overall Recommendation */}
+              {comparisonInsights?.investmentRecommendation && (
+                <Card className="p-6 border-primary/30 bg-primary/5">
+                  <h2 className="text-xl font-bold mb-3 text-foreground">Overall Recommendation</h2>
+                  <p className="text-muted-foreground leading-relaxed">{comparisonInsights.investmentRecommendation}</p>
+                </Card>
+              )}
+
+              {comparisonInsights?.comparativeInsights?.relativePerspective && (
+                <Card className="p-6">
+                  <h2 className="text-xl font-bold mb-3 text-foreground">Overall Perspective</h2>
+                  <p className="text-muted-foreground leading-relaxed">{comparisonInsights.comparativeInsights.relativePerspective}</p>
+                </Card>
               )}
             </div>
 
