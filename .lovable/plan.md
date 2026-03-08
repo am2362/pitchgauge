@@ -1,40 +1,42 @@
 
+# Add "Single Pitch Analysis" Button to Top Navigation
 
-# Landing Page Messaging & "The Problem" Section Updates
+## Problem
+The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
 
-## Changes — all in `src/pages/Landing.tsx`
+## Solution
+Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-### 1. Hero subtitle (line 70-72)
-Replace the `<p>` text with:
-> "Your AI-powered first layer of startup screening. Instantly triage deal flow, surface the signals that matter, and focus your attention where it counts — before your analysts dive deeper."
+## Implementation Details
 
-### 2. Disclaimer below hero CTAs (after line 80)
-Add a new `<p>` with small muted text:
-> "PitchScore is designed as an initial screening tool to support — not replace — human investment judgement."
+### File: `src/pages/Index.tsx`
 
-### 3. Social proof section (lines 120-141)
-Replace entirely. New heading: **"Built for investors who move fast"**. Below it, 4 badges/pills:
-- "VC Deal Flow Screening"
-- "Angel First-Pass Analysis"
-- "Accelerator Batch Shortlisting"
-- "Family Office Deal Review"
+**What to change:**
+1. Add a new import for `FileText` icon (already imported on line 8)
+2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
+3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
+4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
 
-### 4. New "The Problem" section (insert between social proof and "How It Works")
-- Heading: "The average VC sees 1,000+ pitches a year."
-- Subheading: "Most get dismissed in minutes. Not because they weren't good — but because there wasn't enough time to look properly."
-- 3 pain point cards (icons: `Layers`, `Users`, `Zap` or similar):
-  1. **Deal flow overload** — "Hundreds of decks land in your inbox every month..."
-  2. **Inconsistent evaluation** — "Different analysts score the same pitch differently..."
-  3. **Time spent on the wrong deals** — "Hours spent on pitches that could have been ruled out in minutes..."
-- Transition line below cards: "PitchScore gives you a consistent, structured first pass on every pitch in seconds — so your team focuses only on what deserves a second look."
+**Button placement:**
+- Insert as the **first button** in the top nav (line 530), before the Compare button
+- Use `FileText` icon (already imported)
+- Text: "Single Pitch Analysis"
+- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
 
-### 5. Features section intro (lines 188-189)
-Replace the `<h2>` subtitle. Keep "Features" badge. Change heading to current text, then add a `<p>` below:
-> "PitchScore gives investors a fast, structured first look at any pitch — so you spend less time on triage and more time on the deals worth pursuing."
+**Technical approach:**
+```text
+1. Add useRef hook to create a ref for the pitch input card
+2. In the button's onClick, check if user is on "/" page
+   - If on "/", scroll to the ref using scrollIntoView()
+   - If not on "/", navigate to "/"
+3. Attach the ref to the Card element containing "Input Pitch"
+```
 
-### 6. Update comparison mode description (line 201)
-Change "up to 5" to "up to 10" to match the new limit.
+## Files to Modify
+- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
-### Icons needed
-Add `AlertTriangle` or `Clock` import for pain point cards. Current imports already include `Layers`, `Users`, `Zap` which can be reused.
-
+## Expected Result
+- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
+- Clicking it from any page navigates to "/"
+- Clicking it while already on "/" scrolls smoothly to the pitch input form
+- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
