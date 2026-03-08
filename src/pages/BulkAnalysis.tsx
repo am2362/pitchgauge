@@ -7,7 +7,7 @@ import { BulkUploadCard } from '@/components/bulk/BulkUploadCard';
 import { AnalysisProgressBar } from '@/components/bulk/AnalysisProgressBar';
 import { InvestmentRankingsTable } from '@/components/bulk/InvestmentRankingsTable';
 import { SectorBreakdownChart } from '@/components/bulk/SectorBreakdownChart';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase-external';
 import { toast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
 import type { BulkAnalysis, ComparisonReport, BulkAnalysisResult } from '@/types/bulk-analysis';
