@@ -231,6 +231,10 @@ export type Database = {
         Args: { p_action_type: string }
         Returns: number
       }
+      get_monthly_usage_count: {
+        Args: { p_action_type: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
