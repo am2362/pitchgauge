@@ -14,6 +14,8 @@ import ScoringRubric from "./pages/ScoringRubric";
 import Billing from "./pages/Billing";
 import NotFound from "./pages/NotFound";
 import Demo from "./pages/Demo";
+import DemoCompare from "./pages/DemoCompare";
+import DemoBulk from "./pages/DemoBulk";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
