@@ -1,35 +1,23 @@
 
 
-# Rate Limiting Audit
+# Admin Whitelist for Scale Tier Override
 
-## Current State — Already Implemented
+## Change — `src/hooks/useSubscription.ts`
 
-The rate limiting system is **already in place** across both frontend and backend:
+Add a hardcoded whitelist array and an early-return check in `syncWithStripe`:
 
-### Frontend (`useSubscription.ts`)
-- `TIER_LIMITS` defines: Free = 3/day, Pro = unlimited single, Scale = unlimited everything
-- `canAnalyze` flag blocks free users after 3 daily analyses
-- `canCompare` is `false` for free tier, `true` for pro/scale
-- `canBulkAnalyze` is `false` for free/pro, `true` for scale only
-- `remainingAnalyses` tracks remaining count for UI display
-- `recordUsage()` increments counter after each analysis
+1. **Add constant** (after `TIER_LIMITS`):
+```ts
+const ADMIN_WHITELIST = [
+  "amandayung808@gmail.com",
+  "amandaywy2015@gmail.com",
+  "c74661985@gmail.com",
+];
+```
 
-### Frontend enforcement (pages)
-- **Dashboard.tsx**: Checks `canAnalyze` before calling `analyze-startup`; shows toast "Daily Limit Reached" with upgrade message; displays remaining count
-- **Compare.tsx**: Uses `UpgradePrompt` component when `!canCompare` (free tier blocked)
-- **BulkAnalysis.tsx**: Uses `UpgradePrompt` component when `!canBulkAnalyze` (free/pro blocked)
+2. **Early return in `syncWithStripe`** (after getting session, ~line 32-36): If `session.user.email` is in the whitelist, set tier to `"scale"`, skip Stripe check entirely, and return.
 
-### Backend
-- `get_daily_usage_count` RPC counts today's usage per user (security definer, uses `auth.uid()`)
-- `usage_tracking` table records each action with RLS
+3. **Same check in `loadFromDB`**: Add the same override so the fallback path also respects the whitelist.
 
-## What Could Be Improved
-
-The current implementation is **client-side only** — the edge functions (`analyze-startup`, `compare-startups`, `analyze-bulk-startups`) do **not** check usage limits server-side. A determined user could bypass the frontend and call the edge functions directly.
-
-### Recommendation
-If you want **strict** server-side enforcement, I would add usage checks inside the edge functions themselves. However, for most use cases the current client-side gating is sufficient since the functions require authentication.
-
-## Summary
-**Yes, this is already implemented.** Free = 3 analyses/day (blocked with toast), Pro = unlimited single + compare, Scale = unlimited everything. The upgrade prompt and remaining count display are working. The only gap is server-side enforcement in edge functions.
+Single file modified: `src/hooks/useSubscription.ts`
 
