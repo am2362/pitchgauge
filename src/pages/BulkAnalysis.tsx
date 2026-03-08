@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, Eye, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Download, Eye, Trash2, RefreshCw, AlertTriangle, FileDown } from 'lucide-react';
 import AppNavbar from '@/components/AppNavbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
