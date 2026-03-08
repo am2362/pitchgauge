@@ -16,6 +16,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Progress } from "@/components/ui/progress";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useCountUp } from "@/hooks/useCountUp";
+import { exportDemoComparisonToPDF } from "@/lib/pdf-export";
 
 const DemoCompare = () => {
   usePageMeta("Demo Compare | PitchGauge", "See how PitchGauge compares multiple startups side-by-side.");
