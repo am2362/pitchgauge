@@ -66,7 +66,7 @@ function createFailedBulkResult(startupName: string, errorType: string, errorMes
 
 export default function BulkAnalysis() {
   const navigate = useNavigate();
-  const { canBulkAnalyze, tier, recordUsage } = useSubscription();
+  const { canBulkAnalyze, tier, recordUsage, startCheckout } = useSubscription();
   const [currentAnalysis, setCurrentAnalysis] = useState<BulkAnalysis | null>(null);
   const [history, setHistory] = useState<BulkAnalysis[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
