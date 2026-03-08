@@ -5,7 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Loader2, FileText, BarChart, AlertTriangle, MessageSquare, TrendingUp, History, FileInput, LogOut, GitCompare, FileDown, Settings, BookOpen, CreditCard } from "lucide-react";
+import { Upload, Loader2, FileText, BarChart, AlertTriangle, MessageSquare, TrendingUp, History, FileInput, FileDown } from "lucide-react";
+import AppNavbar from "@/components/AppNavbar";
 import { supabase } from "@/lib/supabase-external";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -531,61 +532,18 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
-      <div className="container max-w-7xl mx-auto px-4 py-12">
-        <header className="text-center mb-12 space-y-4">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex flex-col items-start">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-8 w-8 text-primary" />
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  PitchGauge
-                </h1>
-              </div>
-              <div className="flex items-center gap-2 ml-10">
-                <Badge variant={tier === "free" ? "secondary" : "default"} className="capitalize">
-                  {tier}
-                </Badge>
-                {tier === "free" && (
-                  <span className="text-xs text-muted-foreground">
-                    {remainingAnalyses} analyses left today
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" onClick={() => navigate("/compare")}>
-                <GitCompare className="h-4 w-4 mr-2" />
-                Compare
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/history")}>
-                <History className="h-4 w-4 mr-2" />
-                History
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/bulk-analysis")}>
-                <BarChart className="h-4 w-4 mr-2" />
-                Bulk Analysis
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/billing")}>
-                <CreditCard className="h-4 w-4 mr-2" />
-                Billing
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/scoring-rubric")}>
-                <BookOpen className="h-4 w-4 mr-2" />
-                Scoring Rubric
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/settings")}>
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-              <Button variant="outline" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
-          <p className="text-xl text-muted-foreground">
+      <AppNavbar />
+      <div className="container max-w-7xl mx-auto px-4 py-8">
+        <header className="text-center mb-8 space-y-2">
+          <h2 className="text-2xl font-bold text-foreground">Single Pitch Analysis</h2>
+          <p className="text-muted-foreground">
             AI-Powered Comprehensive Startup Pitch Analysis
           </p>
+          {tier === "free" && (
+            <p className="text-sm text-muted-foreground">
+              {remainingAnalyses} analyses left today
+            </p>
+          )}
         </header>
 
         <div className="grid lg:grid-cols-2 gap-8">

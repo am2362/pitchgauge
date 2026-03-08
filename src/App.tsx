@@ -13,6 +13,7 @@ import Settings from "./pages/Settings";
 import ScoringRubric from "./pages/ScoringRubric";
 import Billing from "./pages/Billing";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -24,14 +25,14 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
-          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/compare" element={<Compare />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/bulk-analysis" element={<BulkAnalysis />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/scoring-rubric" element={<ScoringRubric />} />
-          <Route path="/billing" element={<Billing />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/compare" element={<ProtectedRoute><Compare /></ProtectedRoute>} />
+          <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+          <Route path="/bulk-analysis" element={<ProtectedRoute><BulkAnalysis /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/scoring-rubric" element={<ProtectedRoute><ScoringRubric /></ProtectedRoute>} />
+          <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

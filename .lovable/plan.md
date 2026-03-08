@@ -1,58 +1,42 @@
 
+# Add "Single Pitch Analysis" Button to Top Navigation
 
-# Enhance Auth, History, and Navigation
+## Problem
+The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
 
-## What Already Exists
-- Email/password auth (signup + login) at `/auth`
-- Per-page auth guards redirecting to `/auth`
-- History page with search, tabs (single/comparison/bulk), view/delete/export
-- Analysis results saved to DB with user_id
-- RLS on all tables
-- Subscription tier tracking (free/pro/scale)
+## Solution
+Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-## What Needs to Be Built
+## Implementation Details
 
-### 1. Create shared AppNavbar component (`src/components/AppNavbar.tsx`)
-- Horizontal top nav bar used across all authenticated pages
-- Left: PitchGauge logo + title linking to `/dashboard`
-- Center: nav links -- Single Analysis (`/dashboard`), Comparison (`/compare`), Bulk (`/bulk-analysis`), History (`/history`)
-- Right: Account dropdown (using DropdownMenu) showing:
-  - User email (from auth session)
-  - Plan badge (Free/Pro/Scale from `useSubscription`)
-  - "Billing" link to `/billing`
-  - "Settings" link to `/settings`
-  - "Logout" button
+### File: `src/pages/Index.tsx`
 
-### 2. Create ProtectedRoute wrapper (`src/components/ProtectedRoute.tsx`)
-- Wraps authenticated routes in `App.tsx`
-- Checks `supabase.auth.getSession()` and listens to `onAuthStateChange`
-- Redirects to `/auth` if not logged in
-- Provides user context to children
+**What to change:**
+1. Add a new import for `FileText` icon (already imported on line 8)
+2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
+3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
+4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
 
-### 3. Update route redirects in `App.tsx`
-- Landing page (`/`): if logged in, redirect to `/dashboard`
-- Auth page (`/auth`): already redirects to `/dashboard` if logged in (exists)
+**Button placement:**
+- Insert as the **first button** in the top nav (line 530), before the Compare button
+- Use `FileText` icon (already imported)
+- Text: "Single Pitch Analysis"
+- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
 
-### 4. Add free tier history limits to History page
-- Import `useSubscription` hook
-- Free tier: show only first 5 items per tab; render remaining items with blur overlay + "Upgrade for full history" CTA
-- Pro/Scale: show all items with pagination (20 per page) using existing Pagination components
+**Technical approach:**
+```text
+1. Add useRef hook to create a ref for the pitch input card
+2. In the button's onClick, check if user is on "/" page
+   - If on "/", scroll to the ref using scrollIntoView()
+   - If not on "/", navigate to "/"
+3. Attach the ref to the Card element containing "Input Pitch"
+```
 
-### 5. Remove duplicate nav from individual pages
-- Dashboard: remove the header nav buttons (Compare, History, Bulk, Billing, Scoring Rubric, Settings, Logout) since AppNavbar handles it; keep the title/subtitle section
-- History, Compare, BulkAnalysis, Settings, Billing, ScoringRubric: remove back-arrow buttons, wrap with AppNavbar
+## Files to Modify
+- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
-### Files to create
-- `src/components/AppNavbar.tsx` -- shared nav bar with account dropdown
-- `src/components/ProtectedRoute.tsx` -- auth guard wrapper
-
-### Files to modify
-- `src/App.tsx` -- wrap authenticated routes with ProtectedRoute, add redirect logic on `/`
-- `src/pages/Dashboard.tsx` -- remove inline nav buttons, use AppNavbar
-- `src/pages/History.tsx` -- add free tier limit (5 items + blur), pagination for pro/scale, use AppNavbar
-- `src/pages/Compare.tsx` -- replace back button with AppNavbar
-- `src/pages/BulkAnalysis.tsx` -- replace back button with AppNavbar
-- `src/pages/Settings.tsx` -- replace back button with AppNavbar
-- `src/pages/Billing.tsx` -- replace back button with AppNavbar
-- `src/pages/ScoringRubric.tsx` -- replace back button with AppNavbar
-
+## Expected Result
+- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
+- Clicking it from any page navigates to "/"
+- Clicking it while already on "/" scrolls smoothly to the pitch input form
+- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout

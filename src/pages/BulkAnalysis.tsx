@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Eye, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Download, Eye, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
+import AppNavbar from '@/components/AppNavbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BulkUploadCard } from '@/components/bulk/BulkUploadCard';
@@ -624,13 +625,9 @@ export default function BulkAnalysis() {
   if (!canBulkAnalyze) {
     return (
       <div className="min-h-screen bg-background">
+        <AppNavbar />
         <div className="container mx-auto p-6 space-y-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-3xl font-bold">Bulk Startup Analysis</h1>
-          </div>
+          <h1 className="text-3xl font-bold">Bulk Startup Analysis</h1>
           <UpgradePrompt
             requiredTier="scale"
             currentTier={tier}
@@ -644,15 +641,11 @@ export default function BulkAnalysis() {
 
   return (
     <div className="min-h-screen bg-background">
+      <AppNavbar />
       <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Bulk Startup Analysis</h1>
-            <p className="text-muted-foreground">Analyze up to 1000 startup pitches at once</p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold">Bulk Startup Analysis</h1>
+          <p className="text-muted-foreground">Analyze up to 1000 startup pitches at once</p>
         </div>
 
         {!currentAnalysis && <BulkUploadCard onUploadComplete={handleUploadComplete} />}

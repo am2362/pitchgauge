@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/hooks/useSubscription";
 import { User } from "@supabase/supabase-js";
-import { ArrowLeft, Loader2, TrendingUp, Plus, X, FileDown, Save, History, Upload, Download, Edit } from "lucide-react";
+import { Loader2, TrendingUp, Plus, X, FileDown, Save, History, Upload, Download, Edit } from "lucide-react";
+import AppNavbar from "@/components/AppNavbar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -541,13 +542,9 @@ export default function Compare() {
   if (!canCompare) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
+        <AppNavbar />
         <div className="container max-w-7xl mx-auto px-4 py-8">
-          <div className="flex items-center gap-4 mb-8">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-3xl font-bold">Compare Startups</h1>
-          </div>
+          <h1 className="text-3xl font-bold mb-8">Compare Startups</h1>
           <UpgradePrompt
             requiredTier="pro"
             currentTier={tier}
@@ -564,22 +561,11 @@ export default function Compare() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
+      <AppNavbar />
       <div className="container max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-6 w-6 text-primary" />
-              <h1 className="text-3xl font-bold">Compare Startups</h1>
-            </div>
-          </div>
+          <h1 className="text-3xl font-bold">Compare Startups</h1>
           <div className="flex gap-2">
-            <Button onClick={() => navigate("/history")} variant="outline">
-              <History className="h-4 w-4 mr-2" />
-              History
-            </Button>
             <Button onClick={handleDownloadTemplate} variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Template
