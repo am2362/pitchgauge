@@ -418,6 +418,7 @@ export default function Compare() {
 
       setComparisonInsights(data);
       setShowComparisonDialog(true);
+      await recordUsage('comparison');
       toast({
         title: "Comparison Complete",
         description: "View full results in the dialog",
