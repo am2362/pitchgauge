@@ -12,7 +12,7 @@ export interface ExcelParseResult {
 }
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-const MAX_STARTUPS = 1000;
+const MAX_STARTUPS = 100;
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
