@@ -6,11 +6,12 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Loader2, Lock, ArrowRight, Download, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { DEMO_BULK_RESULTS, DEMO_BULK_COMPARISON_REPORT } from "@/lib/demo-data";
+import { DEMO_BULK_RESULTS, DEMO_BULK_COMPARISON_REPORT, DEMO_BULK_SCORE_REASONINGS } from "@/lib/demo-data";
 import { DemoBanner } from "@/components/DemoBanner";
 import { DemoNav } from "@/components/DemoNav";
 import { InvestmentRankingsTable } from "@/components/bulk/InvestmentRankingsTable";
 import { SectorBreakdownChart } from "@/components/bulk/SectorBreakdownChart";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import ExcelJS from "exceljs";
 
 type BulkStep = { msg: string; duration: number };
@@ -21,6 +22,27 @@ const BULK_STEPS: BulkStep[] = [
   { msg: "Analysing startups...", duration: 3000 },
   { msg: "Generating report...", duration: 1000 },
 ];
+
+const METRIC_LABELS: Record<string, string> = {
+  team: "Team Quality",
+  product: "Product Differentiation",
+  market: "Market Size",
+  traction: "Traction",
+  businessModel: "Business Model",
+  funding: "Competitive Landscape",
+};
+
+const getScoreColor = (score: number) => {
+  if (score >= 8) return "text-green-500";
+  if (score >= 6) return "text-blue-500";
+  return "text-orange-500";
+};
+
+const getScoreBarColor = (score: number) => {
+  if (score >= 8) return "bg-green-500";
+  if (score >= 6) return "bg-blue-500";
+  return "bg-orange-500";
+};
 
 const DemoBulk = () => {
   const navigate = useNavigate();
@@ -47,7 +69,6 @@ const DemoBulk = () => {
       return;
     }
 
-    // For step 2 (analysing), animate progress bar
     if (stepIndex === 2) {
       setAnalysisProgress(0);
       const interval = setInterval(() => {
@@ -98,7 +119,6 @@ const DemoBulk = () => {
       { header: "Overall Score", key: "overall", width: 14 },
     ];
 
-    // Header styling
     sheet.getRow(1).eachCell((cell) => {
       cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF3B82F6" } };
@@ -128,6 +148,8 @@ const DemoBulk = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const scoreKeys = ["team", "product", "market", "traction", "businessModel", "funding"] as const;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
@@ -164,7 +186,6 @@ const DemoBulk = () => {
               <CardDescription>Analysing your startup batch</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Show fake file */}
               <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border">
                 <FileText className="h-5 w-5 text-primary shrink-0" />
                 <div>
@@ -173,7 +194,6 @@ const DemoBulk = () => {
                 </div>
               </div>
 
-              {/* Steps */}
               <div className="space-y-2">
                 {BULK_STEPS.map((step, idx) => (
                   <div key={idx} className="flex items-center gap-2">
@@ -218,6 +238,54 @@ const DemoBulk = () => {
 
             {/* Rankings */}
             <InvestmentRankingsTable rankings={DEMO_BULK_COMPARISON_REPORT.investmentRankings} />
+
+            {/* Detailed Score Breakdown */}
+            <Card className="p-6">
+              <h2 className="text-xl font-bold mb-4 text-foreground">Detailed Score Breakdown</h2>
+              <Accordion type="multiple" className="space-y-3">
+                {DEMO_BULK_RESULTS.map((r) => {
+                  const reasonings = DEMO_BULK_SCORE_REASONINGS[r.startupName] || {};
+                  return (
+                    <AccordionItem key={r.startupName} value={r.startupName} className="border rounded-lg px-4">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-foreground">{r.startupName}</span>
+                          <Badge variant="outline" className="text-xs">{r.sector}</Badge>
+                          <span className={`text-sm font-bold ${getScoreColor(r.scores.overall)}`}>
+                            {r.scores.overall}/10
+                          </span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 pt-2">
+                          {scoreKeys.map((key) => {
+                            const score = r.scores[key];
+                            const reasoning = reasonings[key];
+                            return (
+                              <div key={key} className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-foreground">{METRIC_LABELS[key]}</span>
+                                  <span className={`text-sm font-bold ${getScoreColor(score)}`}>{score}/10</span>
+                                </div>
+                                <div className="h-1.5 w-full rounded-full bg-secondary">
+                                  <div
+                                    className={`h-full rounded-full transition-all ${getScoreBarColor(score)}`}
+                                    style={{ width: `${score * 10}%` }}
+                                  />
+                                </div>
+                                {reasoning && (
+                                  <p className="text-xs text-muted-foreground">{reasoning}</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            </Card>
 
             {/* Sector chart */}
             <SectorBreakdownChart sectorBreakdown={DEMO_BULK_COMPARISON_REPORT.sectorBreakdown} />

@@ -12,7 +12,8 @@ import {
 } from "@/lib/demo-data";
 import { DemoBanner } from "@/components/DemoBanner";
 import { DemoNav } from "@/components/DemoNav";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Progress } from "@/components/ui/progress";
 
 const DemoCompare = () => {
   const navigate = useNavigate();
@@ -43,6 +44,12 @@ const DemoCompare = () => {
     if (score >= 8) return "text-green-500";
     if (score >= 6) return "text-blue-500";
     return "text-orange-500";
+  };
+
+  const getScoreBarColor = (score: number) => {
+    if (score >= 8) return "bg-green-500";
+    if (score >= 6) return "bg-blue-500";
+    return "bg-orange-500";
   };
 
   const scorecardKeys = ["team", "marketSize", "productDifferentiation", "traction", "businessModel", "competitiveLandscape"] as const;
@@ -115,31 +122,45 @@ const DemoCompare = () => {
               </div>
             </Card>
 
-            {/* Scorecard comparison table */}
-            <Card className="p-6 overflow-x-auto">
-              <h2 className="text-xl font-bold mb-4 text-foreground">Score Comparison</h2>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Startup</TableHead>
-                    {scorecardKeys.map((k) => (
-                      <TableHead key={k} className="text-center">{scorecardLabels[k]}</TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {DEMO_COMPARISON_RESULTS.map((r) => (
-                    <TableRow key={r.startupName}>
-                      <TableCell className="font-semibold">{r.startupName}</TableCell>
-                      {scorecardKeys.map((k) => (
-                        <TableCell key={k} className={`text-center font-bold ${getScoreColor(r.scorecard[k].score)}`}>
-                          {r.scorecard[k].score}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            {/* Detailed Score Cards with Reasoning */}
+            <Card className="p-6">
+              <h2 className="text-xl font-bold mb-4 text-foreground">Detailed Score Breakdown</h2>
+              <Accordion type="multiple" className="space-y-3">
+                {DEMO_COMPARISON_RESULTS.map((r) => (
+                  <AccordionItem key={r.startupName} value={r.startupName} className="border rounded-lg px-4">
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-foreground">{r.startupName}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {Object.values(r.scorecard).reduce((sum, s) => sum + s.score, 0) / Object.values(r.scorecard).length > 7 ? "Strong" : "Moderate"}
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4 pt-2">
+                        {scorecardKeys.map((key) => {
+                          const entry = r.scorecard[key];
+                          return (
+                            <div key={key} className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-foreground">{scorecardLabels[key]}</span>
+                                <span className={`text-sm font-bold ${getScoreColor(entry.score)}`}>{entry.score}/10</span>
+                              </div>
+                              <div className="h-1.5 w-full rounded-full bg-secondary">
+                                <div
+                                  className={`h-full rounded-full transition-all ${getScoreBarColor(entry.score)}`}
+                                  style={{ width: `${entry.score * 10}%` }}
+                                />
+                              </div>
+                              <p className="text-xs text-muted-foreground">{entry.reasoning}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             </Card>
 
             {/* Strengths & Weaknesses */}
