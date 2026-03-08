@@ -279,6 +279,89 @@ export const DEMO_BULK_RESULTS: BulkAnalysisResult[] = [
   { startupName: "RetailIQ", sector: "RetailTech", tags: ["B2B", "Retail", "Analytics"], metrics: { team: "Retail consultants", product: "In-store analytics dashboard", market: "$8B retail analytics", traction: "$3k MRR, 8 stores", funding: "Pre-seed, $800k", businessModel: "SaaS" }, scores: { team: 5, product: 5, market: 5, traction: 5, funding: 5, businessModel: 6, overall: 5.2 }, summary: "Very early stage with limited traction. Market is shifting to online — physical retail analytics is niche." },
 ];
 
+export const DEMO_BULK_SCORE_REASONINGS: Record<string, Record<string, string>> = {
+  "FinFlow": {
+    team: "Experienced payments team from Stripe and Plaid with deep domain expertise.",
+    market: "Massive global B2B payments opportunity with regulatory tailwinds.",
+    product: "Robust API-first product with proven enterprise integrations.",
+    traction: "$180k MRR growing 35% month on month.",
+    businessModel: "Dual revenue streams with 78% gross margins.",
+    funding: "Crowded market but strong mid-market differentiation.",
+  },
+  "EcoTrack": {
+    team: "Strong domain expertise but gaps in commercial leadership.",
+    market: "ESG compliance mandates creating urgent enterprise demand.",
+    product: "Solid core product with reporting module still maturing.",
+    traction: "Early revenue with long enterprise sales cycles.",
+    businessModel: "Scalable SaaS model with strong expansion potential.",
+    funding: "Differentiates on price and speed vs larger incumbents.",
+  },
+  "MediSync": {
+    team: "Clinical credibility and serial entrepreneur experience.",
+    market: "Large and growing AI diagnostics market.",
+    product: "Clinically validated AI with strong accuracy metrics.",
+    traction: "Pre-revenue with NHS pilots underway.",
+    businessModel: "Reimbursement pathway not yet established.",
+    funding: "Strong IP but regulatory timelines add risk.",
+  },
+  "DataPulse": {
+    team: "Strong engineering team but limited go-to-market experience.",
+    market: "Competitive analytics space with clear enterprise demand.",
+    product: "Intuitive dashboards with real-time data pipeline integrations.",
+    traction: "$25k MRR with steady but slow growth.",
+    businessModel: "Per-seat SaaS pricing with healthy margins.",
+    funding: "Competing against Tableau and Looker on price.",
+  },
+  "ShipEase": {
+    team: "Logistics operations experience but first-time founders.",
+    market: "Last-mile logistics optimisation is a large and growing market.",
+    product: "Route optimisation algorithm reduces delivery costs by 22%.",
+    traction: "3 regional courier partnerships signed, $18k MRR.",
+    businessModel: "Per-delivery fee model with predictable revenue.",
+    funding: "Competing with well-funded players like Onfleet and Route4Me.",
+  },
+  "NutriAI": {
+    team: "Nutritionist and developer co-founders, limited scaling experience.",
+    market: "Personalised nutrition market growing rapidly post-pandemic.",
+    product: "AI meal planning with decent personalisation but limited integrations.",
+    traction: "4,200 app downloads, $8k MRR from premium subscriptions.",
+    businessModel: "Freemium model with low conversion rate of 3%.",
+    funding: "Crowded consumer health app market with low switching costs.",
+  },
+  "LegalBot": {
+    team: "Solo technical founder, lacks legal domain co-founder.",
+    market: "SME legal automation is underserved with large addressable market.",
+    product: "Contract generation and review tool covering 12 document types.",
+    traction: "$6k MRR from 40 SME customers, high churn at 8% monthly.",
+    businessModel: "Subscription model but pricing too low for sustainable margins.",
+    funding: "Competing with DocuSign, Ironclad, and free legal templates.",
+  },
+  "BuildSmart": {
+    team: "Construction industry veteran but limited technology background.",
+    market: "Construction tech adoption slow but market is large.",
+    product: "Project management tool tailored for SME construction firms.",
+    traction: "$4k MRR, 12 customers, limited geographic reach.",
+    businessModel: "Per-project pricing model with inconsistent revenue.",
+    funding: "Procore dominates enterprise, limited SME alternatives.",
+  },
+  "EduPath": {
+    team: "Former teachers turned founders, limited SaaS business experience.",
+    market: "EdTech market crowded post-pandemic with many well-funded players.",
+    product: "Adaptive learning platform for secondary school students.",
+    traction: "3 school pilots, no paid contracts signed yet.",
+    businessModel: "Per-student licensing model with long procurement cycles.",
+    funding: "Competing against established players like Pearson and Khan Academy.",
+  },
+  "RetailIQ": {
+    team: "Retail operations background but first venture into SaaS.",
+    market: "Retail analytics market growing but consolidating around major players.",
+    product: "Inventory forecasting tool with basic demand prediction features.",
+    traction: "$3k MRR from 2 independent retailer customers.",
+    businessModel: "Monthly subscription but very low price point limits revenue potential.",
+    funding: "Competing against built-in analytics from Shopify and major ERPs.",
+  },
+};
+
 export const DEMO_BULK_COMPARISON_REPORT: ComparisonReport = {
   investmentRankings: [
     { rank: 1, startupName: "FinFlow", overallScore: 8.3, topStrengths: ["Ex-Stripe/Plaid team", "$180k MRR", "Transaction-based revenue"], recommendation: "Strong invest — proceed to term sheet" },
