@@ -525,7 +525,7 @@ const Index = () => {
             <div className="flex items-center gap-2">
               <TrendingUp className="h-8 w-8 text-primary" />
               <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                PitchScore
+                PitchGauge
               </h1>
             </div>
             <div className="flex gap-2">
