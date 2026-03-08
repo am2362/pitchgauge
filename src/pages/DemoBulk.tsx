@@ -13,6 +13,7 @@ import { InvestmentRankingsTable } from "@/components/bulk/InvestmentRankingsTab
 import { SectorBreakdownChart } from "@/components/bulk/SectorBreakdownChart";
 import ExcelJS from "exceljs";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { exportDemoBulkToPDF } from "@/lib/pdf-export";
 
 type BulkStep = { msg: string; duration: number };
 
