@@ -20,6 +20,7 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { DemoNav } from "@/components/DemoNav";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useCountUp } from "@/hooks/useCountUp";
+import { exportDemoAnalysisToPDF } from "@/lib/pdf-export";
 
 interface ScoreItem {
   score: number;
