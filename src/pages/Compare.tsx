@@ -537,6 +537,27 @@ export default function Compare() {
 
   if (!user) return null;
 
+  if (!canCompare) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
+        <div className="container max-w-7xl mx-auto px-4 py-8">
+          <div className="flex items-center gap-4 mb-8">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-3xl font-bold">Compare Startups</h1>
+          </div>
+          <UpgradePrompt
+            requiredTier="pro"
+            currentTier={tier}
+            featureName="Comparison Mode"
+            onUpgrade={(t) => startCheckout(t)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   const allAnalyzed = pitches.every(p => p.analysis || !p.text.trim());
   const comparisons = getComparison();
 
