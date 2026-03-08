@@ -31,17 +31,6 @@ const METRIC_LABELS: Record<string, string> = {
   funding: "Competitive Landscape",
 };
 
-const getScoreColor = (score: number) => {
-  if (score >= 8) return "text-green-500";
-  if (score >= 6) return "text-blue-500";
-  return "text-orange-500";
-};
-
-const getScoreBarColor = (score: number) => {
-  if (score >= 8) return "bg-green-500";
-  if (score >= 6) return "bg-blue-500";
-  return "bg-orange-500";
-};
 
 const DemoBulk = () => {
   const navigate = useNavigate();
