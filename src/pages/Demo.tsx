@@ -32,6 +32,7 @@ const PDF_STEPS: PdfStep[] = [
 ];
 
 const Demo = () => {
+  usePageMeta("Demo | PitchGauge", "Try PitchGauge's AI pitch analysis with a sample startup — no signup required.");
   const navigate = useNavigate();
   const { toast } = useToast();
 
