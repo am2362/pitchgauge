@@ -16,6 +16,7 @@ import { exportBulkAnalysisToExcel } from '@/lib/bulk-excel-export';
 import { exportBulkAnalysisToPDF } from '@/lib/pdf-export';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { UpgradePrompt } from '@/components/UpgradePrompt';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 // Chunked processing constants
 // Keep chunks small to avoid backend timeouts and free-tier rate limits.
