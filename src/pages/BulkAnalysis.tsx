@@ -625,13 +625,9 @@ export default function BulkAnalysis() {
   if (!canBulkAnalyze) {
     return (
       <div className="min-h-screen bg-background">
+        <AppNavbar />
         <div className="container mx-auto p-6 space-y-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-3xl font-bold">Bulk Startup Analysis</h1>
-          </div>
+          <h1 className="text-3xl font-bold">Bulk Startup Analysis</h1>
           <UpgradePrompt
             requiredTier="scale"
             currentTier={tier}
