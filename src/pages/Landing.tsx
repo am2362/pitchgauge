@@ -21,6 +21,8 @@ import {
   Download,
   Zap,
   Star,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
