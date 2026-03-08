@@ -561,7 +561,7 @@ const Index = () => {
           </p>
           {tier === "free" && (
             <p className="text-sm text-muted-foreground">
-              {remainingAnalyses} analyses left today
+              {remainingAnalyses} analyses left this month
             </p>
           )}
         </header>

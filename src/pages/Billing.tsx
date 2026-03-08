@@ -102,7 +102,7 @@ const Billing = () => {
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Single Analyses</span>
-                      <span>{tier === "free" ? `${remainingAnalyses} remaining today` : "Unlimited"}</span>
+                      <span>{tier === "free" ? `${remainingAnalyses} remaining this month` : "Unlimited"}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Comparison Mode</span>
