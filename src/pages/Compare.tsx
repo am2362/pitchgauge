@@ -154,6 +154,10 @@ export default function Compare() {
   }, [user]);
 
   const addPitch = () => {
+    if (pitches.length >= 10) {
+      toast({ title: "Maximum 10 startups allowed", description: "You've reached the comparison limit.", variant: "destructive" });
+      return;
+    }
     setPitches([...pitches, {
       id: pitches.length + 1,
       name: `Startup ${String.fromCharCode(65 + pitches.length)}`,
@@ -649,9 +653,9 @@ export default function Compare() {
               onChange={handleFileUpload}
               className="hidden"
             />
-            <Button onClick={addPitch} variant="outline">
+            <Button onClick={addPitch} variant="outline" disabled={pitches.length >= 10}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Startup
+              Add Startup ({pitches.length}/10)
             </Button>
             {allAnalyzed && pitches.some(p => p.analysis) && (
               <>
@@ -815,11 +819,6 @@ export default function Compare() {
                 className="min-h-[150px] mb-4"
                 disabled={pitch.loading || !!pitch.analysis}
               />
-              {!pitch.analysis && (
-                <Button onClick={() => analyzePitch(pitch.id)} disabled={pitch.loading || !pitch.text.trim()}>
-                  {pitch.loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Analyzing...</> : "Analyze"}
-                </Button>
-              )}
             </Card>
           ))}
         </div>
