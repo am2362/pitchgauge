@@ -11,7 +11,6 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { DemoNav } from "@/components/DemoNav";
 import { InvestmentRankingsTable } from "@/components/bulk/InvestmentRankingsTable";
 import { SectorBreakdownChart } from "@/components/bulk/SectorBreakdownChart";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import ExcelJS from "exceljs";
 
 type BulkStep = { msg: string; duration: number };
