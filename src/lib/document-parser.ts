@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase-external";
+import { supabase } from "@/integrations/supabase/client";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
@@ -46,7 +46,7 @@ export default async function parseDocument(file: File): Promise<ParseResult> {
 
   // Call the edge function
   const response = await fetch(
-    `${import.meta.env.VITE_EXTERNAL_SUPABASE_URL}/functions/v1/parse-pdf`,
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-pdf`,
     {
       method: "POST",
       headers: {
