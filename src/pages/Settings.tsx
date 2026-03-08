@@ -8,6 +8,7 @@ import { ArrowLeft, User, Mail, Lock, Loader2, Crown } from "lucide-react";
 import { supabase } from "@/lib/supabase-external";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useState as useCheckoutState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { User as SupabaseUser } from "@supabase/supabase-js";
@@ -32,7 +33,8 @@ const Settings = () => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { tier, dailyAnalysisCount, remainingAnalyses, canCompare, canBulkAnalyze, isLoading: isSubLoading } = useSubscription();
+  const { tier, dailyAnalysisCount, remainingAnalyses, canCompare, canBulkAnalyze, isLoading: isSubLoading, startCheckout } = useSubscription();
+  const [checkoutLoading, setCheckoutLoading] = useCheckoutState<string | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -307,15 +309,20 @@ const Settings = () => {
                   </div>
 
                   {tier === "free" && (
-                    <Button className="w-full" onClick={() => navigate("/")}>
+                    <Button className="w-full" onClick={async () => { setCheckoutLoading("pro"); try { await startCheckout("pro"); } catch {} finally { setCheckoutLoading(null); } }} disabled={checkoutLoading === "pro"}>
+                      {checkoutLoading === "pro" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                       Upgrade to Pro — $29/mo
                     </Button>
                   )}
                   {tier === "pro" && (
-                    <Button variant="outline" className="w-full" onClick={() => navigate("/")}>
+                    <Button variant="outline" className="w-full" onClick={async () => { setCheckoutLoading("scale"); try { await startCheckout("scale"); } catch {} finally { setCheckoutLoading(null); } }} disabled={checkoutLoading === "scale"}>
+                      {checkoutLoading === "scale" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                       Upgrade to Scale — $89/mo
                     </Button>
                   )}
+                  <Button variant="link" className="w-full" onClick={() => navigate("/billing")}>
+                    View Billing Details
+                  </Button>
                 </>
               )}
             </CardContent>

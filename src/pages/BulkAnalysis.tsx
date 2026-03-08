@@ -13,6 +13,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import type { BulkAnalysis, ComparisonReport, BulkAnalysisResult } from '@/types/bulk-analysis';
 import { exportBulkAnalysisToExcel } from '@/lib/bulk-excel-export';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { UpgradePrompt } from '@/components/UpgradePrompt';
 
 // Chunked processing constants
 // Keep chunks small to avoid backend timeouts and free-tier rate limits.
@@ -66,7 +67,7 @@ function createFailedBulkResult(startupName: string, errorType: string, errorMes
 
 export default function BulkAnalysis() {
   const navigate = useNavigate();
-  const { canBulkAnalyze, tier, recordUsage } = useSubscription();
+  const { canBulkAnalyze, tier, recordUsage, startCheckout } = useSubscription();
   const [currentAnalysis, setCurrentAnalysis] = useState<BulkAnalysis | null>(null);
   const [history, setHistory] = useState<BulkAnalysis[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
@@ -619,6 +620,27 @@ export default function BulkAnalysis() {
       }
     }
   };
+
+  if (!canBulkAnalyze) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto p-6 space-y-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-3xl font-bold">Bulk Startup Analysis</h1>
+          </div>
+          <UpgradePrompt
+            requiredTier="scale"
+            currentTier={tier}
+            featureName="Bulk Analysis"
+            onUpgrade={(t) => startCheckout(t)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

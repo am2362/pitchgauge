@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Loader2, FileText, BarChart, AlertTriangle, MessageSquare, TrendingUp, History, FileInput, LogOut, GitCompare, FileDown, Settings, BookOpen } from "lucide-react";
+import { Upload, Loader2, FileText, BarChart, AlertTriangle, MessageSquare, TrendingUp, History, FileInput, LogOut, GitCompare, FileDown, Settings, BookOpen, CreditCard } from "lucide-react";
 import { supabase } from "@/lib/supabase-external";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -548,7 +548,7 @@ const Index = () => {
                 </span>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button variant="outline" onClick={() => navigate("/compare")}>
                 <GitCompare className="h-4 w-4 mr-2" />
                 Compare
@@ -560,6 +560,10 @@ const Index = () => {
               <Button variant="outline" onClick={() => navigate("/bulk-analysis")}>
                 <BarChart className="h-4 w-4 mr-2" />
                 Bulk Analysis
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/billing")}>
+                <CreditCard className="h-4 w-4 mr-2" />
+                Billing
               </Button>
               <Button variant="outline" onClick={() => navigate("/scoring-rubric")}>
                 <BookOpen className="h-4 w-4 mr-2" />

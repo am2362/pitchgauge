@@ -11,6 +11,7 @@ import History from "./pages/History";
 import BulkAnalysis from "./pages/BulkAnalysis";
 import Settings from "./pages/Settings";
 import ScoringRubric from "./pages/ScoringRubric";
+import Billing from "./pages/Billing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/bulk-analysis" element={<BulkAnalysis />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/scoring-rubric" element={<ScoringRubric />} />
+          <Route path="/billing" element={<Billing />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
