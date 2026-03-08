@@ -31,6 +31,7 @@ const App = () => (
           <Route path="/bulk-analysis" element={<BulkAnalysis />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/scoring-rubric" element={<ScoringRubric />} />
+          <Route path="/billing" element={<Billing />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

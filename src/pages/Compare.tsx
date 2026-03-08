@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { parseExcelFile, createExcelTemplate, ParsedStartupData } from "@/lib/excel-parser";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
 
 interface ScoreItem {
   score: number;
