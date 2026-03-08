@@ -33,7 +33,8 @@ const Settings = () => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { tier, dailyAnalysisCount, remainingAnalyses, canCompare, canBulkAnalyze, isLoading: isSubLoading } = useSubscription();
+  const { tier, dailyAnalysisCount, remainingAnalyses, canCompare, canBulkAnalyze, isLoading: isSubLoading, startCheckout } = useSubscription();
+  const [checkoutLoading, setCheckoutLoading] = useCheckoutState<string | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
