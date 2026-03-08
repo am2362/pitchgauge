@@ -13,6 +13,7 @@ import { toast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
 import type { BulkAnalysis, ComparisonReport, BulkAnalysisResult } from '@/types/bulk-analysis';
 import { exportBulkAnalysisToExcel } from '@/lib/bulk-excel-export';
+import { exportBulkAnalysisToPDF } from '@/lib/pdf-export';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { UpgradePrompt } from '@/components/UpgradePrompt';
 
