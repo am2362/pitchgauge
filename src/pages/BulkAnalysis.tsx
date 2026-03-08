@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, Eye, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Download, Eye, Trash2, RefreshCw, AlertTriangle, FileDown } from 'lucide-react';
 import AppNavbar from '@/components/AppNavbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { toast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
 import type { BulkAnalysis, ComparisonReport, BulkAnalysisResult } from '@/types/bulk-analysis';
 import { exportBulkAnalysisToExcel } from '@/lib/bulk-excel-export';
+import { exportBulkAnalysisToPDF } from '@/lib/pdf-export';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { UpgradePrompt } from '@/components/UpgradePrompt';
 
@@ -576,6 +577,23 @@ export default function BulkAnalysis() {
     }
   };
 
+  const handleExportPDF = (batch: BulkAnalysis) => {
+    if (!batch.results) return;
+    try {
+      exportBulkAnalysisToPDF(batch.results, batch.comparison_report, batch.batch_name);
+      toast({
+        title: "PDF Exported",
+        description: "PDF report has been downloaded."
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Could not export PDF",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleDelete = async (batchId: string) => {
     try {
       const { error } = await supabase
@@ -679,6 +697,10 @@ export default function BulkAnalysis() {
                 <Button onClick={() => handleExport(currentAnalysis)} className="gap-2">
                   <Download className="h-4 w-4" />
                   Export to Excel
+                </Button>
+                <Button onClick={() => handleExportPDF(currentAnalysis)} variant="outline" className="gap-2">
+                  <FileDown className="h-4 w-4" />
+                  Export PDF
                 </Button>
                 <Button variant="outline" onClick={() => setCurrentAnalysis(null)}>
                   New Analysis

@@ -11,7 +11,6 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { DemoNav } from "@/components/DemoNav";
 import { InvestmentRankingsTable } from "@/components/bulk/InvestmentRankingsTable";
 import { SectorBreakdownChart } from "@/components/bulk/SectorBreakdownChart";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import ExcelJS from "exceljs";
 
 type BulkStep = { msg: string; duration: number };
@@ -32,17 +31,6 @@ const METRIC_LABELS: Record<string, string> = {
   funding: "Competitive Landscape",
 };
 
-const getScoreColor = (score: number) => {
-  if (score >= 8) return "text-green-500";
-  if (score >= 6) return "text-blue-500";
-  return "text-orange-500";
-};
-
-const getScoreBarColor = (score: number) => {
-  if (score >= 8) return "bg-green-500";
-  if (score >= 6) return "bg-blue-500";
-  return "bg-orange-500";
-};
 
 const DemoBulk = () => {
   const navigate = useNavigate();
@@ -111,11 +99,17 @@ const DemoBulk = () => {
       { header: "Startup Name", key: "name", width: 20 },
       { header: "Sector", key: "sector", width: 18 },
       { header: "Team Quality", key: "team", width: 14 },
+      { header: "Team Reasoning", key: "teamReasoning", width: 50 },
       { header: "Market Size", key: "market", width: 14 },
+      { header: "Market Reasoning", key: "marketReasoning", width: 50 },
       { header: "Product Differentiation", key: "product", width: 22 },
+      { header: "Product Reasoning", key: "productReasoning", width: 50 },
       { header: "Traction", key: "traction", width: 12 },
+      { header: "Traction Reasoning", key: "tractionReasoning", width: 50 },
       { header: "Business Model", key: "businessModel", width: 16 },
+      { header: "Business Model Reasoning", key: "businessModelReasoning", width: 50 },
       { header: "Competitive Landscape", key: "competitive", width: 22 },
+      { header: "Competitive Reasoning", key: "competitiveReasoning", width: 50 },
       { header: "Overall Score", key: "overall", width: 14 },
     ];
 
@@ -125,16 +119,23 @@ const DemoBulk = () => {
     });
 
     DEMO_BULK_RESULTS.forEach((r, idx) => {
+      const reasonings = DEMO_BULK_SCORE_REASONINGS[r.startupName] || {};
       sheet.addRow({
         rank: idx + 1,
         name: r.startupName,
         sector: r.sector,
         team: r.scores.team,
+        teamReasoning: reasonings.team || "",
         market: r.scores.market,
+        marketReasoning: reasonings.market || "",
         product: r.scores.product,
+        productReasoning: reasonings.product || "",
         traction: r.scores.traction,
+        tractionReasoning: reasonings.traction || "",
         businessModel: r.scores.businessModel,
+        businessModelReasoning: reasonings.businessModel || "",
         competitive: r.scores.funding,
+        competitiveReasoning: reasonings.funding || "",
         overall: r.scores.overall,
       });
     });
@@ -149,7 +150,7 @@ const DemoBulk = () => {
     URL.revokeObjectURL(url);
   };
 
-  const scoreKeys = ["team", "product", "market", "traction", "businessModel", "funding"] as const;
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
@@ -239,53 +240,6 @@ const DemoBulk = () => {
             {/* Rankings */}
             <InvestmentRankingsTable rankings={DEMO_BULK_COMPARISON_REPORT.investmentRankings} />
 
-            {/* Detailed Score Breakdown */}
-            <Card className="p-6">
-              <h2 className="text-xl font-bold mb-4 text-foreground">Detailed Score Breakdown</h2>
-              <Accordion type="multiple" className="space-y-3">
-                {DEMO_BULK_RESULTS.map((r) => {
-                  const reasonings = DEMO_BULK_SCORE_REASONINGS[r.startupName] || {};
-                  return (
-                    <AccordionItem key={r.startupName} value={r.startupName} className="border rounded-lg px-4">
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-foreground">{r.startupName}</span>
-                          <Badge variant="outline" className="text-xs">{r.sector}</Badge>
-                          <span className={`text-sm font-bold ${getScoreColor(r.scores.overall)}`}>
-                            {r.scores.overall}/10
-                          </span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-4 pt-2">
-                          {scoreKeys.map((key) => {
-                            const score = r.scores[key];
-                            const reasoning = reasonings[key];
-                            return (
-                              <div key={key} className="space-y-1.5">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm font-medium text-foreground">{METRIC_LABELS[key]}</span>
-                                  <span className={`text-sm font-bold ${getScoreColor(score)}`}>{score}/10</span>
-                                </div>
-                                <div className="h-1.5 w-full rounded-full bg-secondary">
-                                  <div
-                                    className={`h-full rounded-full transition-all ${getScoreBarColor(score)}`}
-                                    style={{ width: `${score * 10}%` }}
-                                  />
-                                </div>
-                                {reasoning && (
-                                  <p className="text-xs text-muted-foreground">{reasoning}</p>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
-              </Accordion>
-            </Card>
 
             {/* Sector chart */}
             <SectorBreakdownChart sectorBreakdown={DEMO_BULK_COMPARISON_REPORT.sectorBreakdown} />
