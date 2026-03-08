@@ -698,6 +698,10 @@ export default function BulkAnalysis() {
                   <Download className="h-4 w-4" />
                   Export to Excel
                 </Button>
+                <Button onClick={() => handleExportPDF(currentAnalysis)} variant="outline" className="gap-2">
+                  <FileDown className="h-4 w-4" />
+                  Export PDF
+                </Button>
                 <Button variant="outline" onClick={() => setCurrentAnalysis(null)}>
                   New Analysis
                 </Button>
