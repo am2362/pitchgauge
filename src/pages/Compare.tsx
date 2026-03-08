@@ -653,9 +653,9 @@ export default function Compare() {
               onChange={handleFileUpload}
               className="hidden"
             />
-            <Button onClick={addPitch} variant="outline">
+            <Button onClick={addPitch} variant="outline" disabled={pitches.length >= 10}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Startup
+              Add Startup ({pitches.length}/10)
             </Button>
             {allAnalyzed && pitches.some(p => p.analysis) && (
               <>
