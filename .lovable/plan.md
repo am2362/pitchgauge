@@ -1,29 +1,42 @@
 
+# Add "Single Pitch Analysis" Button to Top Navigation
 
-# Fix Nav Layout — Move Badge Below Title
+## Problem
+The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
 
-The header uses `flex items-center justify-between` with the left side containing the logo + badge + remaining analyses text, and the right side containing all nav buttons. The left side takes too much horizontal space, pushing Logout to wrap.
+## Solution
+Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-**Fix:** Stack the badge and remaining analyses below the title instead of beside it.
+## Implementation Details
 
-### Change in `src/pages/Dashboard.tsx` (lines 536-550)
+### File: `src/pages/Index.tsx`
 
-Replace the left-side `div` from a single horizontal flex row to a stacked layout:
-- Keep the icon + "PitchGauge" title on one line (reduce title from `text-5xl` to `text-4xl`)
-- Move the Badge and remaining analyses text to a second line below the title
+**What to change:**
+1. Add a new import for `FileText` icon (already imported on line 8)
+2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
+3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
+4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
 
+**Button placement:**
+- Insert as the **first button** in the top nav (line 530), before the Compare button
+- Use `FileText` icon (already imported)
+- Text: "Single Pitch Analysis"
+- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
+
+**Technical approach:**
+```text
+1. Add useRef hook to create a ref for the pitch input card
+2. In the button's onClick, check if user is on "/" page
+   - If on "/", scroll to the ref using scrollIntoView()
+   - If not on "/", navigate to "/"
+3. Attach the ref to the Card element containing "Input Pitch"
 ```
-<div className="flex flex-col items-start">
-  <div className="flex items-center gap-2">
-    <TrendingUp className="h-8 w-8 text-primary" />
-    <h1 className="text-4xl font-bold ...">PitchGauge</h1>
-  </div>
-  <div className="flex items-center gap-2 ml-10">
-    <Badge ...>{tier}</Badge>
-    {tier === "free" && <span ...>...</span>}
-  </div>
-</div>
-```
 
-This frees up enough horizontal space for all 7 nav buttons (including Logout) to fit on one line.
+## Files to Modify
+- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
+## Expected Result
+- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
+- Clicking it from any page navigates to "/"
+- Clicking it while already on "/" scrolls smoothly to the pitch input form
+- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
