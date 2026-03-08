@@ -81,7 +81,7 @@ const Landing = () => {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground/70 italic max-w-md">
-                PitchScore is designed as an initial screening tool to support — not replace — human investment judgement.
+                PitchGauge is designed as an initial screening tool to support — not replace — human investment judgement.
               </p>
             </div>
 
