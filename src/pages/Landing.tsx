@@ -85,7 +85,7 @@ const Landing = () => {
                   <div className="w-3 h-3 rounded-full bg-destructive/60" />
                   <div className="w-3 h-3 rounded-full bg-yellow-400/60" />
                   <div className="w-3 h-3 rounded-full bg-green-400/60" />
-                  <span className="ml-3 text-xs text-muted-foreground">pitchscore.app/dashboard</span>
+                  <span className="ml-3 text-xs text-muted-foreground">pitchgauge.app/dashboard</span>
                 </div>
                 <div className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
