@@ -539,6 +539,14 @@ const Index = () => {
               <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 PitchGauge
               </h1>
+              <Badge variant={tier === "free" ? "secondary" : "default"} className="ml-2 capitalize">
+                {tier}
+              </Badge>
+              {tier === "free" && (
+                <span className="text-xs text-muted-foreground ml-1">
+                  {remainingAnalyses} analyses left today
+                </span>
+              )}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => navigate("/compare")}>

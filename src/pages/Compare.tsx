@@ -315,6 +315,15 @@ export default function Compare() {
   };
 
   const analyzePitch = async (id: number) => {
+    if (!canCompare) {
+      toast({
+        title: "Pro Feature",
+        description: "Comparison mode requires a Pro or Scale subscription. Upgrade to unlock.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const pitch = pitches.find(p => p.id === id);
     if (!pitch || !pitch.text.trim()) {
       toast({
