@@ -296,3 +296,102 @@ export const exportPitchSummaryToPDF = (
     : `Pitch_Summary_${Date.now()}.pdf`;
   pdf.save(fileName);
 };
+
+export const exportBulkAnalysisToPDF = (
+  results: BulkAnalysisResult[],
+  comparisonReport: ComparisonReport | null,
+  batchName: string
+) => {
+  const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const margin = 20;
+  let yPosition = 20;
+
+  const addText = (text: string, fontSize: number = 10, isBold: boolean = false) => {
+    if (yPosition > 270) {
+      pdf.addPage();
+      yPosition = 20;
+    }
+    pdf.setFontSize(fontSize);
+    pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+    const lines = pdf.splitTextToSize(text, pageWidth - 2 * margin);
+    pdf.text(lines, margin, yPosition);
+    yPosition += lines.length * fontSize * 0.5 + 5;
+  };
+
+  // Header
+  addText('Bulk Startup Analysis Report', 18, true);
+  addText(`Batch: ${batchName}`, 12, false);
+  addText(`Generated: ${new Date().toLocaleDateString()}`, 10, false);
+  addText(`Total Startups: ${results.length}`, 10, false);
+  yPosition += 10;
+
+  // Overall Recommendation
+  if (comparisonReport?.overallRecommendation) {
+    addText('Overall Recommendation', 16, true);
+    addText(comparisonReport.overallRecommendation, 10, false);
+    yPosition += 8;
+  }
+
+  // Investment Rankings
+  if (comparisonReport?.investmentRankings) {
+    addText('Investment Rankings', 16, true);
+    yPosition += 3;
+    comparisonReport.investmentRankings.forEach((ranking) => {
+      addText(`#${ranking.rank}: ${ranking.startupName} (${ranking.overallScore}/10)`, 12, true);
+      addText(`Top Strengths: ${ranking.topStrengths.join(', ')}`, 10, false);
+      addText(`Recommendation: ${ranking.recommendation}`, 10, false);
+      yPosition += 3;
+    });
+  }
+
+  // Sector Breakdown
+  if (comparisonReport?.sectorBreakdown) {
+    yPosition += 5;
+    addText('Sector Breakdown', 16, true);
+    Object.entries(comparisonReport.sectorBreakdown).forEach(([sector, count]) => {
+      addText(`${sector}: ${count} startup${count !== 1 ? 's' : ''}`, 10, false);
+    });
+  }
+
+  // Strengths & Weaknesses
+  if (comparisonReport?.strengthsAndWeaknesses) {
+    pdf.addPage();
+    yPosition = 20;
+    addText('Strengths & Weaknesses', 16, true);
+    yPosition += 3;
+    Object.entries(comparisonReport.strengthsAndWeaknesses).forEach(([name, data]) => {
+      addText(name, 12, true);
+      addText(`Strengths: ${data.strengths.join('; ')}`, 10, false);
+      addText(`Weaknesses: ${data.weaknesses.join('; ')}`, 10, false);
+      yPosition += 3;
+    });
+  }
+
+  // Individual Results
+  pdf.addPage();
+  yPosition = 20;
+  addText('Individual Startup Scores', 16, true);
+  yPosition += 5;
+
+  const scoreLabels: Record<string, string> = {
+    team: 'Team', product: 'Product', market: 'Market',
+    traction: 'Traction', businessModel: 'Business Model', funding: 'Competitive Landscape'
+  };
+  const scoreKeys = ['team', 'product', 'market', 'traction', 'businessModel', 'funding'] as const;
+
+  results.forEach((r) => {
+    if (r.scores.overall === 0 && r.summary === 'Failed to analyze this startup') return;
+    
+    addText(`${r.startupName} — ${r.sector} (${r.scores.overall}/10)`, 12, true);
+    addText(r.summary, 10, false);
+    
+    scoreKeys.forEach((key) => {
+      addText(`  ${scoreLabels[key]}: ${r.scores[key]}/10 — ${r.metrics[key === 'funding' ? 'funding' : key]}`, 9, false);
+    });
+    yPosition += 5;
+  });
+
+  const fileName = `${batchName.replace(/[^a-z0-9]/gi, '_')}_report_${new Date().toISOString().split('T')[0]}.pdf`;
+  pdf.save(fileName);
+};
