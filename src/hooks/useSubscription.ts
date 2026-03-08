@@ -53,7 +53,7 @@ export function useSubscription() {
       if (error) {
         console.error("Error checking subscription:", error);
         // Fallback to DB query
-        await loadFromDB(session.user.id);
+        await loadFromDB(session.user.id, session.user.email ?? undefined);
         return;
       }
 
