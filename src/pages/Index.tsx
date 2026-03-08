@@ -529,10 +529,6 @@ const Index = () => {
               </h1>
             </div>
             <div className="flex gap-2">
-              <Button variant="default" onClick={() => pitchInputRef.current?.scrollIntoView({ behavior: 'smooth' })}>
-                <FileText className="h-4 w-4 mr-2" />
-                Single Pitch Analysis
-              </Button>
               <Button variant="outline" onClick={() => navigate("/compare")}>
                 <GitCompare className="h-4 w-4 mr-2" />
                 Compare
