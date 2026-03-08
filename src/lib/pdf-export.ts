@@ -403,6 +403,7 @@ export const exportBulkAnalysisToPDF = (
     yPosition += 5;
   });
 
+  addPitchGaugeFooter(pdf);
   const fileName = `${batchName.replace(/[^a-z0-9]/gi, '_')}_report_${new Date().toISOString().split('T')[0]}.pdf`;
   pdf.save(fileName);
 };
