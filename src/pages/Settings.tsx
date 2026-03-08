@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, Mail, Lock, Loader2 } from "lucide-react";
+import { ArrowLeft, User, Mail, Lock, Loader2, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { User as SupabaseUser } from "@supabase/supabase-js";
