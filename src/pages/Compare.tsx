@@ -820,74 +820,10 @@ export default function Compare() {
           ))}
         </div>
 
-        {allAnalyzed && pitches.some(p => p.analysis) && (
+        {allAnalyzed && pitches.some(p => p.analysis) && !comparisonInsights && (
           <Card className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Comparison Table</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-semibold">Metric</th>
-                    {pitches.filter(p => p.analysis).map(pitch => (
-                      <th key={pitch.id} className="text-center p-3 font-semibold">{pitch.name}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {scorecardKeys.map(key => (
-                    <tr key={key} className="border-b hover:bg-secondary/20">
-                       <td className="p-3 font-medium capitalize align-top">
-                        {key.replace(/([A-Z])/g, ' $1').trim()}
-                      </td>
-                      {pitches.filter(p => p.analysis).map(pitch => {
-                        const scoreItem = pitch.analysis!.scorecard[key];
-                        const score = scoreItem.score;
-                        const maxScore = Math.max(...pitches.filter(p => p.analysis).map(p => p.analysis!.scorecard[key].score));
-                        return (
-                          <td key={pitch.id} className="p-3 align-top">
-                            <div className="space-y-1">
-                              <div className="text-center">
-                                <span className={`text-lg font-bold ${getScoreColor(score)} ${score === maxScore ? 'underline' : ''}`}>
-                                  {score}/10
-                                </span>
-                              </div>
-                              {scoreItem.detailedExplanation && (
-                                <Collapsible>
-                                  <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mx-auto">
-                                    Details <ChevronDown className="h-3 w-3" />
-                                  </CollapsibleTrigger>
-                                  <CollapsibleContent className="text-xs text-muted-foreground mt-2">
-                                    <p className="text-left">{scoreItem.reasoning}</p>
-                                    <Separator className="my-2" />
-                                    <p className="text-left">{scoreItem.detailedExplanation}</p>
-                                  </CollapsibleContent>
-                                </Collapsible>
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                  <tr className="border-t-2 border-primary/30 bg-secondary/20">
-                    <td className="p-3 font-bold text-foreground sticky left-0 bg-secondary/20">Overall Score</td>
-                    {pitches.filter(p => p.analysis).map(pitch => {
-                      const keys = scorecardKeys as Array<keyof typeof pitch.analysis.scorecard>;
-                      const avg = keys.reduce((sum, k) => sum + pitch.analysis!.scorecard[k].score, 0) / keys.length;
-                      const allAvgs = pitches.filter(p => p.analysis).map(p => keys.reduce((s, k) => s + p.analysis!.scorecard[k].score, 0) / keys.length);
-                      const maxAvg = Math.max(...allAvgs);
-                      return (
-                        <td key={pitch.id} className="p-3 text-center">
-                          <span className={`text-xl font-bold ${getScoreColor(Math.round(avg))} ${avg === maxAvg ? 'underline' : ''}`}>
-                            {avg.toFixed(1)}/10
-                          </span>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <h2 className="text-2xl font-bold mb-6">Score Breakdown</h2>
+            {renderScoreBreakdownAccordion(pitches.filter(p => p.analysis))}
           </Card>
         )}
 
