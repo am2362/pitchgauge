@@ -65,7 +65,7 @@ export function useSubscription() {
     ? Math.max(0, limits.dailyAnalyses - state.dailyAnalysisCount) 
     : Infinity;
 
-  const recordUsage = useCallback(async (actionType: string, metadata?: Record<string, unknown>) => {
+  const recordUsage = useCallback(async (actionType: string, metadata?: Record<string, string>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
