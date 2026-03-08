@@ -1,42 +1,29 @@
 
-# Add "Single Pitch Analysis" Button to Top Navigation
+
+# Add Overall Score Row to Compare Feature
 
 ## Problem
-The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
+The comparison tables (both the inline table and the dialog table) show individual scorecard metrics but no overall/average score, making it hard to quickly assess which startup is strongest overall.
 
 ## Solution
-Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
+Add an "Overall Score" row at the bottom of both comparison tables that computes the average of all 6 scorecard metrics for each startup. Highlight the highest overall score.
 
-## Implementation Details
+### File: `src/pages/Compare.tsx`
 
-### File: `src/pages/Index.tsx`
+**Two locations to update:**
 
-**What to change:**
-1. Add a new import for `FileText` icon (already imported on line 8)
-2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
-3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
-4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
+1. **Inline Comparison Table** (~line 728, after the `scorecardKeys.map` tbody closing): Add a new `<tr>` row after the individual metric rows that calculates and displays the average score across all 6 categories for each startup.
 
-**Button placement:**
-- Insert as the **first button** in the top nav (line 530), before the Compare button
-- Use `FileText` icon (already imported)
-- Text: "Single Pitch Analysis"
-- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
+2. **Dialog Detailed Score Comparison Table** (~line 936, after the `scorecardKeys.map` tbody closing): Same overall score row in the dialog table.
 
-**Technical approach:**
+**Score calculation:**
 ```text
-1. Add useRef hook to create a ref for the pitch input card
-2. In the button's onClick, check if user is on "/" page
-   - If on "/", scroll to the ref using scrollIntoView()
-   - If not on "/", navigate to "/"
-3. Attach the ref to the Card element containing "Input Pitch"
+overallScore = average of all 6 scorecard values (team, marketSize, traction, productDifferentiation, businessModel, competitiveLandscape)
 ```
 
-## Files to Modify
-- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
+**Styling:**
+- Bold "Overall Score" label in the metric column
+- Larger font for the score value
+- Highlight the highest overall score (underline, like existing per-metric highlighting)
+- Top border to visually separate from individual metrics
 
-## Expected Result
-- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
-- Clicking it from any page navigates to "/"
-- Clicking it while already on "/" scrolls smoothly to the pitch input form
-- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
