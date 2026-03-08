@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import type { SlideContent } from '@/lib/document-parser';
+import type { BulkAnalysisResult, ComparisonReport } from '@/types/bulk-analysis';
 
 interface ScoreItem {
   score: number;
