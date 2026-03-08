@@ -150,7 +150,7 @@ const DemoBulk = () => {
     URL.revokeObjectURL(url);
   };
 
-  const scoreKeys = ["team", "product", "market", "traction", "businessModel", "funding"] as const;
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
