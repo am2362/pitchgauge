@@ -13,8 +13,8 @@ interface UpgradePromptProps {
 
 export function UpgradePrompt({ requiredTier, currentTier, featureName, onUpgrade, isLoading }: UpgradePromptProps) {
   const tierInfo = {
-    pro: { label: "Pro", price: "$29/mo", icon: Crown },
-    scale: { label: "Scale", price: "$89/mo", icon: Zap },
+    pro: { label: "Pro", price: "$39/mo", icon: Crown },
+    scale: { label: "Scale", price: "$99/mo", icon: Zap },
   };
 
   const info = tierInfo[requiredTier];
@@ -52,7 +52,7 @@ export function UpgradePrompt({ requiredTier, currentTier, featureName, onUpgrad
               disabled={isLoading}
             >
               <Crown className="h-4 w-4" />
-              Or upgrade to Pro — $29/mo
+              Or upgrade to Pro — $39/mo
             </Button>
           )}
         </CardContent>

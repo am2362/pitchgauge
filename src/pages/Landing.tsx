@@ -283,7 +283,7 @@ const Landing = () => {
               },
               {
                 name: "Pro",
-                price: "$29",
+                price: "$39",
                 period: "/mo",
                 desc: "For active angel investors",
                 features: [
@@ -297,7 +297,7 @@ const Landing = () => {
               },
               {
                 name: "Scale",
-                price: "$89",
+                price: "$99",
                 period: "/mo",
                 desc: "For funds & accelerators",
                 features: [
