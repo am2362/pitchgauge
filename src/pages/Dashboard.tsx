@@ -700,8 +700,14 @@ const Index = () => {
           </div>
         )}
 
+        {/* Analysis progress steps */}
+        <AnalysisProgressSteps isActive={isAnalyzing} />
+
+        {/* Skeleton while analyzing */}
+        {isAnalyzing && !result && <ScorecardSkeleton />}
+
         {result && (
-          <Card className="mt-8 p-8 bg-card border-border shadow-lg">
+          <Card className="mt-8 p-8 bg-card border-border shadow-lg animate-fade-in">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-3xl font-bold text-foreground">Analysis Results</h2>
               <div className="flex gap-2">
