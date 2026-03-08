@@ -1,42 +1,35 @@
 
-# Add "Single Pitch Analysis" Button to Top Navigation
 
-## Problem
-The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
+# Rate Limiting Audit
 
-## Solution
-Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
+## Current State — Already Implemented
 
-## Implementation Details
+The rate limiting system is **already in place** across both frontend and backend:
 
-### File: `src/pages/Index.tsx`
+### Frontend (`useSubscription.ts`)
+- `TIER_LIMITS` defines: Free = 3/day, Pro = unlimited single, Scale = unlimited everything
+- `canAnalyze` flag blocks free users after 3 daily analyses
+- `canCompare` is `false` for free tier, `true` for pro/scale
+- `canBulkAnalyze` is `false` for free/pro, `true` for scale only
+- `remainingAnalyses` tracks remaining count for UI display
+- `recordUsage()` increments counter after each analysis
 
-**What to change:**
-1. Add a new import for `FileText` icon (already imported on line 8)
-2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
-3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
-4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
+### Frontend enforcement (pages)
+- **Dashboard.tsx**: Checks `canAnalyze` before calling `analyze-startup`; shows toast "Daily Limit Reached" with upgrade message; displays remaining count
+- **Compare.tsx**: Uses `UpgradePrompt` component when `!canCompare` (free tier blocked)
+- **BulkAnalysis.tsx**: Uses `UpgradePrompt` component when `!canBulkAnalyze` (free/pro blocked)
 
-**Button placement:**
-- Insert as the **first button** in the top nav (line 530), before the Compare button
-- Use `FileText` icon (already imported)
-- Text: "Single Pitch Analysis"
-- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
+### Backend
+- `get_daily_usage_count` RPC counts today's usage per user (security definer, uses `auth.uid()`)
+- `usage_tracking` table records each action with RLS
 
-**Technical approach:**
-```text
-1. Add useRef hook to create a ref for the pitch input card
-2. In the button's onClick, check if user is on "/" page
-   - If on "/", scroll to the ref using scrollIntoView()
-   - If not on "/", navigate to "/"
-3. Attach the ref to the Card element containing "Input Pitch"
-```
+## What Could Be Improved
 
-## Files to Modify
-- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
+The current implementation is **client-side only** — the edge functions (`analyze-startup`, `compare-startups`, `analyze-bulk-startups`) do **not** check usage limits server-side. A determined user could bypass the frontend and call the edge functions directly.
 
-## Expected Result
-- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
-- Clicking it from any page navigates to "/"
-- Clicking it while already on "/" scrolls smoothly to the pitch input form
-- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
+### Recommendation
+If you want **strict** server-side enforcement, I would add usage checks inside the edge functions themselves. However, for most use cases the current client-side gating is sufficient since the functions require authentication.
+
+## Summary
+**Yes, this is already implemented.** Free = 3 analyses/day (blocked with toast), Pro = unlimited single + compare, Scale = unlimited everything. The upgrade prompt and remaining count display are working. The only gap is server-side enforcement in edge functions.
+
