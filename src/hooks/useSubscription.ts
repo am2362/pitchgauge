@@ -41,6 +41,11 @@ export function useSubscription() {
         return;
       }
 
+      if (session.user.email && ADMIN_WHITELIST.includes(session.user.email)) {
+        setState({ tier: "scale", status: "active", isLoading: false, dailyAnalysisCount: 0, subscriptionEnd: null });
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("check-subscription", {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
