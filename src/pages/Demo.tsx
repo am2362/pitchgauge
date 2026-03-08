@@ -67,6 +67,11 @@ const Demo = () => {
     toast({ title: "Demo Mode", description: "Sign up for a free account to access this feature!" });
   };
 
+  const AnimatedScore = ({ score }: { score: number }) => {
+    const animated = useCountUp(score, 800, true);
+    return <>{animated}</>;
+  };
+
   const ScoreBar = ({ label, scoreItem }: { label: string; scoreItem: ScoreItem }) => {
     const getScoreColor = (score: number) => {
       if (score >= 8) return "from-green-500 to-emerald-500";
@@ -80,7 +85,7 @@ const Demo = () => {
         <div className="flex justify-between items-center">
           <span className="font-semibold text-foreground">{label}</span>
           <span className={`text-lg font-bold ${scoreItem.score >= 7 ? 'text-green-500' : scoreItem.score >= 5 ? 'text-blue-500' : 'text-orange-500'}`}>
-            {scoreItem.score}/10
+            <AnimatedScore score={scoreItem.score} />/10
           </span>
         </div>
         <div className="h-3 bg-secondary rounded-full overflow-hidden">
