@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, User, Mail, Lock, Loader2, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/hooks/useSubscription";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { z } from "zod";
 
