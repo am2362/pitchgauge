@@ -26,95 +26,54 @@ export async function exportBulkAnalysisToExcel(
 ): Promise<void> {
   const workbook = new ExcelJS.Workbook();
 
-  // Sheet 1: Detailed Results
-  const resultsSheet = workbook.addWorksheet('Detailed Results');
+  // Sheet 1: Startup Rankings (matches demo format)
+  const resultsSheet = workbook.addWorksheet('Startup Rankings');
 
-  const header = [
-    'Startup Name',
-    'Sector',
-    'Tags',
-    'Team Score',
-    'Product Score',
-    'Market Score',
-    'Traction Score',
-    'Funding Score',
-    'Business Model Score',
-    'Overall Score',
-    'Summary',
-    'Team Metrics',
-    'Product Metrics',
-    'Market Metrics',
-    'Traction Metrics',
-    'Funding Metrics',
-    'Business Model Metrics'
+  resultsSheet.columns = [
+    { header: 'Rank', key: 'rank', width: 8 },
+    { header: 'Startup Name', key: 'name', width: 20 },
+    { header: 'Sector', key: 'sector', width: 18 },
+    { header: 'Team Quality', key: 'team', width: 14 },
+    { header: 'Team Reasoning', key: 'teamReasoning', width: 50 },
+    { header: 'Market Size', key: 'market', width: 14 },
+    { header: 'Market Reasoning', key: 'marketReasoning', width: 50 },
+    { header: 'Product Differentiation', key: 'product', width: 22 },
+    { header: 'Product Reasoning', key: 'productReasoning', width: 50 },
+    { header: 'Traction', key: 'traction', width: 12 },
+    { header: 'Traction Reasoning', key: 'tractionReasoning', width: 50 },
+    { header: 'Business Model', key: 'businessModel', width: 16 },
+    { header: 'Business Model Reasoning', key: 'businessModelReasoning', width: 50 },
+    { header: 'Competitive Landscape', key: 'competitive', width: 22 },
+    { header: 'Competitive Reasoning', key: 'competitiveReasoning', width: 50 },
+    { header: 'Overall Score', key: 'overall', width: 14 },
   ];
 
-  resultsSheet.addRow(header);
-  results.forEach((r) => {
-    resultsSheet.addRow([
-      r.startupName,
-      r.sector,
-      r.tags.join(', '),
-      r.scores.team,
-      r.scores.product,
-      r.scores.market,
-      r.scores.traction,
-      r.scores.funding,
-      r.scores.businessModel,
-      r.scores.overall,
-      r.summary,
-      r.metrics.team,
-      r.metrics.product,
-      r.metrics.market,
-      r.metrics.traction,
-      r.metrics.funding,
-      r.metrics.businessModel
-    ]);
+  // Style header row
+  resultsSheet.getRow(1).eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B82F6' } };
   });
 
-  // Set column widths
-  const widths = [20, 15, 30, 12, 13, 13, 14, 13, 18, 13, 60, 40, 40, 40, 40, 40, 40];
-  widths.forEach((w, idx) => {
-    resultsSheet.getColumn(idx + 1).width = w;
-  });
-
-  // Apply color coding to score columns (Team..Overall => columns 4-10)
-  const scoreColumns = [4, 5, 6, 7, 8, 9, 10];
-  for (let rowNumber = 2; rowNumber <= resultsSheet.rowCount; rowNumber++) {
-    scoreColumns.forEach((colNumber) => {
-      const cell = resultsSheet.getRow(rowNumber).getCell(colNumber);
-      const score = Number(cell.value ?? 0);
-      if (!Number.isFinite(score)) return;
-
-      let fillColor = 'FFFFFF';
-      let fontColor = '000000';
-
-      if (score >= 8) {
-        fillColor = '166534'; // Dark Green
-        fontColor = 'FFFFFF';
-      } else if (score >= 6) {
-        fillColor = '86EFAC'; // Light Green
-        fontColor = '000000';
-      } else if (score >= 4) {
-        fillColor = 'FDE047'; // Yellow
-        fontColor = '000000';
-      } else if (score >= 1) {
-        fillColor = 'DC2626'; // Red
-        fontColor = 'FFFFFF';
-      }
-
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: toArgb(fillColor) }
-      };
-      cell.font = {
-        ...(cell.font ?? {}),
-        color: { argb: toArgb(fontColor) },
-        bold: true
-      };
+  results.forEach((r, idx) => {
+    resultsSheet.addRow({
+      rank: idx + 1,
+      name: r.startupName,
+      sector: r.sector,
+      team: r.scores.team,
+      teamReasoning: r.metrics.team || '',
+      market: r.scores.market,
+      marketReasoning: r.metrics.market || '',
+      product: r.scores.product,
+      productReasoning: r.metrics.product || '',
+      traction: r.scores.traction,
+      tractionReasoning: r.metrics.traction || '',
+      businessModel: r.scores.businessModel,
+      businessModelReasoning: r.metrics.businessModel || '',
+      competitive: r.scores.funding,
+      competitiveReasoning: r.metrics.funding || '',
+      overall: r.scores.overall,
     });
-  }
+  });
 
   // Sheet 2: Investment Rankings (if comparison report exists)
   if (comparisonReport?.investmentRankings) {
