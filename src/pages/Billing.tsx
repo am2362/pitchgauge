@@ -16,7 +16,7 @@ const Billing = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const {
-    tier, isLoading, dailyAnalysisCount, remainingAnalyses,
+    tier, isLoading, monthlyAnalysisCount, remainingAnalyses,
     canCompare, canBulkAnalyze, subscriptionEnd,
     startCheckout, openCustomerPortal, refresh,
   } = useSubscription();
