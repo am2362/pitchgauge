@@ -251,7 +251,7 @@ const Landing = () => {
               },
               {
                 name: "Scale",
-                price: "$49",
+                price: "$89",
                 period: "/mo",
                 desc: "For funds & accelerators",
                 features: [
