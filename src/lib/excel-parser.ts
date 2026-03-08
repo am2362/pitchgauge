@@ -107,7 +107,7 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
 
       // Stop if we've reached max startups
       if (result.data.length >= MAX_STARTUPS) {
-        result.warnings.push(`Maximum ${MAX_STARTUPS} startups imported. Remaining rows ignored.`);
+        result.warnings.push(`Maximum ${MAX_STARTUPS} startups per batch. Please reduce your upload and try again.`);
         break;
       }
     }
