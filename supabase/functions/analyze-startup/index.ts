@@ -242,7 +242,7 @@ ALWAYS include reasoning explaining the exact score (e.g., why 5 not 6). Be brut
         const repairResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            Authorization: `Bearer ${AI_GATEWAY_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
