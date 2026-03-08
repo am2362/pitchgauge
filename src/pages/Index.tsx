@@ -151,7 +151,7 @@ const Index = () => {
   const [extractedSlides, setExtractedSlides] = useState<SlideContent[] | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const pitchInputRef = useRef<HTMLDivElement>(null);
+
 
   // Extract startup name from pitch text (first line if it looks like a name)
   const extractStartupName = (pitchText: string): string | null => {
