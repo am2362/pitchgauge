@@ -1,39 +1,42 @@
 
+# Add "Single Pitch Analysis" Button to Top Navigation
 
-# Fix: Use Non-Colliding Environment Variable Names
-
-## Root Cause
-The auto-generated `.env` file (which cannot be edited) defines:
-- `VITE_SUPABASE_URL` → Lovable Cloud URL
-- `VITE_SUPABASE_PUBLISHABLE_KEY` → Lovable Cloud anon key
-
-These override any secrets with the same name. So `supabase-external.ts` always reads Lovable Cloud credentials.
+## Problem
+The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
 
 ## Solution
-Use **differently-named** environment variables that don't collide with the auto-generated `.env`:
+Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-1. **Add two new secrets**:
-   - `VITE_EXTERNAL_SUPABASE_URL` → your external Supabase project URL
-   - `VITE_EXTERNAL_SUPABASE_ANON_KEY` → your external Supabase anon key
+## Implementation Details
 
-2. **Update `src/lib/supabase-external.ts`** to read from the new variable names:
-   ```typescript
-   const supabaseUrl = import.meta.env.VITE_EXTERNAL_SUPABASE_URL;
-   const supabaseAnonKey = import.meta.env.VITE_EXTERNAL_SUPABASE_ANON_KEY;
-   ```
-   Remove the fallback to `VITE_SUPABASE_PUBLISHABLE_KEY` since that always resolves to Lovable Cloud.
+### File: `src/pages/Index.tsx`
 
-3. **Update `src/lib/document-parser.ts`** — it uses `import.meta.env.VITE_SUPABASE_URL` directly for the edge function URL on line ~52. Change to `VITE_EXTERNAL_SUPABASE_URL`.
+**What to change:**
+1. Add a new import for `FileText` icon (already imported on line 8)
+2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
+3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
+4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
 
-4. **No other file changes needed** — all other files import `supabase` from `supabase-external.ts` and don't reference env vars directly.
+**Button placement:**
+- Insert as the **first button** in the top nav (line 530), before the Compare button
+- Use `FileText` icon (already imported)
+- Text: "Single Pitch Analysis"
+- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
 
-## Files Changed
-- `src/lib/supabase-external.ts` — use new env var names
-- `src/lib/document-parser.ts` — update edge function URL reference
+**Technical approach:**
+```text
+1. Add useRef hook to create a ref for the pitch input card
+2. In the button's onClick, check if user is on "/" page
+   - If on "/", scroll to the ref using scrollIntoView()
+   - If not on "/", navigate to "/"
+3. Attach the ref to the Card element containing "Input Pitch"
+```
 
-## Secrets to Add
-- `VITE_EXTERNAL_SUPABASE_URL`
-- `VITE_EXTERNAL_SUPABASE_ANON_KEY`
+## Files to Modify
+- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
-(You'll be prompted to enter the values for your external Supabase project)
-
+## Expected Result
+- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
+- Clicking it from any page navigates to "/"
+- Clicking it while already on "/" scrolls smoothly to the pitch input form
+- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
