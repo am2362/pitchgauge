@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Lock, ArrowRight, Trophy, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Loader2, Lock, ArrowRight, Trophy, ThumbsUp, ThumbsDown, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   DEMO_COMPARISON_PITCHES,
@@ -16,6 +16,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Progress } from "@/components/ui/progress";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useCountUp } from "@/hooks/useCountUp";
+import { exportDemoComparisonToPDF } from "@/lib/pdf-export";
 
 const DemoCompare = () => {
   usePageMeta("Demo Compare | PitchGauge", "See how PitchGauge compares multiple startups side-by-side.");
@@ -205,8 +206,12 @@ const DemoCompare = () => {
 
             {/* Export buttons */}
             <div className="flex justify-center gap-3">
-              <Button variant="outline" onClick={handleSignupPrompt} className="gap-1">
-                <Lock className="h-3 w-3" /> Export PDF
+              <Button
+                variant="outline"
+                onClick={() => exportDemoComparisonToPDF(DEMO_COMPARISON_RESULTS, DEMO_COMPARISON_INSIGHTS)}
+                className="gap-1"
+              >
+                <Download className="h-3 w-3" /> Export PDF
               </Button>
               <Button variant="outline" onClick={handleSignupPrompt} className="gap-1">
                 <Lock className="h-3 w-3" /> Save Comparison

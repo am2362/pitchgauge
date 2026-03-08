@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { FileText, AlertTriangle, MessageSquare, Lock, ArrowRight, Upload, Loader2 } from "lucide-react";
+import { FileText, AlertTriangle, MessageSquare, Lock, ArrowRight, Upload, Loader2, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,7 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { DemoNav } from "@/components/DemoNav";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useCountUp } from "@/hooks/useCountUp";
+import { exportDemoAnalysisToPDF } from "@/lib/pdf-export";
 
 interface ScoreItem {
   score: number;
@@ -246,7 +247,18 @@ const Demo = () => {
               </Badge>
             </h2>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleSignupPrompt} className="gap-1"><Lock className="h-3 w-3" /> Export</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportDemoAnalysisToPDF(
+                  result as any,
+                  result.startupName || "Startup",
+                  activeResult === "text" ? "PitchScore_FinFlow_Analysis.pdf" : "PitchGauge_EcoTrack_Analysis.pdf"
+                )}
+                className="gap-1"
+              >
+                <Download className="h-3 w-3" /> Download PDF
+              </Button>
               <Badge variant="secondary" className="gap-1"><Lock className="h-3 w-3" /> Demo</Badge>
             </div>
           </div>

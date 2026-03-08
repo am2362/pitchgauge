@@ -13,6 +13,7 @@ import { InvestmentRankingsTable } from "@/components/bulk/InvestmentRankingsTab
 import { SectorBreakdownChart } from "@/components/bulk/SectorBreakdownChart";
 import ExcelJS from "exceljs";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { exportDemoBulkToPDF } from "@/lib/pdf-export";
 
 type BulkStep = { msg: string; duration: number };
 
@@ -234,8 +235,12 @@ const DemoBulk = () => {
               <Button onClick={handleExcelDownload} variant="outline" className="gap-2">
                 <Download className="h-4 w-4" /> Download Excel Results
               </Button>
-              <Button variant="outline" onClick={handleSignupPrompt} className="gap-1">
-                <Lock className="h-3 w-3" /> Export PDF
+              <Button
+                variant="outline"
+                onClick={() => exportDemoBulkToPDF(DEMO_BULK_RESULTS, DEMO_BULK_COMPARISON_REPORT)}
+                className="gap-1"
+              >
+                <Download className="h-3 w-3" /> Export PDF
               </Button>
             </div>
 
