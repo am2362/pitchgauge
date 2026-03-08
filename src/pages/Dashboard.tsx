@@ -18,6 +18,10 @@ import { ChevronDown } from "lucide-react";
 import { exportAnalysisToPDF } from "@/lib/pdf-export";
 import ExtractedPitchSummary from "@/components/ExtractedPitchSummary";
 import type { SlideContent } from "@/lib/document-parser";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { useCountUp } from "@/hooks/useCountUp";
+import { AnalysisProgressSteps } from "@/components/AnalysisProgressSteps";
+import { ScorecardSkeleton } from "@/components/AnalysisSkeletons";
 
 interface ScoreItem {
   score: number;
