@@ -387,6 +387,7 @@ const Index = () => {
       console.log('Startup Name from AI:', data.startupName);
       setResult(data);
       await saveAnalysis(data, pitchText);
+      await recordUsage('single_analysis');
       setStartupName("");
 
       toast({
