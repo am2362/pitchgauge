@@ -46,7 +46,7 @@ export default async function parseDocument(file: File): Promise<ParseResult> {
 
   // Call the edge function
   const response = await fetch(
-    `${import.meta.env.VITE_EXTERNAL_SUPABASE_URL}/functions/v1/parse-pdf`,
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-pdf`,
     {
       method: "POST",
       headers: {
