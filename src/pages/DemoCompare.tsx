@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Lock, ArrowRight, Trophy, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Loader2, Lock, ArrowRight, Trophy, ThumbsUp, ThumbsDown, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   DEMO_COMPARISON_PITCHES,
