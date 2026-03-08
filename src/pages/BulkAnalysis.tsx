@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Eye, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Download, Eye, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
+import AppNavbar from '@/components/AppNavbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BulkUploadCard } from '@/components/bulk/BulkUploadCard';
