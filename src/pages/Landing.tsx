@@ -37,7 +37,7 @@ const Landing = () => {
         <div className="container max-w-6xl mx-auto flex items-center justify-between h-16 px-4">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold tracking-tight">PitchScore</span>
+            <span className="text-lg font-bold tracking-tight">PitchGauge</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
             <button onClick={() => scrollTo("how-it-works")} className="hover:text-foreground transition-colors">How It Works</button>
@@ -85,7 +85,7 @@ const Landing = () => {
                   <div className="w-3 h-3 rounded-full bg-destructive/60" />
                   <div className="w-3 h-3 rounded-full bg-yellow-400/60" />
                   <div className="w-3 h-3 rounded-full bg-green-400/60" />
-                  <span className="ml-3 text-xs text-muted-foreground">pitchscore.app/dashboard</span>
+                  <span className="ml-3 text-xs text-muted-foreground">pitchgauge.app/dashboard</span>
                 </div>
                 <div className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
@@ -237,7 +237,7 @@ const Landing = () => {
               },
               {
                 name: "Pro",
-                price: "$19",
+                price: "$29",
                 period: "/mo",
                 desc: "For active angel investors",
                 features: [
@@ -251,7 +251,7 @@ const Landing = () => {
               },
               {
                 name: "Scale",
-                price: "$49",
+                price: "$89",
                 period: "/mo",
                 desc: "For funds & accelerators",
                 features: [
@@ -331,7 +331,7 @@ const Landing = () => {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
-                <span className="font-bold">PitchScore</span>
+                <span className="font-bold">PitchGauge</span>
               </div>
               <p className="text-sm text-muted-foreground max-w-xs">
                 AI-powered pitch intelligence for modern investors.
@@ -345,7 +345,7 @@ const Landing = () => {
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-border text-center text-xs text-muted-foreground">
-            © 2025 PitchScore. All rights reserved.
+            © 2025 PitchGauge. All rights reserved.
           </div>
         </div>
       </footer>
