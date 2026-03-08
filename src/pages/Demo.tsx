@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { FileText, AlertTriangle, MessageSquare, Lock, ArrowRight, Upload, Loader2 } from "lucide-react";
+import { FileText, AlertTriangle, MessageSquare, Lock, ArrowRight, Upload, Loader2, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
