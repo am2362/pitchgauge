@@ -542,13 +542,9 @@ export default function Compare() {
   if (!canCompare) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
+        <AppNavbar />
         <div className="container max-w-7xl mx-auto px-4 py-8">
-          <div className="flex items-center gap-4 mb-8">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-3xl font-bold">Compare Startups</h1>
-          </div>
+          <h1 className="text-3xl font-bold mb-8">Compare Startups</h1>
           <UpgradePrompt
             requiredTier="pro"
             currentTier={tier}
