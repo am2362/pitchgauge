@@ -148,6 +148,9 @@ const Index = () => {
   const [pitchText, setPitchText] = useState("");
   const [startupName, setStartupName] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfExtractedText, setPdfExtractedText] = useState<string | null>(null);
+  const [pdfFileName, setPdfFileName] = useState<string | null>(null);
+  const [pdfPageCount, setPdfPageCount] = useState<number | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isPdfParsing, setIsPdfParsing] = useState(false);
   const [pdfProgress, setPdfProgress] = useState("");
@@ -286,9 +289,12 @@ const Index = () => {
       const { default: parseDocument } = await import("@/lib/document-parser");
       const parsedContent = await parseDocument(file);
       
-      // Use cleaned text if available, otherwise use raw text
+      // Store extracted text internally — don't show in textarea
       const textToUse = parsedContent.cleanedText || parsedContent.text;
-      setPitchText(textToUse);
+      setPdfExtractedText(textToUse);
+      setPdfFileName(file.name);
+      setPdfPageCount(parsedContent.pages || null);
+      setPitchText(""); // Clear textarea — PDF text is stored separately
       setStartupName("");
       setPdfFile(null);
       
@@ -300,9 +306,7 @@ const Index = () => {
       
       toast({
         title: "PDF parsed successfully",
-        description: parsedContent.pitchSummary 
-          ? `Extracted & cleaned ${parsedContent.slides?.length || 0} slides. Review and click 'Generate Analysis'.`
-          : `Extracted text from ${parsedContent.pages || 'multiple'} page(s). Review and click 'Generate Analysis'.`,
+        description: `Extracted content from ${parsedContent.pages || 'multiple'} page(s). Click 'Generate Analysis' to evaluate.`,
       });
     } catch (error: any) {
       toast({
@@ -363,16 +367,18 @@ const Index = () => {
       return;
     }
 
-    if (!pitchText.trim()) {
+    const textToAnalyze = pdfExtractedText || pitchText.trim();
+    
+    if (!textToAnalyze) {
       toast({
         title: "Error",
-        description: "Please enter pitch text",
+        description: "Please enter pitch text or upload a PDF",
         variant: "destructive",
       });
       return;
     }
 
-    if (pitchText.trim().length < 50) {
+    if (textToAnalyze.length < 50) {
       toast({
         title: "Pitch too short",
         description: "Please provide at least 50 characters",
@@ -386,16 +392,20 @@ const Index = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("analyze-startup", {
-        body: { text: pitchText },
+        body: { text: textToAnalyze },
       });
 
       if (error) throw error;
       console.log('AI Response:', data);
       console.log('Startup Name from AI:', data.startupName);
       setResult(data);
-      await saveAnalysis(data, pitchText);
+      await saveAnalysis(data, textToAnalyze);
       await recordUsage('single_analysis');
       setStartupName("");
+      // Clear PDF state after successful analysis
+      setPdfExtractedText(null);
+      setPdfFileName(null);
+      setPdfPageCount(null);
 
       toast({
         title: "Analysis complete",
@@ -576,33 +586,64 @@ const Index = () => {
                 />
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  Paste Startup Pitch or Load Template
-                </label>
-                
-                <div className="flex gap-2 mb-3 flex-wrap">
-                  <Button variant="outline" size="sm" onClick={() => loadTemplate('saas')} className="text-xs">
-                    <FileInput className="h-3 w-3 mr-1" />
-                    SaaS Example
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => loadTemplate('marketplace')} className="text-xs">
-                    <FileInput className="h-3 w-3 mr-1" />
-                    Marketplace Example
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => loadTemplate('hardware')} className="text-xs">
-                    <FileInput className="h-3 w-3 mr-1" />
-                    Hardware Example
-                  </Button>
+              {pdfExtractedText ? (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    PDF Uploaded — Ready to Analyze
+                  </label>
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                    <FileText className="h-8 w-8 text-primary shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">{pdfFileName || "Pitch Deck"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {pdfPageCount ? `${pdfPageCount} pages extracted` : "Text extracted"} · Ready for analysis
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setPdfExtractedText(null);
+                        setPdfFileName(null);
+                        setPdfPageCount(null);
+                        setExtractedPitchSummary(null);
+                        setExtractedSlides(null);
+                      }}
+                      className="text-xs text-muted-foreground"
+                    >
+                      Remove
+                    </Button>
+                  </div>
                 </div>
+              ) : (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Paste Startup Pitch or Load Template
+                  </label>
+                  
+                  <div className="flex gap-2 mb-3 flex-wrap">
+                    <Button variant="outline" size="sm" onClick={() => loadTemplate('saas')} className="text-xs">
+                      <FileInput className="h-3 w-3 mr-1" />
+                      SaaS Example
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => loadTemplate('marketplace')} className="text-xs">
+                      <FileInput className="h-3 w-3 mr-1" />
+                      Marketplace Example
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => loadTemplate('hardware')} className="text-xs">
+                      <FileInput className="h-3 w-3 mr-1" />
+                      Hardware Example
+                    </Button>
+                  </div>
 
-                <Textarea
-                  value={pitchText}
-                  onChange={(e) => setPitchText(e.target.value)}
-                  placeholder="Paste your startup pitch here... Include: Problem, Solution, Market Size, Traction, Team, Business Model, and what you're seeking."
-                  className="min-h-[300px] bg-background border-border resize-none"
-                />
-              </div>
+                  <Textarea
+                    value={pitchText}
+                    onChange={(e) => setPitchText(e.target.value)}
+                    placeholder="Paste your startup pitch here... Include: Problem, Solution, Market Size, Traction, Team, Business Model, and what you're seeking."
+                    className="min-h-[300px] bg-background border-border resize-none"
+                  />
+                </div>
+              )}
 
               <Separator />
 
@@ -640,7 +681,7 @@ const Index = () => {
 
               <Button
                 onClick={handleAnalyze}
-                disabled={isAnalyzing || !pitchText.trim()}
+                disabled={isAnalyzing || (!pitchText.trim() && !pdfExtractedText)}
                 className="w-full h-12 text-lg font-semibold"
               >
                 {isAnalyzing ? (
