@@ -242,7 +242,7 @@ const Landing = () => {
               {
                 icon: GitCompare,
                 title: "Comparison Mode",
-                desc: "Compare up to 5 startups side-by-side. Get ranked investment recommendations with detailed score breakdowns and key strengths/weaknesses per startup.",
+                desc: "Compare up to 10 startups side-by-side. Get ranked investment recommendations with detailed score breakdowns and key strengths/weaknesses per startup.",
               },
               {
                 icon: Layers,
