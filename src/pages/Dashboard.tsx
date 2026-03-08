@@ -152,6 +152,7 @@ const Index = () => {
   const [extractedSlides, setExtractedSlides] = useState<SlideContent[] | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { tier, canAnalyze, remainingAnalyses, recordUsage, isLoading: isSubLoading } = useSubscription();
 
 
   // Extract startup name from pitch text (first line if it looks like a name)
