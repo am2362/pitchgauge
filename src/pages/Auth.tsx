@@ -122,7 +122,7 @@ export default function Auth() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-end justify-center gap-2 mb-4">
+          <div className="flex items-center justify-center gap-2 mb-4">
             <img src={logo} alt="PitchGauge" className="h-10 w-10" />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               PitchGauge

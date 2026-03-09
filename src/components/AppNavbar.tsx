@@ -43,7 +43,7 @@ export default function AppNavbar() {
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container max-w-7xl mx-auto flex h-14 items-center justify-between px-4">
         {/* Left: Logo */}
-        <button onClick={() => navigate("/dashboard")} className="flex items-end gap-2 hover:opacity-80 transition-opacity">
+        <button onClick={() => navigate("/dashboard")} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <img src={logo} alt="PitchGauge" className="h-6 w-6" />
           <span className="text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             PitchGauge
