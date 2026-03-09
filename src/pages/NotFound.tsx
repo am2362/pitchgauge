@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 const NotFound = () => {
-  usePageMeta("Page Not Found | PitchGauge");
+  usePageMeta("PitchGauge");
   const location = useLocation();
 
   useEffect(() => {

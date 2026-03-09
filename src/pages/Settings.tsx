@@ -21,7 +21,7 @@ const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const Settings = () => {
-  usePageMeta("Settings | PitchGauge", "Manage your PitchGauge account settings and preferences.");
+  usePageMeta("PitchGauge", "Manage your PitchGauge account settings and preferences.");
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [currentEmail, setCurrentEmail] = useState("");

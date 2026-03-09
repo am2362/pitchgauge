@@ -19,7 +19,7 @@ import { useCountUp } from "@/hooks/useCountUp";
 import { exportDemoComparisonToPDF } from "@/lib/pdf-export";
 
 const DemoCompare = () => {
-  usePageMeta("Demo Compare | PitchGauge", "See how PitchGauge compares multiple startups side-by-side.");
+  usePageMeta("PitchGauge", "See how PitchGauge compares multiple startups side-by-side.");
   const navigate = useNavigate();
   const { toast } = useToast();
 
