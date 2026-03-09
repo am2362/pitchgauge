@@ -1,42 +1,41 @@
 
-# Add "Single Pitch Analysis" Button to Top Navigation
+# Match Auth Page Logo & Text Styling
 
 ## Problem
-The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
+The user likes how the logo and "PitchGauge" text look on the Auth page, but the Landing and Scoring Rubric pages look worse with the current `items-end` alignment.
+
+## Analysis
+**Auth page (looks good):**
+- Logo: `h-10 w-10` 
+- Text: `text-4xl font-bold`
+- Alignment: `items-end justify-center`
+
+**Landing page header (looks bad):**
+- Logo: `h-6 w-6` (too small)
+- Text: `text-lg font-bold` (smaller)
+- Alignment: `items-end`
+
+**Scoring Rubric (looks bad):**
+- Logo: `h-6 w-6` (too small)
+- Text: `text-3xl font-bold` (large)
+- Alignment: `items-end`
+
+The issue is size proportion mismatch between logo and text.
 
 ## Solution
-Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-## Implementation Details
+### 1. Landing.tsx (line 42-44)
+Update header logo container:
+- Change logo size: `h-6 w-6` → `h-8 w-8`
+- This better matches the `text-lg` heading size
 
-### File: `src/pages/Index.tsx`
+### 2. ScoringRubric.tsx (line 74-76)
+Update page header:
+- Change logo size: `h-6 w-6` → `h-9 w-9`
+- This better matches the `text-3xl` heading size
 
-**What to change:**
-1. Add a new import for `FileText` icon (already imported on line 8)
-2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
-3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
-4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
+### 3. Landing.tsx footer (line 378-380)
+Keep as-is (`h-5 w-5` with default text) - footer should be smaller
 
-**Button placement:**
-- Insert as the **first button** in the top nav (line 530), before the Compare button
-- Use `FileText` icon (already imported)
-- Text: "Single Pitch Analysis"
-- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
-
-**Technical approach:**
-```text
-1. Add useRef hook to create a ref for the pitch input card
-2. In the button's onClick, check if user is on "/" page
-   - If on "/", scroll to the ref using scrollIntoView()
-   - If not on "/", navigate to "/"
-3. Attach the ref to the Card element containing "Input Pitch"
-```
-
-## Files to Modify
-- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
-
-## Expected Result
-- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
-- Clicking it from any page navigates to "/"
-- Clicking it while already on "/" scrolls smoothly to the pitch input form
-- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
+## Result
+Logo and text proportions will match the Auth page's balanced visual hierarchy across all pages.
