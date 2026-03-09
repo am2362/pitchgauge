@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateBulkAnalysisInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-import { corsHeaders, secureJsonResponse, secureErrorResponse, checkRateLimit, recordRateLimitEvent, safeLog } from '../_shared/security.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, checkRateLimit, recordRateLimitEvent, safeLog, getUserTier } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -38,8 +38,15 @@ serve(async (req) => {
 
     safeLog("BULK-ANALYSIS", "User authenticated");
 
-    // Rate limiting
+    // Subscription tier enforcement - bulk analysis requires scale tier
     if (SERVICE_ROLE_KEY) {
+      const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (tier !== 'scale') {
+        safeLog("BULK-ANALYSIS", "Non-scale tier denied");
+        return secureErrorResponse('This feature requires a Scale subscription.', 403);
+      }
+
+      // Rate limiting
       const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
       if (!rateCheck.allowed) {
         safeLog("BULK-ANALYSIS", "Rate limit exceeded");

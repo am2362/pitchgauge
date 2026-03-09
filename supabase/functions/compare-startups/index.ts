@@ -2,7 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateCompareInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, checkRateLimit, recordRateLimitEvent, safeLog } from '../_shared/security.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, checkRateLimit, recordRateLimitEvent, safeLog, getUserTier } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -44,8 +44,15 @@ serve(async (req) => {
 
     safeLog("COMPARE-STARTUPS", "User authenticated");
 
-    // Rate limiting
+    // Subscription tier enforcement - compare requires pro or scale
     if (SERVICE_ROLE_KEY) {
+      const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (tier === 'free') {
+        safeLog("COMPARE-STARTUPS", "Free tier denied");
+        return secureErrorResponse('This feature requires a Pro or Scale subscription.', 403);
+      }
+
+      // Rate limiting
       const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
       if (!rateCheck.allowed) {
         safeLog("COMPARE-STARTUPS", "Rate limit exceeded");
