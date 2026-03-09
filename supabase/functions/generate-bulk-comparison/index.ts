@@ -43,8 +43,14 @@ serve(async (req) => {
 
     safeLog("BULK-COMPARISON", "User authenticated");
 
-    // Rate limiting
+    // Subscription tier enforcement - require Scale tier
     if (SERVICE_ROLE_KEY) {
+      const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (tier !== 'scale') {
+        return secureErrorResponse('This feature requires a Scale subscription.', 403);
+      }
+
+      // Rate limiting
       const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
       if (!rateCheck.allowed) {
         safeLog("BULK-COMPARISON", "Rate limit exceeded");
