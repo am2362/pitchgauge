@@ -9,7 +9,6 @@ import {
   BarChart3,
   GitCompare,
   Layers,
-  Shield,
   Users,
   Building2,
   Briefcase,
