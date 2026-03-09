@@ -1,51 +1,42 @@
 
+# Add "Single Pitch Analysis" Button to Top Navigation
 
-# Plan: Standardize AI Temperature and Scoring Prompts
+## Problem
+The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
 
-## Current State
+## Solution
+Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-| Function | Temperature | System Prompt | Anchoring |
-|----------|------------|---------------|-----------|
-| analyze-startup | 0 (good) | Detailed scoring rubric | Category ranges only, no specific anchors |
-| compare-startups | **0.7 (too high)** | Minimal: "You are a VC analyst" | Rubric in user prompt, no anchors |
-| analyze-bulk-startups | 0 (good, both paths) | Detailed scoring rubric | Category ranges only, no specific anchors |
+## Implementation Details
 
-## Changes
+### File: `src/pages/Index.tsx`
 
-### 1. Set temperature to 0.1 on all three functions
+**What to change:**
+1. Add a new import for `FileText` icon (already imported on line 8)
+2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
+3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
+4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
 
-- **analyze-startup** (line 98): Change `temperature: 0` → `temperature: 0.1`
-- **compare-startups** (line 143): Change `temperature: 0.7` → `temperature: 0.1`
-- **analyze-bulk-startups** (line 267/287): Change `temperature: 0` → `temperature: 0.1` (both Gemini direct and gateway paths)
+**Button placement:**
+- Insert as the **first button** in the top nav (line 530), before the Compare button
+- Use `FileText` icon (already imported)
+- Text: "Single Pitch Analysis"
+- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
 
-### 2. Add consistency enforcement to all system prompts
+**Technical approach:**
+```text
+1. Add useRef hook to create a ref for the pitch input card
+2. In the button's onClick, check if user is on "/" page
+   - If on "/", scroll to the ref using scrollIntoView()
+   - If not on "/", navigate to "/"
+3. Attach the ref to the Card element containing "Input Pitch"
+```
 
-Prepend to each function's system prompt:
+## Files to Modify
+- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
-> "You are a consistent startup evaluation AI. Always apply the same scoring criteria strictly. Do not vary scores based on writing style or tone — evaluate only on substance. A pitch with identical facts must always receive identical scores."
-
-- **analyze-startup**: Add to existing system prompt (line 103)
-- **compare-startups**: Replace the minimal system prompt (line 135) with the consistency directive plus existing comparison instructions
-- **analyze-bulk-startups**: Add to the `systemPrompt` variable (line 185)
-
-### 3. Add explicit score anchoring instructions to all scoring rubrics
-
-Replace the category-specific scoring sections with detailed anchoring. Applied to analyze-startup and analyze-bulk-startups (both have identical rubric structures). Compare-startups doesn't generate scores itself (it compares existing scores), so it gets the anchoring context for interpreting scores.
-
-Anchoring examples per category:
-
-- **Team Quality**: "7/10 requires at minimum 2 founders with relevant domain experience and one prior startup or notable company background. 5/10 means founders have general business experience but no direct domain expertise or startup track record."
-- **Market Size**: "7/10 requires explicit mention of TAM >$10B with evidence of growth. 5/10 means market is $1B-$10B with no strong growth signals."
-- **Product Differentiation**: "7/10 requires a clearly articulated unique value proposition with some form of defensibility (IP, data moat, network effects). 5/10 means the product solves a real problem but could be easily replicated."
-- **Traction**: "7/10 requires demonstrated revenue or significant user growth with specific numbers. 5/10 means some early users or pilots but no clear growth trajectory."
-- **Business Model**: "7/10 requires a clearly scalable monetization strategy with evidence of unit economics. 5/10 means monetization path exists but margins or scalability are unproven."
-- **Competitive Landscape**: "7/10 requires clear differentiation from named competitors with defensible positioning. 5/10 means some competitive awareness but no strong moat."
-
-## Files Modified
-
-| File | Changes |
-|------|---------|
-| `supabase/functions/analyze-startup/index.ts` | Temperature → 0.1, add consistency preamble, add score anchors to rubric |
-| `supabase/functions/compare-startups/index.ts` | Temperature → 0.1, replace system prompt with consistency + comparison directive |
-| `supabase/functions/analyze-bulk-startups/index.ts` | Temperature → 0.1 (both code paths), add consistency preamble, add score anchors to rubric |
-
+## Expected Result
+- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
+- Clicking it from any page navigates to "/"
+- Clicking it while already on "/" scrolls smoothly to the pitch input form
+- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
