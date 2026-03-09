@@ -4,145 +4,46 @@ import { supabase } from "@/lib/supabase-external";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft } from "lucide-react";
-import { z } from "zod";
+import { Loader2, ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import logo from "@/assets/logo.png";
 
-const emailSchema = z.string().email("Invalid email address");
-const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
-
 export default function Auth() {
-  usePageMeta("PitchGauge", "Sign in or create your PitchGauge account to analyze startup pitches.");
+  usePageMeta("PitchGauge", "Sign in to your PitchGauge account with a magic link.");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/dashboard");
-      }
+      if (session) navigate("/dashboard");
     });
   }, [navigate]);
 
-  const validateInputs = (isSignUp: boolean) => {
-    try {
-      emailSchema.parse(email);
-      passwordSchema.parse(password);
-      if (isSignUp && !fullName.trim()) {
-        throw new Error("Full name is required");
-      }
-      return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast({
-          title: "Validation Error",
-          description: error.issues[0].message,
-          variant: "destructive",
-        });
-      } else if (error instanceof Error) {
-        toast({
-          title: "Validation Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-      return false;
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateInputs(true)) return;
+    if (!email.trim()) return;
 
     setLoading(true);
-    const redirectUrl = `${window.location.origin}/`;
-
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      password,
       options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-        },
+        emailRedirectTo: `${window.location.origin}/dashboard`,
       },
     });
+    setLoading(false);
 
     if (error) {
-      setLoading(false);
       toast({
-        title: "Sign Up Failed",
+        title: "Failed to send link",
         description: error.message,
         variant: "destructive",
       });
-      return;
-    }
-
-    // Call edge function to un-confirm user and trigger verification email
-    if (data.user) {
-      try {
-        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/send-verification-email`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-            },
-            body: JSON.stringify({
-              userId: data.user.id,
-              email,
-              redirectTo: `${window.location.origin}/dashboard`,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          console.error('Verification email request failed');
-        }
-      } catch (err) {
-        console.error('Failed to send verification email:', err);
-      }
-    }
-
-    setLoading(false);
-    toast({
-      title: "Check your email",
-      description: "We sent you a confirmation link. Please verify your email to continue.",
-    });
-    navigate("/verify-email", { state: { email } });
-  };
-
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateInputs(false)) return;
-
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    setLoading(false);
-
-    if (error) {
-      toast({
-        title: "Sign In Failed",
-        description: error.message === "Invalid login credentials"
-          ? "Invalid email or password. Please try again."
-          : error.message,
-        variant: "destructive",
-      });
     } else {
-      navigate("/dashboard");
+      setSent(true);
     }
   };
 
@@ -156,6 +57,7 @@ export default function Auth() {
         <ArrowLeft className="h-4 w-4" />
         Back to home
       </Button>
+
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-end justify-center gap-2 mb-4">
@@ -164,55 +66,68 @@ export default function Auth() {
               PitchGauge
             </h1>
           </div>
-          <p className="text-muted-foreground">
-            AI-Powered Pitch Intelligence
-          </p>
+          <p className="text-muted-foreground">AI-Powered Pitch Intelligence</p>
         </div>
 
         <Card className="p-6">
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4 mt-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Email</label>
-                  <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Password</label>
-                  <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={loading} />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing In...</>) : "Sign In"}
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4 mt-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Full Name</label>
-                  <Input type="text" placeholder="John Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} required disabled={loading} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Email</label>
-                  <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Password</label>
-                  <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={loading} />
-                  <p className="text-xs text-muted-foreground mt-1">Must be at least 6 characters</p>
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating Account...</>) : "Create Account"}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+          {sent ? (
+            <div className="text-center space-y-4 py-4">
+              <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                <CheckCircle2 className="h-7 w-7 text-primary" />
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-lg font-semibold text-foreground">Check your email</h2>
+                <p className="text-sm text-muted-foreground">
+                  We've sent a login link to{" "}
+                  <span className="font-medium text-foreground">{email}</span>
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setSent(false);
+                  setEmail("");
+                }}
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                Use a different email
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleSendMagicLink} className="space-y-4">
+              <div className="text-center space-y-1 mb-2">
+                <h2 className="text-lg font-semibold text-foreground">Sign in with Magic Link</h2>
+                <p className="text-sm text-muted-foreground">
+                  Enter your email and we'll send you a login link — no password needed.
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Email</label>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading || !email.trim()}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Send Magic Link
+                  </>
+                )}
+              </Button>
+            </form>
+          )}
         </Card>
       </div>
     </div>
