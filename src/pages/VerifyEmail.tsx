@@ -161,7 +161,7 @@ export default function VerifyEmail() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30 flex items-center justify-center p-4">
         <Card className="p-8 text-center space-y-4 max-w-md">
-          <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
+          <CheckCircle2 className="h-16 w-16 text-primary mx-auto" />
           <h2 className="text-xl font-semibold text-foreground">Email Verified!</h2>
           <p className="text-muted-foreground">Redirecting to your dashboard...</p>
         </Card>
