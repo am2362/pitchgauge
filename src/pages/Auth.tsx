@@ -86,10 +86,10 @@ export default function Auth() {
       });
     } else {
       toast({
-        title: "Success!",
-        description: "Account created successfully. You can now log in.",
+        title: "Check your email",
+        description: "We sent you a confirmation link. Please verify your email to continue.",
       });
-      navigate("/dashboard");
+      navigate("/verify-email", { state: { email } });
     }
   };
 
