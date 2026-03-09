@@ -142,9 +142,10 @@ export function BulkUploadCard({ onUploadComplete }: BulkUploadCardProps) {
         </div>
 
         <div className="text-sm text-muted-foreground space-y-1">
-          <p>• Maximum file size: 20MB</p>
+          <p>• Maximum file size: 5MB</p>
           <p>• Maximum startups: 100</p>
           <p>• Required columns: Startup Name, Written Pitch</p>
+          <p>• Accepted format: .xlsx only</p>
         </div>
       </CardContent>
     </Card>

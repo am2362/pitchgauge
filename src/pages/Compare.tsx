@@ -173,8 +173,15 @@ export default function Compare() {
     }
   };
 
+  // Sanitize text by stripping HTML tags
+  const sanitizeText = (text: string): string => {
+    return text.replace(/<[^>]*>?/gm, '');
+  };
+
   const updatePitchText = (id: number, text: string) => {
-    setPitches(currentPitches => currentPitches.map(p => p.id === id ? { ...p, text } : p));
+    // Enforce 10,000 character limit
+    const limitedText = text.length > 10000 ? text.slice(0, 10000) : text;
+    setPitches(currentPitches => currentPitches.map(p => p.id === id ? { ...p, text: limitedText } : p));
   };
 
   const updatePitchName = (id: number, newName: string) => {
