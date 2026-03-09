@@ -375,7 +375,7 @@ const Landing = () => {
         <div className="container max-w-6xl mx-auto px-4 py-12">
           <div className="grid md:grid-cols-2 gap-8 items-start">
             <div>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-end gap-2 mb-2">
                 <img src={logo} alt="PitchGauge" className="h-5 w-5" />
                 <span className="font-bold">PitchGauge</span>
               </div>
