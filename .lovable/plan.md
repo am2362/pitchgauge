@@ -1,42 +1,39 @@
 
-# Add "Single Pitch Analysis" Button to Top Navigation
 
-## Problem
-The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
+# Email Verification Plan
 
-## Solution
-Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
+## What Changes
 
-## Implementation Details
+### 1. Disable auto-confirm on signup
+Currently after signup the user is immediately redirected to `/dashboard`. Email confirmation must be required. Use the auth configuration to ensure `enable_confirmations = true` (this is the default in Supabase -- the current signup flow just navigates to dashboard without checking confirmation status).
 
-### File: `src/pages/Index.tsx`
+### 2. Create `/verify-email` page (`src/pages/VerifyEmail.tsx`)
+- Shows message: "Please check your email and click the confirmation link to activate your account."
+- Displays the email address used during signup (passed via route state or retrieved from session)
+- "Resend confirmation email" button that calls `supabase.auth.resend({ type: 'signup', email })`
+- "Back to Sign In" link
+- Styled consistently with the Auth page (gradient background, logo, Card)
+- If user is already confirmed and logged in, redirect to `/dashboard`
 
-**What to change:**
-1. Add a new import for `FileText` icon (already imported on line 8)
-2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
-3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
-4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
+### 3. Update Auth.tsx signup handler
+- After successful signup, redirect to `/verify-email` instead of `/dashboard`
+- Pass the email via React Router state so the verify page can display it and use it for resend
+- Update success toast: "Check your email to verify your account"
 
-**Button placement:**
-- Insert as the **first button** in the top nav (line 530), before the Compare button
-- Use `FileText` icon (already imported)
-- Text: "Single Pitch Analysis"
-- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
+### 4. Update ProtectedRoute to check email confirmation
+- After confirming user exists, check `user.email_confirmed_at`
+- If user is authenticated but email is not confirmed, redirect to `/verify-email`
+- This prevents unverified users from accessing any protected route
 
-**Technical approach:**
-```text
-1. Add useRef hook to create a ref for the pitch input card
-2. In the button's onClick, check if user is on "/" page
-   - If on "/", scroll to the ref using scrollIntoView()
-   - If not on "/", navigate to "/"
-3. Attach the ref to the Card element containing "Input Pitch"
-```
+### 5. Add route in App.tsx
+- Add `/verify-email` route (public, not behind ProtectedRoute)
 
-## Files to Modify
-- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
+## Files to Create/Modify
 
-## Expected Result
-- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
-- Clicking it from any page navigates to "/"
-- Clicking it while already on "/" scrolls smoothly to the pitch input form
-- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
+| File | Action |
+|------|--------|
+| `src/pages/VerifyEmail.tsx` | **Create** -- verification pending page with resend button |
+| `src/pages/Auth.tsx` | Modify -- redirect signup to `/verify-email`, pass email in state |
+| `src/components/ProtectedRoute.tsx` | Modify -- check `email_confirmed_at`, redirect unverified to `/verify-email` |
+| `src/App.tsx` | Modify -- add `/verify-email` route |
+
