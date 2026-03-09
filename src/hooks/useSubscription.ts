@@ -17,11 +17,6 @@ const TIER_LIMITS = {
   scale: { monthlyAnalyses: Infinity, canCompare: true, canBulkAnalyze: true },
 } as const;
 
-const ADMIN_WHITELIST = [
-  "amandayung808@gmail.com",
-  "amandaywy2015@gmail.com",
-  "c74661985@gmail.com",
-];
 
 export function useSubscription() {
   const [state, setState] = useState<SubscriptionState>({
@@ -41,7 +36,12 @@ export function useSubscription() {
         return;
       }
 
-      if (session.user.email && ADMIN_WHITELIST.includes(session.user.email)) {
+      // Check admin status server-side first
+      const { data: adminData } = await supabase.functions.invoke("check-admin", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      
+      if (adminData?.isAdmin) {
         setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, subscriptionEnd: null });
         return;
       }
@@ -77,9 +77,13 @@ export function useSubscription() {
 
   const loadFromDB = useCallback(async (userId: string, email?: string) => {
     try {
-      if (email && ADMIN_WHITELIST.includes(email)) {
-        setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, subscriptionEnd: null });
-        return;
+      // Check admin status first with service role check
+      if (email) {
+        const { data: adminData } = await supabase.functions.invoke("check-admin");
+        if (adminData?.isAdmin) {
+          setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, subscriptionEnd: null });
+          return;
+        }
       }
       const [subResult, usageResult] = await Promise.all([
         supabase
