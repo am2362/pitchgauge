@@ -36,7 +36,12 @@ export function useSubscription() {
         return;
       }
 
-      if (session.user.email && ADMIN_WHITELIST.includes(session.user.email)) {
+      // Check admin status server-side first
+      const { data: adminData } = await supabase.functions.invoke("check-admin", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      
+      if (adminData?.isAdmin) {
         setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, subscriptionEnd: null });
         return;
       }
