@@ -17,6 +17,8 @@ const USER_FRIENDLY_ERRORS: Record<string, string> = {
   'truncated': 'The response was too long. Please try with a shorter input.',
   'Invalid': 'Invalid request format. Please check your input.',
   'Unauthorized': 'Unauthorized access. Please log in and try again.',
+  'payload too large': 'Request is too large. Please reduce the input size.',
+  'File size': 'File is too large. Please use a smaller file.',
 };
 
 export function sanitizeErrorMessage(error: unknown): string {
@@ -24,13 +26,18 @@ export function sanitizeErrorMessage(error: unknown): string {
   
   // Check for known safe error patterns
   for (const [pattern, userMessage] of Object.entries(USER_FRIENDLY_ERRORS)) {
-    if (message.includes(pattern)) {
+    if (message.toLowerCase().includes(pattern.toLowerCase())) {
       return userMessage;
     }
   }
   
   // Default to generic error for unknown errors (don't leak internal details)
   return 'An error occurred processing your request. Please try again.';
+}
+
+// Strip HTML tags from text (for sanitization)
+export function stripHtmlTags(text: string): string {
+  return text.replace(/<[^>]*>?/gm, '');
 }
 
 // Validation helpers
@@ -56,7 +63,7 @@ export function isValidArray<T>(
          value.every(itemValidator);
 }
 
-// Pitch text validation
+// Pitch text validation (max 10,000 characters for frontend, 50,000 for backend processing)
 export interface PitchInput {
   text: string;
   startupName?: string;
@@ -76,13 +83,16 @@ export function validatePitchInput(body: unknown, maxLength = 50000): Validation
     return { success: false, error: 'Pitch text is required and must be non-empty' };
   }
   
-  const result: PitchInput = { text: obj.text.trim() };
+  // Sanitize the text by stripping HTML tags
+  const sanitizedText = stripHtmlTags(obj.text).trim();
+  
+  const result: PitchInput = { text: sanitizedText };
   
   if (obj.startupName !== undefined) {
     if (!isNonEmptyString(obj.startupName, 200)) {
       return { success: false, error: 'Startup name must be a non-empty string under 200 characters' };
     }
-    result.startupName = obj.startupName.trim();
+    result.startupName = stripHtmlTags(obj.startupName).trim();
   }
   
   return { success: true, data: result };
@@ -144,7 +154,11 @@ export function validateBulkAnalysisInput(
       return { success: false, error: `Invalid or missing pitch for startup "${s.name}"` };
     }
     
-    validatedStartups.push({ name: s.name.trim(), pitch: s.pitch.trim() });
+    // Sanitize inputs
+    validatedStartups.push({ 
+      name: stripHtmlTags(s.name).trim(), 
+      pitch: stripHtmlTags(s.pitch).trim() 
+    });
   }
   
   const result: BulkAnalysisInput = { startups: validatedStartups };
@@ -206,7 +220,7 @@ export function validateCompareInput(
     if (!isNonEmptyString(obj.startupNames[i], 200)) {
       return { success: false, error: `Invalid startup name at index ${i}` };
     }
-    validatedNames.push((obj.startupNames[i] as string).trim());
+    validatedNames.push(stripHtmlTags(obj.startupNames[i] as string).trim());
   }
   
   // Validate each analysis has required scorecard structure

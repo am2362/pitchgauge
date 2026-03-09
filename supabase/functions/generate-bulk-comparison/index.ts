@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateBulkComparisonInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, checkRateLimit, recordRateLimitEvent, safeLog } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -13,20 +9,26 @@ serve(async (req) => {
   }
 
   try {
+    safeLog("BULK-COMPARISON", "Function started");
+
+    // Check payload size
+    const contentLength = req.headers.get("content-length");
+    if (isPayloadTooLarge(contentLength)) {
+      return secureErrorResponse("Request payload too large", 413);
+    }
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+    const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     // Authentication check
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse('Unauthorized', 401);
     }
 
-    // Verify token claims (works with signing-keys)
+    // Verify token claims
     const supabaseAuth = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
       global: { headers: { Authorization: authHeader } }
     });
@@ -36,33 +38,41 @@ serve(async (req) => {
     const userId = claimsData?.claims?.sub;
 
     if (claimsError || !userId) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse('Unauthorized', 401);
     }
 
-    console.log(`Authenticated user: ${userId}`);
+    safeLog("BULK-COMPARISON", "User authenticated");
+
+    // Rate limiting
+    if (SERVICE_ROLE_KEY) {
+      const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!rateCheck.allowed) {
+        safeLog("BULK-COMPARISON", "Rate limit exceeded");
+        return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
+      }
+      await recordRateLimitEvent(userId, 'bulk_comparison', SUPABASE_URL!, SERVICE_ROLE_KEY);
+    }
 
     if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY not configured');
       throw new Error('Service configuration error');
     }
 
     // Parse and validate input using schema validation
-    const body = await req.json();
+    const bodyText = await req.text();
+    if (isPayloadTooLarge(null, bodyText)) {
+      return secureErrorResponse("Request payload too large", 413);
+    }
+
+    const body = JSON.parse(bodyText);
     const validation = validateBulkComparisonInput(body, 200);
     
     if (!validation.success) {
-      return new Response(
-        JSON.stringify({ error: validation.error }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse(validation.error || 'Invalid input', 400);
     }
 
     const { results } = validation.data!;
 
-    console.log(`Generating comparison report for ${results.length} startups`);
+    safeLog("BULK-COMPARISON", "Generating report", { count: results.length });
 
     // Sort by overall score
     const sortedResults = [...results].sort((a, b) => b.scores.overall - a.scores.overall);
@@ -121,21 +131,16 @@ serve(async (req) => {
       sectorBreakdown
     };
 
-    return new Response(
-      JSON.stringify({ comparisonReport }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    safeLog("BULK-COMPARISON", "Report generated");
+    return secureJsonResponse({ comparisonReport });
 
   } catch (error) {
-    console.error('Comparison generation error:', error);
+    safeLog("BULK-COMPARISON", "Error occurred");
     
     // Sanitize error message before returning to client
     const userMessage = sanitizeErrorMessage(error);
     
-    return new Response(
-      JSON.stringify({ error: userMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return secureErrorResponse(userMessage, 500);
   }
 });
 
@@ -211,14 +216,14 @@ Provide:
     });
 
     if (!response.ok) {
-      console.error('AI API error:', response.status);
+      safeLog("BULK-COMPARISON", "AI API error in recommendation");
       throw new Error('AI service error');
     }
 
     const data = await response.json();
     return data.choices?.[0]?.message?.content || 'Analysis complete. Review top-ranked startups for investment opportunities.';
   } catch (error) {
-    console.error('Error generating recommendation:', error);
+    safeLog("BULK-COMPARISON", "Error generating recommendation");
     return `Analysis of ${topRankings.length} startups complete. Top performers show strong potential across ${Object.keys(sectorBreakdown).length} sectors. Focus on highest-ranked startups for detailed due diligence.`;
   }
 }

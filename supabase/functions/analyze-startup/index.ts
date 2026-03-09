@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validatePitchInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, checkRateLimit, recordRateLimitEvent, safeLog } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -13,22 +9,28 @@ serve(async (req) => {
   }
 
   try {
+    safeLog("ANALYZE-STARTUP", "Function started");
+
+    // Check payload size
+    const contentLength = req.headers.get("content-length");
+    if (isPayloadTooLarge(contentLength)) {
+      return secureErrorResponse("Request payload too large", 413);
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const AI_GATEWAY_KEY = LOVABLE_API_KEY || GEMINI_API_KEY;
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+    const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     // Authentication check
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse('Unauthorized', 401);
     }
 
-    // Verify token claims (works with signing-keys even when session record is missing)
+    // Verify token claims
     const supabaseAuth = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
       global: { headers: { Authorization: authHeader } }
     });
@@ -38,16 +40,22 @@ serve(async (req) => {
     const userId = claimsData?.claims?.sub;
 
     if (claimsError || !userId) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse('Unauthorized', 401);
     }
 
-    console.log(`Authenticated user: ${userId}`);
+    safeLog("ANALYZE-STARTUP", "User authenticated");
+
+    // Rate limiting
+    if (SERVICE_ROLE_KEY) {
+      const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!rateCheck.allowed) {
+        safeLog("ANALYZE-STARTUP", "Rate limit exceeded");
+        return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
+      }
+      await recordRateLimitEvent(userId, 'analyze_startup', SUPABASE_URL!, SERVICE_ROLE_KEY);
+    }
 
     if (!AI_GATEWAY_KEY) {
-      console.error("LOVABLE_API_KEY/GEMINI_API_KEY is not configured");
       throw new Error("Service configuration error");
     }
 
@@ -55,30 +63,27 @@ serve(async (req) => {
 
     // Handle text input only (PDF parsing not supported)
     if (contentType.includes("multipart/form-data")) {
-      return new Response(
-        JSON.stringify({ 
-          error: "PDF upload is not currently supported. Please copy and paste the text content of your pitch instead." 
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+      return secureErrorResponse(
+        "PDF upload is not currently supported. Please copy and paste the text content of your pitch instead.",
+        400
       );
     }
     
     // Parse and validate input using schema validation
-    const body = await req.json();
+    const bodyText = await req.text();
+    if (isPayloadTooLarge(null, bodyText)) {
+      return secureErrorResponse("Request payload too large", 413);
+    }
+
+    const body = JSON.parse(bodyText);
     const validation = validatePitchInput(body, 50000);
     
     if (!validation.success) {
-      return new Response(
-        JSON.stringify({ error: validation.error }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return secureErrorResponse(validation.error || 'Invalid input', 400);
     }
 
     const { text: pitchText } = validation.data!;
-    console.log("Analyzing startup pitch with Gemini...");
+    safeLog("ANALYZE-STARTUP", "Analyzing pitch", { textLength: pitchText.length });
 
     // Call Lovable AI Gateway with Gemini
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -168,27 +173,21 @@ ALWAYS include reasoning explaining the exact score (e.g., why 5 not 6). Be brut
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI API error:", response.status, errorText);
+      const errorStatus = response.status;
+      safeLog("ANALYZE-STARTUP", "AI API error", { status: errorStatus });
       
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (errorStatus === 429) {
+        return secureErrorResponse('Rate limit exceeded. Please try again in a moment.', 429);
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'AI usage limit reached. Please try again later.' }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (errorStatus === 402) {
+        return secureErrorResponse('AI usage limit reached. Please try again later.', 402);
       }
       
       throw new Error("AI service error");
     }
 
     const data = await response.json();
-    console.log("AI response received");
+    safeLog("ANALYZE-STARTUP", "AI response received");
 
     // Extract the content from Gemini's response
     const content = data.choices?.[0]?.message?.content as string | undefined;
@@ -232,10 +231,9 @@ ALWAYS include reasoning explaining the exact score (e.g., why 5 not 6). Be brut
         .replace(/[\u0000-\u001F]/g, ' ')
         .trim();
 
-      console.log('Attempting to parse JSON, length:', jsonCandidate.length);
       analysisResult = JSON.parse(jsonCandidate);
     } catch (parseError) {
-      console.error('JSON parse error:', parseError);
+      safeLog("ANALYZE-STARTUP", "JSON parse error, attempting repair");
 
       // Fallback: ask AI to repair JSON strictly
       try {
@@ -257,11 +255,10 @@ ALWAYS include reasoning explaining the exact score (e.g., why 5 not 6). Be brut
         if (repairResp.ok) {
           const r = await repairResp.json();
           const repaired = (r.choices?.[0]?.message?.content || "").replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-          console.log("Trying repaired JSON parse, length:", repaired.length);
           analysisResult = JSON.parse(repaired);
         }
       } catch (repairError) {
-        console.error('Repair attempt failed:', repairError);
+        safeLog("ANALYZE-STARTUP", "Repair attempt failed");
       }
 
       if (!analysisResult) {
@@ -286,22 +283,15 @@ ALWAYS include reasoning explaining the exact score (e.g., why 5 not 6). Be brut
       throw new Error('Invalid response structure');
     }
 
-    return new Response(JSON.stringify(analysisResult), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    safeLog("ANALYZE-STARTUP", "Analysis complete");
+    return secureJsonResponse(analysisResult);
 
   } catch (error) {
-    console.error("Error in analyze-startup function:", error);
+    safeLog("ANALYZE-STARTUP", "Error occurred");
     
     // Sanitize error message before returning to client
     const userMessage = sanitizeErrorMessage(error);
     
-    return new Response(
-      JSON.stringify({ error: userMessage }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return secureErrorResponse(userMessage, 500);
   }
 });

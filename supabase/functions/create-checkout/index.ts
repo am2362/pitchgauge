@@ -1,15 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-const logStep = (step: string, details?: any) => {
-  console.log(`[CREATE-CHECKOUT] ${step}${details ? ` - ${JSON.stringify(details)}` : ""}`);
-};
+import { sanitizeErrorMessage } from '../_shared/validation.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, checkRateLimit, recordRateLimitEvent, safeLog } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -17,37 +10,60 @@ serve(async (req) => {
   }
 
   try {
-    logStep("Function started");
+    safeLog("CREATE-CHECKOUT", "Function started");
+
+    // Check payload size
+    const contentLength = req.headers.get("content-length");
+    if (isPayloadTooLarge(contentLength)) {
+      return secureErrorResponse("Request payload too large", 413);
+    }
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    if (!stripeKey) throw new Error("Service configuration error");
 
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-    );
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    if (!authHeader) {
+      return secureErrorResponse('Unauthorized', 401);
+    }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    if (userError) throw new Error('Authentication error');
     const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    if (!user?.email) throw new Error('User not authenticated');
+    
+    safeLog("CREATE-CHECKOUT", "User authenticated");
 
-    const { tier } = await req.json();
+    // Rate limiting
+    const rateCheck = await checkRateLimit(user.id, SUPABASE_URL, SERVICE_ROLE_KEY);
+    if (!rateCheck.allowed) {
+      safeLog("CREATE-CHECKOUT", "Rate limit exceeded");
+      return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
+    }
+    await recordRateLimitEvent(user.id, 'create_checkout', SUPABASE_URL, SERVICE_ROLE_KEY);
+
+    const bodyText = await req.text();
+    if (isPayloadTooLarge(null, bodyText)) {
+      return secureErrorResponse("Request payload too large", 413);
+    }
+
+    const { tier } = JSON.parse(bodyText);
     if (!tier || !["pro", "scale"].includes(tier)) {
-      throw new Error("Invalid tier. Must be 'pro' or 'scale'.");
+      return secureErrorResponse("Invalid tier. Must be 'pro' or 'scale'.", 400);
     }
 
     const proPriceId = Deno.env.get("STRIPE_PRO_PRICE_ID");
     const scalePriceId = Deno.env.get("STRIPE_SCALE_PRICE_ID");
-    if (!proPriceId || !scalePriceId) throw new Error("Stripe price IDs not configured");
+    if (!proPriceId || !scalePriceId) throw new Error("Service configuration error");
 
     const priceId = tier === "pro" ? proPriceId : scalePriceId;
-    logStep("Using price", { tier, priceId });
+    safeLog("CREATE-CHECKOUT", "Creating checkout session", { tier });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
@@ -55,7 +71,7 @@ serve(async (req) => {
     let customerId: string | undefined;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
-      logStep("Existing Stripe customer found", { customerId });
+      safeLog("CREATE-CHECKOUT", "Existing customer found");
     }
 
     const origin = req.headers.get("origin") || "https://pitchgauge.lovable.app";
@@ -69,18 +85,12 @@ serve(async (req) => {
       metadata: { user_id: user.id, tier },
     });
 
-    logStep("Checkout session created", { sessionId: session.id });
+    safeLog("CREATE-CHECKOUT", "Checkout session created");
 
-    return new Response(JSON.stringify({ url: session.url }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return secureJsonResponse({ url: session.url });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    safeLog("CREATE-CHECKOUT", "Error occurred");
+    const userMessage = sanitizeErrorMessage(error);
+    return secureErrorResponse(userMessage, 500);
   }
 });
