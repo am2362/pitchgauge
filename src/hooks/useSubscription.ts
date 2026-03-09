@@ -17,11 +17,6 @@ const TIER_LIMITS = {
   scale: { monthlyAnalyses: Infinity, canCompare: true, canBulkAnalyze: true },
 } as const;
 
-const ADMIN_WHITELIST = [
-  "amandayung808@gmail.com",
-  "amandaywy2015@gmail.com",
-  "c74661985@gmail.com",
-];
 
 export function useSubscription() {
   const [state, setState] = useState<SubscriptionState>({
