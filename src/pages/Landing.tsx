@@ -66,8 +66,8 @@ const Landing = () => {
                 <Shield className="h-3 w-3" /> Trusted by Investors
               </Badge>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
-                Analyze Any Startup Pitch{" "}
-                <span className="text-primary">in Minutes</span>
+                Analyze, Compare & Bulk Screen Startup Pitches{" "}
+                <span className="text-primary">with AI</span>
               </h1>
               <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
                 Your AI-powered first layer of startup screening. Instantly triage deal flow, surface the signals that matter, and focus your attention where it counts — before your analysts dive deeper.
