@@ -1,15 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-const logStep = (step: string, details?: any) => {
-  console.log(`[CUSTOMER-PORTAL] ${step}${details ? ` - ${JSON.stringify(details)}` : ""}`);
-};
+import { sanitizeErrorMessage } from '../_shared/validation.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, checkRateLimit, recordRateLimitEvent, safeLog } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -17,35 +10,49 @@ serve(async (req) => {
   }
 
   try {
-    logStep("Function started");
+    safeLog("CUSTOMER-PORTAL", "Function started");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    if (!stripeKey) throw new Error("Service configuration error");
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+    const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      SUPABASE_URL,
+      SERVICE_ROLE_KEY,
       { auth: { persistSession: false } },
     );
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    if (!authHeader) {
+      return secureErrorResponse('Unauthorized', 401);
+    }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    if (userError) throw new Error('Authentication error');
     const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    if (!user?.email) throw new Error('User not authenticated');
+    
+    safeLog("CUSTOMER-PORTAL", "User authenticated");
+
+    // Rate limiting
+    const rateCheck = await checkRateLimit(user.id, SUPABASE_URL, SERVICE_ROLE_KEY);
+    if (!rateCheck.allowed) {
+      safeLog("CUSTOMER-PORTAL", "Rate limit exceeded");
+      return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
+    }
+    await recordRateLimitEvent(user.id, 'customer_portal', SUPABASE_URL, SERVICE_ROLE_KEY);
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     if (customers.data.length === 0) {
-      throw new Error("No Stripe customer found. You may not have an active subscription.");
+      return secureErrorResponse("No subscription found. You may not have an active subscription.", 400);
     }
 
     const customerId = customers.data[0].id;
-    logStep("Found Stripe customer", { customerId });
+    safeLog("CUSTOMER-PORTAL", "Found Stripe customer");
 
     const origin = req.headers.get("origin") || "https://pitchgauge.lovable.app";
     const portalSession = await stripe.billingPortal.sessions.create({
@@ -53,18 +60,12 @@ serve(async (req) => {
       return_url: `${origin}/billing`,
     });
 
-    logStep("Portal session created", { url: portalSession.url });
+    safeLog("CUSTOMER-PORTAL", "Portal session created");
 
-    return new Response(JSON.stringify({ url: portalSession.url }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return secureJsonResponse({ url: portalSession.url });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    safeLog("CUSTOMER-PORTAL", "Error occurred");
+    const userMessage = sanitizeErrorMessage(error);
+    return secureErrorResponse(userMessage, 500);
   }
 });

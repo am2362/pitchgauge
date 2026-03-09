@@ -357,6 +357,11 @@ const Index = () => {
     }
   };
 
+  // Sanitize text by stripping HTML tags
+  const sanitizeText = (text: string): string => {
+    return text.replace(/<[^>]*>?/gm, '');
+  };
+
   const handleAnalyze = async () => {
     if (!canAnalyze) {
       toast({
@@ -367,7 +372,7 @@ const Index = () => {
       return;
     }
 
-    const textToAnalyze = pdfExtractedText || pitchText.trim();
+    let textToAnalyze = pdfExtractedText || pitchText.trim();
     
     if (!textToAnalyze) {
       toast({
@@ -385,6 +390,16 @@ const Index = () => {
         variant: "destructive",
       });
       return;
+    }
+
+    // Enforce 10,000 character limit and sanitize HTML
+    textToAnalyze = sanitizeText(textToAnalyze);
+    if (textToAnalyze.length > 10000) {
+      textToAnalyze = textToAnalyze.slice(0, 10000);
+      toast({
+        title: "Text truncated",
+        description: "Pitch text was limited to 10,000 characters.",
+      });
     }
 
     setIsAnalyzing(true);

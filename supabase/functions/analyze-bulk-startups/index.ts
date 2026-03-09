@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateBulkAnalysisInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+import { corsHeaders, secureJsonResponse, secureErrorResponse, checkRateLimit, recordRateLimitEvent, safeLog } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -13,21 +9,21 @@ serve(async (req) => {
   }
 
   try {
+    safeLog("BULK-ANALYSIS", "Function started");
+
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+    const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     // Authentication check
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse('Unauthorized', 401);
     }
 
-    // Verify token claims (works with signing-keys)
+    // Verify token claims
     const supabaseAuth = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
       global: { headers: { Authorization: authHeader } }
     });
@@ -37,21 +33,25 @@ serve(async (req) => {
     const userId = claimsData?.claims?.sub;
 
     if (claimsError || !userId) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse('Unauthorized', 401);
     }
 
-    console.log(`Authenticated user: ${userId}`);
+    safeLog("BULK-ANALYSIS", "User authenticated");
 
-    // Prefer the Lovable AI gateway for stability.
-    // GEMINI_API_KEY may be missing/expired and can cause full-batch failures.
-    // (We keep the direct Gemini path available for future use, but default to gateway.)
+    // Rate limiting
+    if (SERVICE_ROLE_KEY) {
+      const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!rateCheck.allowed) {
+        safeLog("BULK-ANALYSIS", "Rate limit exceeded");
+        return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
+      }
+      await recordRateLimitEvent(userId, 'bulk_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
+    }
+
+    // Prefer the Lovable AI gateway for stability
     const useGeminiDirect = false;
     
     if (!useGeminiDirect && !LOVABLE_API_KEY) {
-      console.error('Neither GEMINI_API_KEY nor LOVABLE_API_KEY is configured');
       throw new Error('Service configuration error');
     }
 
@@ -60,10 +60,7 @@ serve(async (req) => {
     const validation = validateBulkAnalysisInput(body, 100, 50000, 200);
     
     if (!validation.success) {
-      return new Response(
-        JSON.stringify({ error: validation.error }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse(validation.error || 'Invalid input', 400);
     }
 
     const { batchId, startups, batchSize = useGeminiDirect ? 3 : 1, appendResults = false } = validation.data!;
@@ -79,20 +76,17 @@ serve(async (req) => {
         .single();
 
       if (batchError || !batch) {
-        return new Response(
-          JSON.stringify({ error: 'Batch not found or unauthorized' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return secureErrorResponse('Batch not found or unauthorized', 403);
       }
 
       // If appending, get existing results
       if (appendResults && batch.results) {
         existingResults = batch.results as any[];
-        console.log(`Append mode: ${existingResults.length} existing results`);
+        safeLog("BULK-ANALYSIS", "Append mode", { existingCount: existingResults.length });
       }
     }
 
-    console.log(`Processing ${startups.length} startups in batches of ${batchSize}`);
+    safeLog("BULK-ANALYSIS", "Processing startups", { count: startups.length, batchSize });
 
     // Use authenticated client throughout - RLS policies enforce ownership
     const allResults: any[] = [];
@@ -100,7 +94,7 @@ serve(async (req) => {
     // Process in batches to avoid rate limits
     for (let i = 0; i < startups.length; i += batchSize) {
       const batch = startups.slice(i, i + batchSize);
-      console.log(`Processing batch ${Math.floor(i / batchSize) + 1}: startups ${i + 1}-${Math.min(i + batchSize, startups.length)}`);
+      safeLog("BULK-ANALYSIS", "Processing batch", { batchNum: Math.floor(i / batchSize) + 1 });
 
       const batchPromises = batch.map(async (startup) => {
         try {
@@ -112,7 +106,7 @@ serve(async (req) => {
           );
           return result;
         } catch (error) {
-          console.error(`Error analyzing ${startup.name}:`, error);
+          safeLog("BULK-ANALYSIS", "Startup analysis failed", { startup: startup.name });
           const kind = (error as any)?.kind;
           const status = (error as any)?.status;
           return {
@@ -148,41 +142,34 @@ serve(async (req) => {
       const batchResults = await Promise.all(batchPromises);
       allResults.push(...batchResults);
 
-      // Append results incrementally using the new DB function (keeps payloads small).
+      // Append results incrementally using the new DB function
       if (batchId && batchResults.length > 0) {
         const { error: appendErr } = await supabaseAuth.rpc('append_bulk_analysis_results', {
           p_batch_id: batchId,
           p_results: batchResults
         });
         if (appendErr) {
-          console.error('append_bulk_analysis_results error', appendErr);
+          safeLog("BULK-ANALYSIS", "Append results error");
         }
       }
 
-      // Add a small delay between batches to reduce rate-limit pressure.
-      // Keep per-invocation sleeps small so the whole request doesn't time out.
-      // Frontend handles longer cooldowns between invocations.
+      // Add a small delay between batches
       if (i + batchSize < startups.length) {
         await new Promise(resolve => setTimeout(resolve, useGeminiDirect ? 200 : 250));
       }
     }
 
-    // Return only the newly-analysed results (frontend tracks cumulative count via polling/state).
-    return new Response(
-      JSON.stringify({ results: allResults, totalProcessed: allResults.length }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    safeLog("BULK-ANALYSIS", "Processing complete", { totalProcessed: allResults.length });
+
+    return secureJsonResponse({ results: allResults, totalProcessed: allResults.length });
 
   } catch (error) {
-    console.error('Bulk analysis error:', error);
+    safeLog("BULK-ANALYSIS", "Error occurred");
     
     // Sanitize error message before returning to client
     const userMessage = sanitizeErrorMessage(error);
     
-    return new Response(
-      JSON.stringify({ error: userMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return secureErrorResponse(userMessage, 500);
   }
 });
 
@@ -304,26 +291,25 @@ Return ONLY valid JSON with this structure:
   }
 
   if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    const snippet = errorText ? errorText.slice(0, 800) : '(no body)';
-    console.error('AI API error:', response.status, snippet);
+    const errorStatus = response.status;
+    safeLog("BULK-ANALYSIS", "AI API error", { status: errorStatus });
 
     // Retry with exponential backoff on 429 (rate limit)
-    if (response.status === 429) {
+    if (errorStatus === 429) {
       const retryAttempt = (retryCount ?? 0);
       if (retryAttempt < 3) {
-        const backoffMs = Math.pow(2, retryAttempt + 1) * 1000; // 2s, 4s, 8s
-        console.log(`Rate limited for ${name}, retry ${retryAttempt + 1}/3 after ${backoffMs}ms`);
+        const backoffMs = Math.pow(2, retryAttempt + 1) * 1000;
+        safeLog("BULK-ANALYSIS", "Rate limited, retrying", { attempt: retryAttempt + 1 });
         await new Promise(resolve => setTimeout(resolve, backoffMs));
         return analyzeStartup(name, pitch, apiKey, useGeminiDirect, retryAttempt + 1);
       }
       throw new RateLimitError('Rate limited after 3 retries');
     }
 
-    if (useGeminiDirect && (response.status === 400 || response.status === 401 || response.status === 403)) {
+    if (useGeminiDirect && (errorStatus === 400 || errorStatus === 401 || errorStatus === 403)) {
       const fallbackKey = Deno.env.get('LOVABLE_API_KEY');
       if (fallbackKey) {
-        console.log(`Falling back to Lovable AI gateway for ${name} after Gemini ${response.status}`);
+        safeLog("BULK-ANALYSIS", "Falling back to Lovable AI gateway");
         return analyzeStartup(name, pitch, fallbackKey, false);
       }
     }
@@ -342,7 +328,6 @@ Return ONLY valid JSON with this structure:
   }
 
   if (!content) {
-    console.error('No content in AI response');
     throw new Error('No content in AI response');
   }
 

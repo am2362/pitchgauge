@@ -2,11 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { getDocument } from "https://esm.sh/pdfjs-serverless";
 import { sanitizeErrorMessage } from '../_shared/validation.ts';
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { corsHeaders, secureJsonResponse, secureErrorResponse, checkRateLimit, recordRateLimitEvent, safeLog, sanitizeText } from '../_shared/security.ts';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
@@ -25,7 +21,7 @@ interface CleanedPitchResult {
  */
 async function cleanExtractedText(rawText: string, apiKey: string): Promise<CleanedPitchResult | null> {
   try {
-    console.log("Starting AI text cleaning...");
+    safeLog("PARSE-PDF", "Starting AI text cleaning");
     
     const cleaningResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -81,7 +77,7 @@ CRITICAL: Return ONLY JSON. No markdown. No code blocks. Start with { and end wi
     });
 
     if (!cleaningResponse.ok) {
-      console.error("AI cleaning request failed:", cleaningResponse.status);
+      safeLog("PARSE-PDF", "AI cleaning request failed", { status: cleaningResponse.status });
       return null;
     }
 
@@ -89,7 +85,7 @@ CRITICAL: Return ONLY JSON. No markdown. No code blocks. Start with { and end wi
     const content = data.choices?.[0]?.message?.content;
     
     if (!content) {
-      console.error("No content in cleaning response");
+      safeLog("PARSE-PDF", "No content in cleaning response");
       return null;
     }
 
@@ -117,11 +113,11 @@ CRITICAL: Return ONLY JSON. No markdown. No code blocks. Start with { and end wi
     const jsonStr = cleaned.slice(start, end + 1);
     
     const result = JSON.parse(jsonStr) as CleanedPitchResult;
-    console.log(`AI cleaning successful: ${result.slides?.length || 0} slides identified`);
+    safeLog("PARSE-PDF", "AI cleaning successful", { slideCount: result.slides?.length || 0 });
     
     return result;
   } catch (error) {
-    console.error("AI cleaning failed:", error);
+    safeLog("PARSE-PDF", "AI cleaning failed");
     return null;
   }
 }
@@ -132,28 +128,24 @@ serve(async (req) => {
   }
 
   try {
+    safeLog("PARSE-PDF", "Function started");
+
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY is not configured");
-      return new Response(
-        JSON.stringify({ error: "AI service not configured" }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse("AI service not configured", 500);
     }
 
     // Authentication check
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse('Unauthorized', 401);
     }
 
-    // Verify token claims (works with signing-keys)
+    // Verify token claims
     const supabaseAuth = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
       global: { headers: { Authorization: authHeader } }
     });
@@ -163,50 +155,45 @@ serve(async (req) => {
     const userId = claimsData?.claims?.sub;
 
     if (claimsError || !userId) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse('Unauthorized', 401);
     }
 
-    console.log(`Authenticated user: ${userId}`);
+    safeLog("PARSE-PDF", "User authenticated");
+
+    // Rate limiting
+    if (SERVICE_ROLE_KEY) {
+      const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!rateCheck.allowed) {
+        safeLog("PARSE-PDF", "Rate limit exceeded");
+        return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
+      }
+      await recordRateLimitEvent(userId, 'parse_pdf', SUPABASE_URL!, SERVICE_ROLE_KEY);
+    }
 
     // Parse multipart form data
     const contentType = req.headers.get("content-type") || "";
     if (!contentType.includes("multipart/form-data")) {
-      return new Response(
-        JSON.stringify({ error: "Expected multipart/form-data" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return secureErrorResponse("Expected multipart/form-data", 400);
     }
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
 
     if (!file) {
-      return new Response(
-        JSON.stringify({ error: "No file uploaded" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return secureErrorResponse("No file uploaded", 400);
     }
 
     // Validate file type
     if (file.type !== "application/pdf") {
-      return new Response(
-        JSON.stringify({ error: "Only PDF files are supported" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return secureErrorResponse("Only PDF files are supported", 400);
     }
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      return new Response(
-        JSON.stringify({ error: "File size exceeds 20MB limit" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return secureErrorResponse("File size exceeds 20MB limit", 400);
     }
 
-    console.log(`Processing PDF: ${file.name}, size: ${file.size} bytes`);
+    safeLog("PARSE-PDF", "Processing PDF", { size: file.size });
 
     // Read file as ArrayBuffer and convert to Uint8Array
     const arrayBuffer = await file.arrayBuffer();
@@ -215,7 +202,7 @@ serve(async (req) => {
     // Load PDF to get page count and try text extraction first
     const doc = await getDocument(pdfData).promise;
     const numPages = doc.numPages;
-    console.log(`PDF has ${numPages} pages`);
+    safeLog("PARSE-PDF", "PDF loaded", { pages: numPages });
 
     // First, try standard text extraction
     const textParts: string[] = [];
@@ -242,7 +229,7 @@ serve(async (req) => {
     
     // If standard extraction failed, use Vision AI on the PDF
     if (!hasEmbeddedText || rawExtractedText.length < 100) {
-      console.log("Standard text extraction yielded little content, using Vision AI...");
+      safeLog("PARSE-PDF", "Using Vision AI for extraction");
       extractionMethod = "vision_ai";
       
       // Convert PDF to base64 for Vision AI (chunked to avoid stack overflow)
@@ -298,93 +285,72 @@ Start with "--- Page 1 ---" for each new page.`
       });
 
       if (!visionResponse.ok) {
-        const errorText = await visionResponse.text();
-        console.error("Vision AI error:", visionResponse.status, errorText);
+        const errorStatus = visionResponse.status;
+        safeLog("PARSE-PDF", "Vision AI error", { status: errorStatus });
         
-        if (visionResponse.status === 429) {
-          return new Response(
-            JSON.stringify({ error: "AI service is busy. Please try again in a moment." }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+        if (errorStatus === 429) {
+          return secureErrorResponse("AI service is busy. Please try again in a moment.", 429);
         }
         
-        return new Response(
-          JSON.stringify({ error: "Failed to process PDF with AI vision" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return secureErrorResponse("Failed to process PDF with AI vision", 500);
       }
 
       const visionData = await visionResponse.json();
       rawExtractedText = visionData.choices?.[0]?.message?.content || "";
 
       if (!rawExtractedText) {
-        return new Response(
-          JSON.stringify({ error: "Could not extract any text from the PDF. The document may be empty or unreadable." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return secureErrorResponse("Could not extract any text from the PDF. The document may be empty or unreadable.", 400);
       }
 
-      console.log(`Vision AI extracted ${rawExtractedText.length} characters from PDF`);
+      safeLog("PARSE-PDF", "Vision AI extraction complete", { textLength: rawExtractedText.length });
     } else {
-      console.log(`Standard extraction got ${rawExtractedText.length} characters`);
+      safeLog("PARSE-PDF", "Standard extraction complete", { textLength: rawExtractedText.length });
     }
+
+    // Sanitize extracted text before returning
+    const sanitizedRawText = sanitizeText(rawExtractedText, 100000);
 
     // Step 2: AI-powered cleaning and structuring
-    const cleanedResult = await cleanExtractedText(rawExtractedText, LOVABLE_API_KEY);
+    const cleanedResult = await cleanExtractedText(sanitizedRawText, LOVABLE_API_KEY);
     
     if (cleanedResult) {
-      console.log(`Returning cleaned result with ${cleanedResult.slides.length} slides`);
-      return new Response(
-        JSON.stringify({ 
-          text: rawExtractedText,
-          cleanedText: cleanedResult.cleanedText,
-          pitchSummary: cleanedResult.pitchSummary,
-          slides: cleanedResult.slides,
-          pages: numPages,
-          fileName: file.name,
-          method: extractionMethod
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Fallback: return raw text if cleaning failed
-    console.log("AI cleaning failed, returning raw text");
-    return new Response(
-      JSON.stringify({ 
-        text: rawExtractedText,
+      safeLog("PARSE-PDF", "Returning cleaned result", { slideCount: cleanedResult.slides.length });
+      return secureJsonResponse({ 
+        text: sanitizedRawText,
+        cleanedText: sanitizeText(cleanedResult.cleanedText, 100000),
+        pitchSummary: sanitizeText(cleanedResult.pitchSummary, 5000),
+        slides: cleanedResult.slides,
         pages: numPages,
         fileName: file.name,
         method: extractionMethod
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+      });
+    }
+
+    // Fallback: return raw text if cleaning failed
+    safeLog("PARSE-PDF", "AI cleaning failed, returning raw text");
+    return secureJsonResponse({ 
+      text: sanitizedRawText,
+      pages: numPages,
+      fileName: file.name,
+      method: extractionMethod
+    });
 
   } catch (error) {
-    console.error("Error parsing PDF:", error);
+    safeLog("PARSE-PDF", "Error occurred");
     
     // Check for specific PDF parsing errors
     const errorMessage = error instanceof Error ? error.message : String(error);
     
     if (errorMessage.includes("password") || errorMessage.includes("encrypted")) {
-      return new Response(
-        JSON.stringify({ error: "This PDF is password-protected. Please upload an unprotected PDF." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return secureErrorResponse("This PDF is password-protected. Please upload an unprotected PDF.", 400);
     }
     
     if (errorMessage.includes("Invalid PDF")) {
-      return new Response(
-        JSON.stringify({ error: "Invalid or corrupted PDF file. Please try another file." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return secureErrorResponse("Invalid or corrupted PDF file. Please try another file.", 400);
     }
 
     const userMessage = sanitizeErrorMessage(error);
     
-    return new Response(
-      JSON.stringify({ error: userMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return secureErrorResponse(userMessage, 500);
   }
 });

@@ -2,11 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateCompareInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, checkRateLimit, recordRateLimitEvent, safeLog } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,20 +10,26 @@ serve(async (req) => {
   }
 
   try {
+    safeLog("COMPARE-STARTUPS", "Function started");
+
+    // Check payload size
+    const contentLength = req.headers.get("content-length");
+    if (isPayloadTooLarge(contentLength)) {
+      return secureErrorResponse("Request payload too large", 413);
+    }
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+    const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     // Authentication check
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse('Unauthorized', 401);
     }
 
-    // Verify token claims (works with signing-keys)
+    // Verify token claims
     const supabaseAuth = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
       global: { headers: { Authorization: authHeader } }
     });
@@ -37,33 +39,41 @@ serve(async (req) => {
     const userId = claimsData?.claims?.sub;
 
     if (claimsError || !userId) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse('Unauthorized', 401);
     }
 
-    console.log(`Authenticated user: ${userId}`);
+    safeLog("COMPARE-STARTUPS", "User authenticated");
+
+    // Rate limiting
+    if (SERVICE_ROLE_KEY) {
+      const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!rateCheck.allowed) {
+        safeLog("COMPARE-STARTUPS", "Rate limit exceeded");
+        return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
+      }
+      await recordRateLimitEvent(userId, 'compare_startups', SUPABASE_URL!, SERVICE_ROLE_KEY);
+    }
 
     // Parse and validate input using schema validation
-    const body = await req.json();
+    const bodyText = await req.text();
+    if (isPayloadTooLarge(null, bodyText)) {
+      return secureErrorResponse("Request payload too large", 413);
+    }
+
+    const body = JSON.parse(bodyText);
     const validation = validateCompareInput(body, 10);
     
     if (!validation.success) {
-      return new Response(
-        JSON.stringify({ error: validation.error }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return secureErrorResponse(validation.error || 'Invalid input', 400);
     }
 
     const { analyses, startupNames } = validation.data!;
 
     if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY is not configured');
       throw new Error('Service configuration error');
     }
 
-    console.log('Comparing startups:', startupNames);
+    safeLog("COMPARE-STARTUPS", "Comparing startups", { count: startupNames.length });
 
     // Build comparison prompt
     const comparisonPrompt = `You are a venture capital analyst. Compare the following startup analyses and provide insights.
@@ -134,21 +144,15 @@ Provide a comprehensive comparison in the following JSON structure:
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI API error:', response.status);
+      const errorStatus = response.status;
+      safeLog("COMPARE-STARTUPS", "AI API error", { status: errorStatus });
       
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (errorStatus === 429) {
+        return secureErrorResponse('Rate limit exceeded. Please try again in a moment.', 429);
       }
       
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'AI usage limit reached. Please try again later.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (errorStatus === 402) {
+        return secureErrorResponse('AI usage limit reached. Please try again later.', 402);
       }
       
       throw new Error('AI service error');
@@ -157,7 +161,7 @@ Provide a comprehensive comparison in the following JSON structure:
     const data = await response.json();
     let comparisonText = data.choices?.[0]?.message?.content || '';
 
-    console.log('AI response received');
+    safeLog("COMPARE-STARTUPS", "AI response received");
 
     // Clean and parse JSON
     comparisonText = comparisonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -166,7 +170,7 @@ Provide a comprehensive comparison in the following JSON structure:
     try {
       comparisonInsights = JSON.parse(comparisonText);
     } catch (parseError) {
-      console.error('JSON parse error');
+      safeLog("COMPARE-STARTUPS", "JSON parse error");
       throw new Error('Failed to parse response. Please try again.');
     }
 
@@ -175,23 +179,15 @@ Provide a comprehensive comparison in the following JSON structure:
       throw new Error('Invalid response structure');
     }
 
-    return new Response(
-      JSON.stringify(comparisonInsights),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    safeLog("COMPARE-STARTUPS", "Comparison complete");
+    return secureJsonResponse(comparisonInsights);
 
   } catch (error) {
-    console.error('Error in compare-startups:', error);
+    safeLog("COMPARE-STARTUPS", "Error occurred");
     
     // Sanitize error message before returning to client
     const userMessage = sanitizeErrorMessage(error);
     
-    return new Response(
-      JSON.stringify({ error: userMessage }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+    return secureErrorResponse(userMessage, 500);
   }
 });

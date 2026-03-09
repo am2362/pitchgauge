@@ -11,7 +11,7 @@ export interface ExcelParseResult {
   warnings: string[];
 }
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB (reduced from 20MB for security)
 const MAX_STARTUPS = 100;
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -34,16 +34,22 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
     warnings: []
   };
 
-  // Validate file type
+  // Validate file type - only .xlsx allowed (not .xls)
   const isValidType =
     file.type === XLSX_MIME || file.name.toLowerCase().endsWith('.xlsx');
 
   if (!isValidType) {
-    result.errors.push('Invalid file type. Please upload an Excel file (.xlsx)');
+    result.errors.push('Invalid file type. Please upload an Excel file (.xlsx only)');
     return result;
   }
 
-  // Validate file size
+  // Reject .xls files explicitly
+  if (file.name.toLowerCase().endsWith('.xls') && !file.name.toLowerCase().endsWith('.xlsx')) {
+    result.errors.push('Legacy .xls format is not supported. Please save as .xlsx and try again.');
+    return result;
+  }
+
+  // Validate file size (5MB limit)
   if (file.size > MAX_FILE_SIZE) {
     result.errors.push(`File size exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`);
     return result;

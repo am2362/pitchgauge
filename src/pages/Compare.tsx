@@ -173,8 +173,15 @@ export default function Compare() {
     }
   };
 
+  // Sanitize text by stripping HTML tags
+  const sanitizeText = (text: string): string => {
+    return text.replace(/<[^>]*>?/gm, '');
+  };
+
   const updatePitchText = (id: number, text: string) => {
-    setPitches(currentPitches => currentPitches.map(p => p.id === id ? { ...p, text } : p));
+    // Enforce 10,000 character limit
+    const limitedText = text.length > 10000 ? text.slice(0, 10000) : text;
+    setPitches(currentPitches => currentPitches.map(p => p.id === id ? { ...p, text: limitedText } : p));
   };
 
   const updatePitchName = (id: number, newName: string) => {
@@ -346,8 +353,11 @@ export default function Compare() {
     setPitches(currentPitches => currentPitches.map(p => p.id === id ? { ...p, loading: true } : p));
 
     try {
+      // Sanitize and limit text before sending
+      const sanitizedText = sanitizeText(pitch.text).slice(0, 10000);
+      
       const { data, error } = await supabase.functions.invoke("analyze-startup", {
-        body: { text: pitch.text },
+        body: { text: sanitizedText },
       });
 
       if (error) throw error;
