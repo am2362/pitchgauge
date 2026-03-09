@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 
-export function usePageMeta(title: string, description?: string) {
+export function usePageMeta(_title: string, description?: string) {
   useEffect(() => {
-    document.title = title;
+    document.title = "PitchGauge";
     if (description) {
       let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
       if (!meta) {
@@ -12,5 +12,5 @@ export function usePageMeta(title: string, description?: string) {
       }
       meta.content = description;
     }
-  }, [title, description]);
+  }, [description]);
 }
