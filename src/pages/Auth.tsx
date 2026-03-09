@@ -15,6 +15,7 @@ export default function Auth() {
   usePageMeta("PitchGauge", "Sign in to your PitchGauge account with a magic link.");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
