@@ -45,8 +45,20 @@ serve(async (req) => {
 
     safeLog("ANALYZE-STARTUP", "User authenticated");
 
-    // Rate limiting
+    // Subscription tier enforcement
     if (SERVICE_ROLE_KEY) {
+      const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      const FREE_MONTHLY_LIMIT = 3;
+      
+      if (tier === 'free') {
+        const monthlyCount = await getMonthlyUsageCount(userId, 'rate_limit_analyze_startup', SUPABASE_URL!, SERVICE_ROLE_KEY);
+        if (monthlyCount >= FREE_MONTHLY_LIMIT) {
+          safeLog("ANALYZE-STARTUP", "Free tier limit reached");
+          return secureErrorResponse('Monthly analysis limit reached. Please upgrade your plan.', 403);
+        }
+      }
+
+      // Rate limiting
       const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
       if (!rateCheck.allowed) {
         safeLog("ANALYZE-STARTUP", "Rate limit exceeded");

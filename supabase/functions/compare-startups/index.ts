@@ -44,8 +44,15 @@ serve(async (req) => {
 
     safeLog("COMPARE-STARTUPS", "User authenticated");
 
-    // Rate limiting
+    // Subscription tier enforcement - compare requires pro or scale
     if (SERVICE_ROLE_KEY) {
+      const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (tier === 'free') {
+        safeLog("COMPARE-STARTUPS", "Free tier denied");
+        return secureErrorResponse('This feature requires a Pro or Scale subscription.', 403);
+      }
+
+      // Rate limiting
       const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
       if (!rateCheck.allowed) {
         safeLog("COMPARE-STARTUPS", "Rate limit exceeded");

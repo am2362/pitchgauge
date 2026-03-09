@@ -38,8 +38,15 @@ serve(async (req) => {
 
     safeLog("BULK-ANALYSIS", "User authenticated");
 
-    // Rate limiting
+    // Subscription tier enforcement - bulk analysis requires scale tier
     if (SERVICE_ROLE_KEY) {
+      const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (tier !== 'scale') {
+        safeLog("BULK-ANALYSIS", "Non-scale tier denied");
+        return secureErrorResponse('This feature requires a Scale subscription.', 403);
+      }
+
+      // Rate limiting
       const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
       if (!rateCheck.allowed) {
         safeLog("BULK-ANALYSIS", "Rate limit exceeded");

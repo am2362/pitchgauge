@@ -175,3 +175,63 @@ export function safeLog(prefix: string, step: string, details?: Record<string, u
   
   console.log(`[${prefix}] ${step}${safeDetails ? ` - ${JSON.stringify(safeDetails)}` : ''}`);
 }
+
+/**
+ * Check user subscription tier server-side.
+ * Returns the tier string or null if lookup fails.
+ */
+export async function getUserTier(
+  userId: string,
+  supabaseUrl: string,
+  serviceRoleKey: string
+): Promise<string> {
+  try {
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+    });
+
+    const { data, error } = await supabaseAdmin
+      .from('subscriptions')
+      .select('tier')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .single();
+
+    if (error || !data) return 'free';
+    return data.tier || 'free';
+  } catch {
+    return 'free';
+  }
+}
+
+/**
+ * Get monthly usage count for a user and action type (server-side).
+ */
+export async function getMonthlyUsageCount(
+  userId: string,
+  actionType: string,
+  supabaseUrl: string,
+  serviceRoleKey: string
+): Promise<number> {
+  try {
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+    });
+
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+
+    const { count, error } = await supabaseAdmin
+      .from('usage_tracking')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('action_type', actionType)
+      .gte('created_at', monthStart.toISOString());
+
+    if (error) return 0;
+    return count || 0;
+  } catch {
+    return 0;
+  }
+}
