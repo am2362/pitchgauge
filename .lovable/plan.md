@@ -1,42 +1,33 @@
 
-# Add "Single Pitch Analysis" Button to Top Navigation
+# Align Logo Icon Bottom with Text Baseline
 
-## Problem
-The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
+## Current Issue
+The logo icon is vertically centered with the "PitchGauge" text using `items-center`, which makes the icon appear slightly misaligned because its bottom doesn't align with the text baseline.
 
 ## Solution
-Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
+Change flex alignment from `items-center` to `items-end` on all logo + text containers. This will align the bottom edge of the icon with the baseline of the text, creating a more visually balanced appearance.
 
-## Implementation Details
+## Files to Update
 
-### File: `src/pages/Index.tsx`
+### 1. AppNavbar.tsx (line 46)
+- Change: `className="flex items-center gap-2"` 
+- To: `className="flex items-end gap-2"`
 
-**What to change:**
-1. Add a new import for `FileText` icon (already imported on line 8)
-2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
-3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
-4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
+### 2. DemoNav.tsx (line 22)  
+- Change: `className="flex items-center gap-2"`
+- To: `className="flex items-end gap-2"`
 
-**Button placement:**
-- Insert as the **first button** in the top nav (line 530), before the Compare button
-- Use `FileText` icon (already imported)
-- Text: "Single Pitch Analysis"
-- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
+### 3. Auth.tsx (line 125)
+- Change: `className="flex items-center justify-center gap-2"`
+- To: `className="flex items-end justify-center gap-2"`
 
-**Technical approach:**
-```text
-1. Add useRef hook to create a ref for the pitch input card
-2. In the button's onClick, check if user is on "/" page
-   - If on "/", scroll to the ref using scrollIntoView()
-   - If not on "/", navigate to "/"
-3. Attach the ref to the Card element containing "Input Pitch"
-```
+### 4. Landing.tsx
+- Line 42: Change `className="flex items-center gap-2"` to `className="flex items-end gap-2"`
+- Line 378: Change `className="flex items-center gap-2 mb-2"` to `className="flex items-end gap-2 mb-2"`
 
-## Files to Modify
-- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
+### 5. ScoringRubric.tsx (line 74)
+- Change: `className="flex items-center gap-2 mb-8"`
+- To: `className="flex items-end gap-2 mb-8"`
 
-## Expected Result
-- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
-- Clicking it from any page navigates to "/"
-- Clicking it while already on "/" scrolls smoothly to the pitch input form
-- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
+## Result
+The bottom of the gauge icon will now align with the text baseline across all pages (navigation bars, auth page, landing page, scoring rubric), creating a more polished and intentional visual alignment.
