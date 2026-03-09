@@ -74,14 +74,24 @@ serve(async (req) => {
       safeLog("CREATE-CHECKOUT", "Existing customer found");
     }
 
-    const origin = req.headers.get("origin") || "https://pitchgauge.lovable.app";
+    const requestOrigin = req.headers.get("origin");
+    const ALLOWED_ORIGINS = [
+      "https://pitchgauge.lovable.app",
+      "https://pitchgauge.com"
+    ];
+
+    if (!requestOrigin || (!ALLOWED_ORIGINS.includes(requestOrigin) && !requestOrigin.endsWith(".lovable.app") && !requestOrigin.startsWith("http://localhost:"))) {
+      return secureErrorResponse("Forbidden: Invalid Origin", 403);
+    }
+
+    const baseUrl = "https://pitchgauge.lovable.app";
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
-      success_url: `${origin}/dashboard?checkout=success`,
-      cancel_url: `${origin}/billing`,
+      success_url: `${baseUrl}/dashboard?checkout=success`,
+      cancel_url: `${baseUrl}/billing`,
       metadata: { user_id: user.id, tier },
     });
 
