@@ -16,7 +16,6 @@ import NotFound from "./pages/NotFound";
 import Demo from "./pages/Demo";
 import DemoCompare from "./pages/DemoCompare";
 import DemoBulk from "./pages/DemoBulk";
-import VerifyEmail from "./pages/VerifyEmail";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
