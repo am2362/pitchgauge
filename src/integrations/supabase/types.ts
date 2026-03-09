@@ -218,6 +218,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_verifications: {
+        Row: {
+          created_at: string
+          id: string
+          token: string
+          user_id: string
+          verified: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          token?: string
+          user_id: string
+          verified?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          token?: string
+          user_id?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -235,6 +259,7 @@ export type Database = {
         Args: { p_action_type: string }
         Returns: number
       }
+      is_user_verified: { Args: { p_user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
