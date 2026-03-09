@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase-external";
+import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
