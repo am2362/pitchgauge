@@ -1,40 +1,105 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Mail, RefreshCw } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, RefreshCw, CheckCircle2 } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import logo from "@/assets/logo.png";
 
 export default function VerifyEmail() {
   usePageMeta("Verify Email — PitchGauge", "Please verify your email address to activate your PitchGauge account.");
   const [resending, setResending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verified, setVerified] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   const email = (location.state as { email?: string })?.email || "";
+  const token = searchParams.get("token");
+
+  // Handle token-based verification
+  useEffect(() => {
+    if (!token) return;
+
+    const verifyToken = async () => {
+      setVerifying(true);
+      try {
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/verify-email-token?token=${token}`,
+          { method: 'GET' }
+        );
+
+        if (response.ok) {
+          setVerified(true);
+          toast({
+            title: "Email Verified!",
+            description: "Your account has been activated. Redirecting...",
+          });
+          setTimeout(() => navigate("/dashboard", { replace: true }), 2000);
+        } else {
+          toast({
+            title: "Verification Failed",
+            description: "Invalid or expired token. Please request a new verification email.",
+            variant: "destructive",
+          });
+        }
+      } catch {
+        toast({
+          title: "Verification Failed",
+          description: "Something went wrong. Please try again.",
+          variant: "destructive",
+        });
+      }
+      setVerifying(false);
+    };
+
+    verifyToken();
+  }, [token, navigate, toast]);
+
+  // Poll verification status
+  const checkVerificationStatus = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+
+    const { data } = await supabase
+      .from('user_verifications')
+      .select('verified')
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (data?.verified) {
+      setVerified(true);
+      toast({
+        title: "Email Verified!",
+        description: "Your account has been activated. Redirecting...",
+      });
+      setTimeout(() => navigate("/dashboard", { replace: true }), 1500);
+    }
+  }, [navigate, toast]);
 
   useEffect(() => {
-    // If user is already confirmed, redirect to dashboard
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.email_confirmed_at) {
-        navigate("/dashboard", { replace: true });
-      }
+    if (token || verified) return;
+
+    // Check immediately
+    checkVerificationStatus();
+
+    // Poll every 5 seconds
+    const interval = setInterval(checkVerificationStatus, 5000);
+
+    // Also check on window focus
+    const handleFocus = () => checkVerificationStatus();
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
     };
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user?.email_confirmed_at) {
-        navigate("/dashboard", { replace: true });
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [token, verified, checkVerificationStatus]);
 
   const handleResend = async () => {
     if (!email) {
@@ -47,22 +112,62 @@ export default function VerifyEmail() {
     }
 
     setResending(true);
-    const { error } = await supabase.auth.resend({ type: "signup", email });
-    setResending(false);
 
-    if (error) {
-      toast({
-        title: "Resend Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        await fetch(
+          `https://${projectId}.supabase.co/functions/v1/send-verification-email`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              userId: session.user.id,
+              email,
+              redirectTo: `${window.location.origin}/dashboard`,
+            }),
+          }
+        );
+      }
+
       toast({
         title: "Email Sent",
         description: "A new confirmation email has been sent. Please check your inbox.",
       });
+    } catch {
+      toast({
+        title: "Resend Failed",
+        description: "Could not send verification email. Please try again.",
+        variant: "destructive",
+      });
     }
+
+    setResending(false);
   };
+
+  if (verifying) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (verified) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30 flex items-center justify-center p-4">
+        <Card className="p-8 text-center space-y-4 max-w-md">
+          <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
+          <h2 className="text-xl font-semibold text-foreground">Email Verified!</h2>
+          <p className="text-muted-foreground">Redirecting to your dashboard...</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30 flex items-center justify-center p-4 relative">

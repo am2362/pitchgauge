@@ -24,7 +24,6 @@ export default function Auth() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         navigate("/dashboard");
@@ -65,7 +64,7 @@ export default function Auth() {
     setLoading(true);
     const redirectUrl = `${window.location.origin}/`;
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -76,21 +75,50 @@ export default function Auth() {
       },
     });
 
-    setLoading(false);
-
     if (error) {
+      setLoading(false);
       toast({
         title: "Sign Up Failed",
         description: error.message,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Check your email",
-        description: "We sent you a confirmation link. Please verify your email to continue.",
-      });
-      navigate("/verify-email", { state: { email } });
+      return;
     }
+
+    // Call edge function to un-confirm user and trigger verification email
+    if (data.user) {
+      try {
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/send-verification-email`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            },
+            body: JSON.stringify({
+              userId: data.user.id,
+              email,
+              redirectTo: `${window.location.origin}/dashboard`,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          console.error('Verification email request failed');
+        }
+      } catch (err) {
+        console.error('Failed to send verification email:', err);
+      }
+    }
+
+    setLoading(false);
+    toast({
+      title: "Check your email",
+      description: "We sent you a confirmation link. Please verify your email to continue.",
+    });
+    navigate("/verify-email", { state: { email } });
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -108,7 +136,7 @@ export default function Auth() {
     if (error) {
       toast({
         title: "Sign In Failed",
-        description: error.message === "Invalid login credentials" 
+        description: error.message === "Invalid login credentials"
           ? "Invalid email or password. Please try again."
           : error.message,
         variant: "destructive",
@@ -152,35 +180,14 @@ export default function Auth() {
               <form onSubmit={handleSignIn} className="space-y-4 mt-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Email</label>
-                  <Input
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
+                  <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} />
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Password</label>
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
+                  <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={loading} />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing In...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
+                  {loading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing In...</>) : "Sign In"}
                 </Button>
               </form>
             </TabsContent>
@@ -189,49 +196,19 @@ export default function Auth() {
               <form onSubmit={handleSignUp} className="space-y-4 mt-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Full Name</label>
-                  <Input
-                    type="text"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
+                  <Input type="text" placeholder="John Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} required disabled={loading} />
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Email</label>
-                  <Input
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
+                  <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} />
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Password</label>
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Must be at least 6 characters
-                  </p>
+                  <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={loading} />
+                  <p className="text-xs text-muted-foreground mt-1">Must be at least 6 characters</p>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating Account...
-                    </>
-                  ) : (
-                    "Create Account"
-                  )}
+                  {loading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating Account...</>) : "Create Account"}
                 </Button>
               </form>
             </TabsContent>
