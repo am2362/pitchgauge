@@ -64,7 +64,7 @@ const categories = [
 ];
 
 const ScoringRubric = () => {
-  usePageMeta("Scoring Methodology | PitchGauge", "Understand how PitchGauge scores startup pitches across six key criteria.");
+  usePageMeta("PitchGauge", "Understand how PitchGauge scores startup pitches across six key criteria.");
   const navigate = useNavigate();
 
   return (

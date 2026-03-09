@@ -69,7 +69,7 @@ function createFailedBulkResult(startupName: string, errorType: string, errorMes
 }
 
 export default function BulkAnalysis() {
-  usePageMeta("Bulk Analysis | PitchGauge", "Batch-analyze multiple startup pitches at once with AI scoring.");
+  usePageMeta("PitchGauge", "Batch-analyze multiple startup pitches at once with AI scoring.");
   const navigate = useNavigate();
   const { canBulkAnalyze, tier, recordUsage, startCheckout } = useSubscription();
   const [currentAnalysis, setCurrentAnalysis] = useState<BulkAnalysis | null>(null);

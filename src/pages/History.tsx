@@ -69,7 +69,7 @@ interface BulkAnalysisHistory {
 }
 
 export default function History() {
-  usePageMeta("History | PitchGauge", "Browse and manage your past startup pitch analyses.");
+  usePageMeta("PitchGauge", "Browse and manage your past startup pitch analyses.");
   const [user, setUser] = useState<User | null>(null);
   const [comparisons, setComparisons] = useState<ComparisonHistory[]>([]);
   const [analyses, setAnalyses] = useState<AnalysisHistory[]>([]);

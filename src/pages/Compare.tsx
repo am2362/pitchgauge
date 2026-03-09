@@ -65,7 +65,7 @@ interface RecentComparison {
 }
 
 export default function Compare() {
-  usePageMeta("Compare Startups | PitchGauge", "Compare multiple startup pitches side-by-side with AI analysis.");
+  usePageMeta("PitchGauge", "Compare multiple startup pitches side-by-side with AI analysis.");
   const [user, setUser] = useState<User | null>(null);
   const [pitches, setPitches] = useState<PitchSlot[]>([
     { id: 1, name: "Startup A", text: "", analysis: null, loading: false },

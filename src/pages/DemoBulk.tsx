@@ -35,7 +35,7 @@ const METRIC_LABELS: Record<string, string> = {
 
 
 const DemoBulk = () => {
-  usePageMeta("Demo Bulk Analysis | PitchGauge", "Try PitchGauge's bulk startup analysis with sample data.");
+  usePageMeta("PitchGauge", "Try PitchGauge's bulk startup analysis with sample data.");
   const navigate = useNavigate();
   const { toast } = useToast();
 
