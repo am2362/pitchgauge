@@ -72,7 +72,7 @@ const ScoringRubric = () => {
       <AppNavbar />
       <div className="container max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-end gap-2 mb-8">
-          <img src={logo} alt="PitchGauge" className="h-6 w-6" />
+          <img src={logo} alt="PitchGauge" className="h-9 w-9" />
           <h1 className="text-3xl font-bold text-foreground">Scoring Rubric</h1>
         </div>
 
