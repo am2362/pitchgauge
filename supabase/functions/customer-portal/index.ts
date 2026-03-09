@@ -54,10 +54,20 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     safeLog("CUSTOMER-PORTAL", "Found Stripe customer");
 
-    const origin = req.headers.get("origin") || "https://pitchgauge.lovable.app";
+    const requestOrigin = req.headers.get("origin");
+    const ALLOWED_ORIGINS = [
+      "https://pitchgauge.lovable.app",
+      "https://pitchgauge.com"
+    ];
+
+    if (!requestOrigin || (!ALLOWED_ORIGINS.includes(requestOrigin) && !requestOrigin.endsWith(".lovable.app") && !requestOrigin.startsWith("http://localhost:"))) {
+      return secureErrorResponse("Forbidden: Invalid Origin", 403);
+    }
+
+    const baseUrl = "https://pitchgauge.lovable.app";
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${origin}/billing`,
+      return_url: `${baseUrl}/billing`,
     });
 
     safeLog("CUSTOMER-PORTAL", "Portal session created");
