@@ -353,8 +353,11 @@ export default function Compare() {
     setPitches(currentPitches => currentPitches.map(p => p.id === id ? { ...p, loading: true } : p));
 
     try {
+      // Sanitize and limit text before sending
+      const sanitizedText = sanitizeText(pitch.text).slice(0, 10000);
+      
       const { data, error } = await supabase.functions.invoke("analyze-startup", {
-        body: { text: pitch.text },
+        body: { text: sanitizedText },
       });
 
       if (error) throw error;
