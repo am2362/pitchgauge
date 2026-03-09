@@ -9,7 +9,6 @@ import {
   BarChart3,
   GitCompare,
   Layers,
-  Shield,
   Users,
   Building2,
   Briefcase,
@@ -62,9 +61,6 @@ const Landing = () => {
         <div className="container max-w-6xl mx-auto px-4 pt-20 pb-16 md:pt-32 md:pb-24">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
-              <Badge variant="secondary" className="gap-1.5 px-3 py-1 text-xs font-medium">
-                <Shield className="h-3 w-3" /> Trusted by Investors
-              </Badge>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
                 Analyze, Compare & Bulk Screen Startup Pitches{" "}
                 <span className="text-primary">with AI</span>
