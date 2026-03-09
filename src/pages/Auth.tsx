@@ -119,7 +119,15 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30 flex items-center justify-center p-4 relative">
+      <Button
+        variant="ghost"
+        onClick={() => navigate("/")}
+        className="absolute top-4 left-4 text-muted-foreground hover:text-foreground gap-1.5"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to home
+      </Button>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-end justify-center gap-2 mb-4">
