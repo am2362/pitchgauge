@@ -44,17 +44,6 @@ export function UpgradePrompt({ requiredTier, currentTier, featureName, onUpgrad
             <Icon className="h-4 w-4" />
             Upgrade to {info.label} — {info.price}
           </Button>
-          {currentTier === "free" && requiredTier === "scale" && (
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => onUpgrade("pro")}
-              disabled={isLoading}
-            >
-              <Crown className="h-4 w-4" />
-              Or upgrade to Pro — $39/mo
-            </Button>
-          )}
         </CardContent>
       </Card>
     </div>
