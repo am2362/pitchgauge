@@ -266,7 +266,7 @@ Return ONLY valid JSON with this structure:
           parts: [{ text: prompt }]
         }],
         generationConfig: {
-          temperature: 0,
+          temperature: 0.1,
           topP: 1,
         }
       }),
