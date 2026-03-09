@@ -1,77 +1,42 @@
 
+# Add "Single Pitch Analysis" Button to Top Navigation
 
-## Auth Flow Overhaul: Email/Password + Magic Link with Verification
+## Problem
+The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
 
-### Overview
-Refactor the auth page to support email/password as the primary method with magic link as secondary. Enforce email verification for password signups, with a demo account bypass for `c74661985@gmail.com`.
+## Solution
+Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-### Demo Account
-- **Email**: `c74661985@gmail.com` — bypasses email verification, can log in with password directly.
+## Implementation Details
 
-### Files to Create/Modify
+### File: `src/pages/Index.tsx`
 
-#### 1. `src/lib/demo-accounts.ts` (new)
-- Export `DEMO_EMAILS` array containing `c74661985@gmail.com`
-- Export `isDemoAccount(email: string): boolean` helper
+**What to change:**
+1. Add a new import for `FileText` icon (already imported on line 8)
+2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
+3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
+4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
 
-#### 2. `src/pages/Auth.tsx` (rewrite)
-- **Default view**: Email/password form with toggle between "Sign Up" and "Sign In" modes
-- **Sign In**: `supabase.auth.signInWithPassword({ email, password })`
-- **Sign Up**: `supabase.auth.signUp({ email, password })`, then immediately call `supabase.auth.signInWithOtp({ email })` to send verification email, then navigate to `/verify-email`
-- **Demo account exception**: On sign-up for demo emails, skip OTP and navigate directly to dashboard
-- **Secondary option**: "Or send me a magic link" button below the form, which sends OTP as before
-- **Google sign-in**: Keep existing button at top
-- Password field with show/hide toggle
-- "Forgot password" link (calls `resetPasswordForEmail`)
+**Button placement:**
+- Insert as the **first button** in the top nav (line 530), before the Compare button
+- Use `FileText` icon (already imported)
+- Text: "Single Pitch Analysis"
+- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
 
-#### 3. `src/pages/VerifyEmail.tsx` (new)
-- "Check your email" confirmation page
-- Shows the email address used during signup
-- "Resend verification email" button
-- "Use a different email" button → navigates back to `/auth`
-- Accessible without authentication
-
-#### 4. `src/pages/ResetPassword.tsx` (new)
-- Form to set a new password after clicking reset link
-- Checks for `type=recovery` in URL hash
-- Calls `supabase.auth.updateUser({ password })`
-- Public route
-
-#### 5. `src/components/ProtectedRoute.tsx` (modify)
-- After confirming user is authenticated, check `user.email_confirmed_at`
-- If `email_confirmed_at` is null/undefined AND email is NOT in `DEMO_EMAILS`, redirect to `/verify-email`
-- Demo accounts bypass this check entirely
-
-#### 6. `src/App.tsx` (modify)
-- Add routes: `/verify-email` → `<VerifyEmail />`, `/reset-password` → `<ResetPassword />`
-- Both are public routes (not wrapped in `ProtectedRoute`)
-
-### Auth Flow Diagrams
-
+**Technical approach:**
 ```text
-PASSWORD SIGNUP:
-  Auth page → signUp() → signInWithOtp() → /verify-email
-  User clicks email link → email_confirmed_at set → /dashboard
-
-PASSWORD LOGIN:
-  Auth page → signInWithPassword() → ProtectedRoute checks email_confirmed_at
-  If confirmed → /dashboard
-  If not confirmed → /verify-email
-
-MAGIC LINK:
-  Auth page → signInWithOtp() → "Check email" UI
-  User clicks link → auto-verified → /dashboard
-
-DEMO ACCOUNT (c74661985@gmail.com):
-  Auth page → signInWithPassword() → skip verification → /dashboard
-
-GOOGLE:
-  Auth page → OAuth → auto-verified → /dashboard
+1. Add useRef hook to create a ref for the pitch input card
+2. In the button's onClick, check if user is on "/" page
+   - If on "/", scroll to the ref using scrollIntoView()
+   - If not on "/", navigate to "/"
+3. Attach the ref to the Card element containing "Input Pitch"
 ```
 
-### Technical Notes
-- `email_confirmed_at` is set automatically by Supabase when a user clicks a magic link or verifies email
-- The `signUp` call creates the user; the immediate `signInWithOtp` sends a clickable verification link
-- No database changes needed — `email_confirmed_at` is already on `auth.users`
-- Email auto-confirm must remain **disabled** (current default) for this flow to work
+## Files to Modify
+- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
+## Expected Result
+- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
+- Clicking it from any page navigates to "/"
+- Clicking it while already on "/" scrolls smoothly to the pitch input form
+- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout

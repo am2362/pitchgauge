@@ -16,6 +16,8 @@ import NotFound from "./pages/NotFound";
 import Demo from "./pages/Demo";
 import DemoCompare from "./pages/DemoCompare";
 import DemoBulk from "./pages/DemoBulk";
+import VerifyEmail from "./pages/VerifyEmail";
+import ResetPassword from "./pages/ResetPassword";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -29,6 +31,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           
           <Route path="/demo" element={<Demo />} />
           <Route path="/demo/compare" element={<DemoCompare />} />
