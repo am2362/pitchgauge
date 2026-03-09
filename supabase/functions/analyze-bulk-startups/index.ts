@@ -286,7 +286,7 @@ Return ONLY valid JSON with this structure:
           { role: 'user', content: `Startup Name: ${name}\n\nPitch:\n${pitch}` }
         ],
         max_tokens: 2000,
-        temperature: 0,
+        temperature: 0.1,
         top_p: 1
       }),
     });
