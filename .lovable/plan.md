@@ -1,33 +1,42 @@
 
+# Add "Single Pitch Analysis" Button to Top Navigation
 
-# Update Favicon with Transparent Background Logo
+## Problem
+The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
 
-## Current State
-- Logo at `src/assets/logo.png` has a white/light gray background
-- `index.html` has no favicon link tag (using default `public/favicon.ico`)
-- The uploaded gauge icon is currently used for in-app branding but not as favicon
+## Solution
+Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
 
-## Challenge
-The current logo has a white background. To create a favicon with transparent background, I need a version of the gauge icon with transparency.
+## Implementation Details
 
-## Two Options
+### File: `src/pages/Index.tsx`
 
-### Option 1: User provides transparent version (Recommended)
-If you have or can provide a PNG version of the gauge icon with transparent background:
-1. Upload the transparent version
-2. Copy to `public/favicon.png`
-3. Add favicon link to `index.html`:
-   ```html
-   <link rel="icon" href="/favicon.png" type="image/png">
-   ```
+**What to change:**
+1. Add a new import for `FileText` icon (already imported on line 8)
+2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
+3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
+4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
 
-### Option 2: Use current image as-is
-Use the existing logo (with white background) as favicon:
-1. Copy `src/assets/logo.png` to `public/favicon.png`
-2. Add favicon link to `index.html`
+**Button placement:**
+- Insert as the **first button** in the top nav (line 530), before the Compare button
+- Use `FileText` icon (already imported)
+- Text: "Single Pitch Analysis"
+- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
 
-**Note**: Browsers don't support CSS transparency for favicons, so the background will remain white unless you provide a transparent PNG.
+**Technical approach:**
+```text
+1. Add useRef hook to create a ref for the pitch input card
+2. In the button's onClick, check if user is on "/" page
+   - If on "/", scroll to the ref using scrollIntoView()
+   - If not on "/", navigate to "/"
+3. Attach the ref to the Card element containing "Input Pitch"
+```
 
-## Question
-Do you have a transparent background version of the gauge icon you can upload? Or would you like me to proceed with the current white-background version?
+## Files to Modify
+- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
 
+## Expected Result
+- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
+- Clicking it from any page navigates to "/"
+- Clicking it while already on "/" scrolls smoothly to the pitch input form
+- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
