@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateBulkComparisonInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, checkRateLimit, recordRateLimitEvent, safeLog, getUserTier } from '../_shared/security.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, safeLog, getUserTier } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -50,13 +50,7 @@ serve(async (req) => {
         return secureErrorResponse('This feature requires a Scale subscription.', 403);
       }
 
-      // Rate limiting
-      const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
-      if (!rateCheck.allowed) {
-        safeLog("BULK-COMPARISON", "Rate limit exceeded");
-        return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
-      }
-      await recordRateLimitEvent(userId, 'bulk_comparison', SUPABASE_URL!, SERVICE_ROLE_KEY);
+      // Skip per-request rate limiting for bulk comparison — Scale tier check is sufficient.
     }
 
     if (!LOVABLE_API_KEY) {

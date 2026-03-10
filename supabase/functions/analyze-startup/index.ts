@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validatePitchInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, checkRateLimit, recordRateLimitEvent, safeLog, getUserTier, getMonthlyUsageCount } from '../_shared/security.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, checkRateLimit, recordRateLimitEvent, safeLog, getUserTier, getMonthlyUsageCount } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,9 +11,10 @@ serve(async (req) => {
   try {
     safeLog("ANALYZE-STARTUP", "Function started");
 
-    // Check payload size
+    // Check payload size — use higher limit (500KB) for analysis payloads
+    const ANALYSIS_MAX_PAYLOAD = 500 * 1024;
     const contentLength = req.headers.get("content-length");
-    if (isPayloadTooLarge(contentLength)) {
+    if (contentLength && parseInt(contentLength, 10) > ANALYSIS_MAX_PAYLOAD) {
       return secureErrorResponse("Request payload too large", 413);
     }
 
@@ -83,7 +84,7 @@ serve(async (req) => {
     
     // Parse and validate input using schema validation
     const bodyText = await req.text();
-    if (isPayloadTooLarge(null, bodyText)) {
+    if (bodyText.length > ANALYSIS_MAX_PAYLOAD) {
       return secureErrorResponse("Request payload too large", 413);
     }
 
