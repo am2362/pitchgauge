@@ -49,8 +49,18 @@ export function useSubscription() {
       });
       
       if (adminData?.isAdmin) {
-        setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, subscriptionEnd: null });
+        setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, dailyDemoUsageCount: 0, subscriptionEnd: null, isDemoAccount: false });
         return;
+      }
+
+      const isDemo = isDemoAccount(session.user.email);
+      let dailyDemoUsageCount = 0;
+      if (isDemo) {
+        const dailyResult = await supabase.rpc("get_daily_usage_count", { p_action_type: "single_analysis" });
+        const dailySingle = (dailyResult.data as number) || 0;
+        const dailyCompare = ((await supabase.rpc("get_daily_usage_count", { p_action_type: "comparison_analysis" })).data as number) || 0;
+        const dailyBulk = ((await supabase.rpc("get_daily_usage_count", { p_action_type: "bulk_analysis" })).data as number) || 0;
+        dailyDemoUsageCount = dailySingle + dailyCompare + dailyBulk;
       }
 
       const { data, error } = await supabase.functions.invoke("check-subscription", {
