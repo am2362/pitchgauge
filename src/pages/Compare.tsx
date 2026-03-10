@@ -435,7 +435,23 @@ export default function Compare() {
 
       if (error) throw error;
 
-      setComparisonInsights(data);
+      // Recalculate rankings on frontend from actual scores for consistency
+      const scoreKeys: Array<keyof Scorecard> = ['team', 'marketSize', 'traction', 'productDifferentiation', 'businessModel', 'competitiveLandscape'];
+      const calculatedRankings = analyzed.map(p => {
+        const avg = scoreKeys.reduce((sum, k) => sum + p.analysis!.scorecard[k].score, 0) / scoreKeys.length;
+        return { startupName: p.name, overallScore: Math.round(avg * 10) / 10 };
+      });
+      calculatedRankings.sort((a, b) => b.overallScore - a.overallScore);
+      const rankedData = {
+        ...data,
+        rankings: calculatedRankings.map((r, idx) => ({
+          ...r,
+          rank: idx + 1,
+          reasoning: data.comparativeInsights?.strengths?.[r.startupName] || data.rankings?.find((dr: any) => dr.startupName === r.startupName)?.reasoning || '',
+        })),
+      };
+
+      setComparisonInsights(rankedData);
       setShowComparisonDialog(true);
       await recordUsage('comparison');
       toast({
@@ -698,22 +714,16 @@ export default function Compare() {
                   <Trophy className="h-5 w-5 text-primary" /> Investment Rankings
                 </h2>
                 <div className="space-y-3">
-                  {comparisonInsights.rankings.map((ranking: any) => {
-                    const pitch = pitches.find(p => p.name === ranking.startupName);
-                    const avg = pitch?.analysis ? getOverallScore(pitch.analysis) : null;
-                    return (
-                      <div key={ranking.startupName} className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30">
-                        <span className="text-2xl font-extrabold text-primary w-8">#{ranking.rank}</span>
-                        <div className="flex-1">
-                          <p className="font-semibold text-foreground">{ranking.startupName}</p>
-                          <p className="text-xs text-muted-foreground">{ranking.reasoning}</p>
-                        </div>
-                        {avg !== null && (
-                          <span className={`text-xl font-bold ${getScoreColor(Math.round(avg))}`}>{avg.toFixed(1)}/10</span>
-                        )}
+                  {comparisonInsights.rankings.map((ranking: any) => (
+                    <div key={ranking.startupName} className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30">
+                      <span className="text-2xl font-extrabold text-primary w-8">#{ranking.rank}</span>
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground">{ranking.startupName}</p>
+                        <p className="text-xs text-muted-foreground">{ranking.reasoning}</p>
                       </div>
-                    );
-                  })}
+                      <span className={`text-xl font-bold ${getScoreColor(Math.round(ranking.overallScore))}`}>{ranking.overallScore.toFixed(1)}/10</span>
+                    </div>
+                  ))}
                 </div>
               </Card>
             )}

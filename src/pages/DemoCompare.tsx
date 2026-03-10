@@ -107,22 +107,29 @@ const DemoCompare = () => {
               ))}
             </div>
 
-            {/* Rankings */}
+            {/* Rankings - calculated from scores */}
             <Card className="p-6">
               <h2 className="text-xl font-bold mb-4 text-foreground flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-primary" /> Investment Rankings
               </h2>
               <div className="space-y-3">
-                {DEMO_COMPARISON_INSIGHTS.rankings.map((r) => (
-                  <div key={r.rank} className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30">
-                    <span className="text-2xl font-extrabold text-primary w-8">#{r.rank}</span>
-                    <div className="flex-1">
-                      <p className="font-semibold text-foreground">{r.name}</p>
-                      <p className="text-xs text-muted-foreground">{r.topStrengths.join(" · ")}</p>
+                {(() => {
+                  // Calculate rankings mathematically from scorecard averages
+                  const calculated = DEMO_COMPARISON_RESULTS.map((r) => {
+                    const avg = scorecardKeys.reduce((sum, k) => sum + r.scorecard[k].score, 0) / scorecardKeys.length;
+                    return { name: r.startupName, overallScore: Math.round(avg * 10) / 10 };
+                  });
+                  calculated.sort((a, b) => b.overallScore - a.overallScore);
+                  return calculated.map((r, idx) => (
+                    <div key={r.name} className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30">
+                      <span className="text-2xl font-extrabold text-primary w-8">#{idx + 1}</span>
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground">{r.name}</p>
+                      </div>
+                      <span className={`text-xl font-bold ${getScoreColor(Math.round(r.overallScore))}`}>{r.overallScore.toFixed(1)}/10</span>
                     </div>
-                    <span className={`text-xl font-bold ${getScoreColor(r.overallScore)}`}>{r.overallScore}/10</span>
-                  </div>
-                ))}
+                  ));
+                })()}
               </div>
             </Card>
 
