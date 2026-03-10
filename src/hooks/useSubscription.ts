@@ -1,14 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase-external";
+import { isDemoAccount } from "@/lib/demo-accounts";
 
 export type SubscriptionTier = "free" | "pro" | "scale";
+
+const DEMO_DAILY_LIMIT = 10;
 
 interface SubscriptionState {
   tier: SubscriptionTier;
   status: string;
   isLoading: boolean;
   monthlyAnalysisCount: number;
+  dailyDemoUsageCount: number;
   subscriptionEnd: string | null;
+  isDemoAccount: boolean;
 }
 
 const TIER_LIMITS = {
@@ -24,7 +29,9 @@ export function useSubscription() {
     status: "active",
     isLoading: true,
     monthlyAnalysisCount: 0,
+    dailyDemoUsageCount: 0,
     subscriptionEnd: null,
+    isDemoAccount: false,
   });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -42,8 +49,18 @@ export function useSubscription() {
       });
       
       if (adminData?.isAdmin) {
-        setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, subscriptionEnd: null });
+        setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, dailyDemoUsageCount: 0, subscriptionEnd: null, isDemoAccount: false });
         return;
+      }
+
+      const isDemo = isDemoAccount(session.user.email);
+      let dailyDemoUsageCount = 0;
+      if (isDemo) {
+        const dailyResult = await supabase.rpc("get_daily_usage_count", { p_action_type: "single_analysis" });
+        const dailySingle = (dailyResult.data as number) || 0;
+        const dailyCompare = ((await supabase.rpc("get_daily_usage_count", { p_action_type: "comparison_analysis" })).data as number) || 0;
+        const dailyBulk = ((await supabase.rpc("get_daily_usage_count", { p_action_type: "bulk_analysis" })).data as number) || 0;
+        dailyDemoUsageCount = dailySingle + dailyCompare + dailyBulk;
       }
 
       const { data, error } = await supabase.functions.invoke("check-subscription", {
@@ -67,7 +84,9 @@ export function useSubscription() {
         status: "active",
         isLoading: false,
         monthlyAnalysisCount,
+        dailyDemoUsageCount,
         subscriptionEnd,
+        isDemoAccount: isDemo,
       });
     } catch (error) {
       console.error("Error syncing subscription:", error);
@@ -80,8 +99,8 @@ export function useSubscription() {
       // Check admin status first with service role check
       if (email) {
         const { data: adminData } = await supabase.functions.invoke("check-admin");
-        if (adminData?.isAdmin) {
-          setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, subscriptionEnd: null });
+      if (adminData?.isAdmin) {
+          setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, dailyDemoUsageCount: 0, subscriptionEnd: null, isDemoAccount: false });
           return;
         }
       }
@@ -99,7 +118,7 @@ export function useSubscription() {
       const monthlyAnalysisCount = (usageResult.data as number) || 0;
       const subscriptionEnd = subResult.data?.current_period_end || null;
 
-      setState({ tier, status, isLoading: false, monthlyAnalysisCount, subscriptionEnd });
+      setState({ tier, status, isLoading: false, monthlyAnalysisCount, dailyDemoUsageCount: 0, subscriptionEnd, isDemoAccount: isDemoAccount(email) });
     } catch (error) {
       console.error("Error loading subscription from DB:", error);
       setState(s => ({ ...s, isLoading: false }));
@@ -117,9 +136,12 @@ export function useSubscription() {
 
   const limits = TIER_LIMITS[state.tier];
 
-  const canAnalyze = state.tier !== "free" || state.monthlyAnalysisCount < limits.monthlyAnalyses;
-  const canCompare = limits.canCompare;
-  const canBulkAnalyze = limits.canBulkAnalyze;
+  const demoLimitReached = state.isDemoAccount && state.dailyDemoUsageCount >= DEMO_DAILY_LIMIT;
+  const demoLimitMessage = "Demo limit reached for today. Sign up for your own account to continue.";
+
+  const canAnalyze = !demoLimitReached && (state.tier !== "free" || state.monthlyAnalysisCount < limits.monthlyAnalyses);
+  const canCompare = !demoLimitReached && limits.canCompare;
+  const canBulkAnalyze = !demoLimitReached && limits.canBulkAnalyze;
   const remainingAnalyses = state.tier === "free"
     ? Math.max(0, limits.monthlyAnalyses - state.monthlyAnalysisCount)
     : Infinity;
@@ -187,7 +209,11 @@ export function useSubscription() {
     status: state.status,
     isLoading: state.isLoading,
     monthlyAnalysisCount: state.monthlyAnalysisCount,
+    dailyDemoUsageCount: state.dailyDemoUsageCount,
     subscriptionEnd: state.subscriptionEnd,
+    isDemoAccount: state.isDemoAccount,
+    demoLimitReached,
+    demoLimitMessage,
     canAnalyze,
     canCompare,
     canBulkAnalyze,
