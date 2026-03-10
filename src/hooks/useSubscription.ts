@@ -29,7 +29,9 @@ export function useSubscription() {
     status: "active",
     isLoading: true,
     monthlyAnalysisCount: 0,
+    dailyDemoUsageCount: 0,
     subscriptionEnd: null,
+    isDemoAccount: false,
   });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
