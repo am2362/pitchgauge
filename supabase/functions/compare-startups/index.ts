@@ -82,16 +82,16 @@ serve(async (req) => {
 
     safeLog("COMPARE-STARTUPS", "Comparing startups", { count: startupNames.length });
 
-    // Build comparison prompt
-    const comparisonPrompt = `You are a venture capital analyst. Compare the following startup analyses and provide insights.
+    // Calculate rankings mathematically from scores
+    const scoreKeys = ['team', 'marketSize', 'traction', 'productDifferentiation', 'businessModel', 'competitiveLandscape'];
+    const startupScores = analyses.map((analysis: any, idx: number) => {
+      const avg = scoreKeys.reduce((sum, key) => sum + (analysis.scorecard[key]?.score || 0), 0) / scoreKeys.length;
+      return { name: startupNames[idx], avg: Math.round(avg * 10) / 10 };
+    });
+    startupScores.sort((a: any, b: any) => b.avg - a.avg);
 
-SCORING CONTEXT (use this rubric when interpreting and comparing scores):
-- 1-3: Critical weakness / missing / fatal flaw (high risk of failure)
-- 4-6: Mediocre / average / partial (uncompelling; needs major fixes)
-- 7-8: Strong / good evidence (attractive, competitive)
-- 9-10: Outstanding / exceptional (top decile, clear advantage)
-
-MISSING DATA RULE: If a startup's pitch provided NO information about a category, its score should be 1. Do NOT infer or assume missing data. Only evaluate based on what is explicitly stated.
+    // Build comparison prompt - no ranking instructions for AI
+    const comparisonPrompt = `You are a venture capital analyst. Compare the following startup analyses and provide qualitative insights only. Do NOT determine rankings yourself. Do NOT include any ranking or rank field. Rankings will be calculated automatically from scores.
 
 Startups being compared: ${startupNames.join(', ')}
 
@@ -107,15 +107,8 @@ Competition: ${analysis.scorecard.competitiveLandscape.score}/10 - ${analysis.sc
 Red Flags: ${analysis.redFlags?.map((rf: any) => rf.flag).join('; ') || 'None'}
 `).join('\n')}
 
-Provide a comprehensive comparison in the following JSON structure:
+Provide qualitative comparison insights ONLY in the following JSON structure (no rankings):
 {
-  "rankings": [
-    {
-      "startupName": "Name",
-      "rank": 1,
-      "reasoning": "Why this startup ranks here (2-3 sentences)"
-    }
-  ],
   "comparativeInsights": {
     "strengths": {
       "StartupName": "Key strengths relative to others"
