@@ -11,9 +11,10 @@ serve(async (req) => {
   try {
     safeLog("ANALYZE-STARTUP", "Function started");
 
-    // Check payload size
+    // Check payload size — use higher limit (500KB) for analysis payloads
+    const ANALYSIS_MAX_PAYLOAD = 500 * 1024;
     const contentLength = req.headers.get("content-length");
-    if (isPayloadTooLarge(contentLength)) {
+    if (contentLength && parseInt(contentLength, 10) > ANALYSIS_MAX_PAYLOAD) {
       return secureErrorResponse("Request payload too large", 413);
     }
 
