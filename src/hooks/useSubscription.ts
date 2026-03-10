@@ -118,7 +118,7 @@ export function useSubscription() {
       const monthlyAnalysisCount = (usageResult.data as number) || 0;
       const subscriptionEnd = subResult.data?.current_period_end || null;
 
-      setState({ tier, status, isLoading: false, monthlyAnalysisCount, subscriptionEnd });
+      setState({ tier, status, isLoading: false, monthlyAnalysisCount, dailyDemoUsageCount: 0, subscriptionEnd, isDemoAccount: isDemoAccount(email) });
     } catch (error) {
       console.error("Error loading subscription from DB:", error);
       setState(s => ({ ...s, isLoading: false }));
