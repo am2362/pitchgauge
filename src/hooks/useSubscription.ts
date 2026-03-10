@@ -99,8 +99,8 @@ export function useSubscription() {
       // Check admin status first with service role check
       if (email) {
         const { data: adminData } = await supabase.functions.invoke("check-admin");
-        if (adminData?.isAdmin) {
-          setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, subscriptionEnd: null });
+      if (adminData?.isAdmin) {
+          setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, dailyDemoUsageCount: 0, subscriptionEnd: null, isDemoAccount: false });
           return;
         }
       }
