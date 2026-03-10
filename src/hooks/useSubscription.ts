@@ -84,7 +84,9 @@ export function useSubscription() {
         status: "active",
         isLoading: false,
         monthlyAnalysisCount,
+        dailyDemoUsageCount,
         subscriptionEnd,
+        isDemoAccount: isDemo,
       });
     } catch (error) {
       console.error("Error syncing subscription:", error);
