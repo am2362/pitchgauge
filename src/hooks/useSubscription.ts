@@ -1,14 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase-external";
+import { isDemoAccount } from "@/lib/demo-accounts";
 
 export type SubscriptionTier = "free" | "pro" | "scale";
+
+const DEMO_DAILY_LIMIT = 10;
 
 interface SubscriptionState {
   tier: SubscriptionTier;
   status: string;
   isLoading: boolean;
   monthlyAnalysisCount: number;
+  dailyDemoUsageCount: number;
   subscriptionEnd: string | null;
+  isDemoAccount: boolean;
 }
 
 const TIER_LIMITS = {
