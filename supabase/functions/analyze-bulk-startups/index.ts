@@ -46,13 +46,9 @@ serve(async (req) => {
         return secureErrorResponse('This feature requires a Scale subscription.', 403);
       }
 
-      // Rate limiting
-      const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
-      if (!rateCheck.allowed) {
-        safeLog("BULK-ANALYSIS", "Rate limit exceeded");
-        return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
-      }
-      await recordRateLimitEvent(userId, 'bulk_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
+      // Skip per-request rate limiting for bulk analysis — Scale tier check is sufficient.
+      // The frontend sends many small chunks (1 startup each) so the generic 60/hour
+      // limit would block legitimate bulk jobs well before completion.
     }
 
     // Prefer the Lovable AI gateway for stability
