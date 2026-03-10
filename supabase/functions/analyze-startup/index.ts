@@ -84,7 +84,7 @@ serve(async (req) => {
     
     // Parse and validate input using schema validation
     const bodyText = await req.text();
-    if (isPayloadTooLarge(null, bodyText)) {
+    if (bodyText.length > ANALYSIS_MAX_PAYLOAD) {
       return secureErrorResponse("Request payload too large", 413);
     }
 
