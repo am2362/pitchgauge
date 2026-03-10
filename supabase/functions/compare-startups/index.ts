@@ -185,9 +185,17 @@ SCORE ANCHORING CONTEXT (use when interpreting and comparing scores):
     }
 
     // Validate structure
-    if (!comparisonInsights.rankings || !comparisonInsights.comparativeInsights) {
+    if (!comparisonInsights.comparativeInsights) {
       throw new Error('Invalid response structure');
     }
+
+    // Inject mathematically calculated rankings
+    comparisonInsights.rankings = startupScores.map((s: any, idx: number) => ({
+      startupName: s.name,
+      rank: idx + 1,
+      overallScore: s.avg,
+      reasoning: comparisonInsights.comparativeInsights?.strengths?.[s.name] || '',
+    }));
 
     safeLog("COMPARE-STARTUPS", "Comparison complete");
     return secureJsonResponse(comparisonInsights);

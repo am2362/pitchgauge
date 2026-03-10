@@ -435,7 +435,23 @@ export default function Compare() {
 
       if (error) throw error;
 
-      setComparisonInsights(data);
+      // Recalculate rankings on frontend from actual scores for consistency
+      const scoreKeys: Array<keyof Scorecard> = ['team', 'marketSize', 'traction', 'productDifferentiation', 'businessModel', 'competitiveLandscape'];
+      const calculatedRankings = analyzed.map(p => {
+        const avg = scoreKeys.reduce((sum, k) => sum + p.analysis!.scorecard[k].score, 0) / scoreKeys.length;
+        return { startupName: p.name, overallScore: Math.round(avg * 10) / 10 };
+      });
+      calculatedRankings.sort((a, b) => b.overallScore - a.overallScore);
+      const rankedData = {
+        ...data,
+        rankings: calculatedRankings.map((r, idx) => ({
+          ...r,
+          rank: idx + 1,
+          reasoning: data.comparativeInsights?.strengths?.[r.startupName] || data.rankings?.find((dr: any) => dr.startupName === r.startupName)?.reasoning || '',
+        })),
+      };
+
+      setComparisonInsights(rankedData);
       setShowComparisonDialog(true);
       await recordUsage('comparison');
       toast({
