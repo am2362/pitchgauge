@@ -136,9 +136,12 @@ export function useSubscription() {
 
   const limits = TIER_LIMITS[state.tier];
 
-  const canAnalyze = state.tier !== "free" || state.monthlyAnalysisCount < limits.monthlyAnalyses;
-  const canCompare = limits.canCompare;
-  const canBulkAnalyze = limits.canBulkAnalyze;
+  const demoLimitReached = state.isDemoAccount && state.dailyDemoUsageCount >= DEMO_DAILY_LIMIT;
+  const demoLimitMessage = "Demo limit reached for today. Sign up for your own account to continue.";
+
+  const canAnalyze = !demoLimitReached && (state.tier !== "free" || state.monthlyAnalysisCount < limits.monthlyAnalyses);
+  const canCompare = !demoLimitReached && limits.canCompare;
+  const canBulkAnalyze = !demoLimitReached && limits.canBulkAnalyze;
   const remainingAnalyses = state.tier === "free"
     ? Math.max(0, limits.monthlyAnalyses - state.monthlyAnalysisCount)
     : Infinity;
