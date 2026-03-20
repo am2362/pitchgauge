@@ -1,42 +1,38 @@
 
-# Add "Single Pitch Analysis" Button to Top Navigation
 
-## Problem
-The main Single Pitch Analysis feature (the Index page) is not clearly accessible from the top navigation bar. Users can only enter the analysis feature by being on the homepage, but there's no button to navigate to it from other pages or to make it clear it's a primary feature.
+## Fix: `getClaims` Does Not Exist in Supabase JS Client
 
-## Solution
-Add a "Single Pitch Analysis" button to the top navigation bar in `src/pages/Index.tsx` alongside Bulk Analysis, Comparison, History, Scoring Rubric, and Settings. This button will scroll to the main pitch input form when clicked, or navigate to "/" if the user is on another page.
+### Root Cause
+During security hardening, the auth check in four edge functions was changed from `supabase.auth.getUser(token)` to `supabase.auth.getClaims(token)`. **The `getClaims` method does not exist** in the Supabase JS client library. Every call throws an error, which is caught as `claimsError`, causing all requests to return 401 Unauthorized.
 
-## Implementation Details
+This affects:
+- `analyze-startup` (single analysis broken)
+- `analyze-bulk-startups` (bulk analysis broken)  
+- `compare-startups` (comparison broken)
+- `generate-bulk-comparison` (bulk comparison report broken)
 
-### File: `src/pages/Index.tsx`
+The `check-subscription` function still works because it correctly uses `supabaseAdmin.auth.getUser(token)`.
 
-**What to change:**
-1. Add a new import for `FileText` icon (already imported on line 8)
-2. Create a ref for the main pitch input card (the "Input Pitch" section starting at line 563)
-3. Add a "Single Pitch Analysis" button to the top navigation bar (around line 530, before the Compare button)
-4. Add a scroll handler function that scrolls to the pitch input form when the button is clicked
+### Fix
+Replace `getClaims(token)` with `getUser(token)` in all four functions and extract `userId` from the correct response shape:
 
-**Button placement:**
-- Insert as the **first button** in the top nav (line 530), before the Compare button
-- Use `FileText` icon (already imported)
-- Text: "Single Pitch Analysis"
-- onClick handler: navigate to "/" if not already there, or scroll to the pitch input form if already on the page
+```typescript
+// BEFORE (broken):
+const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+const userId = claimsData?.claims?.sub;
+if (claimsError || !userId) { ... }
 
-**Technical approach:**
-```text
-1. Add useRef hook to create a ref for the pitch input card
-2. In the button's onClick, check if user is on "/" page
-   - If on "/", scroll to the ref using scrollIntoView()
-   - If not on "/", navigate to "/"
-3. Attach the ref to the Card element containing "Input Pitch"
+// AFTER (working):
+const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
+const userId = userData?.user?.id;
+if (userError || !userId) { ... }
 ```
 
-## Files to Modify
-- `src/pages/Index.tsx` -- add ref, add button to nav, add scroll handler
+### Files to Modify
+1. **`supabase/functions/analyze-bulk-startups/index.ts`** — lines 32-36
+2. **`supabase/functions/analyze-startup/index.ts`** — lines 40-44
+3. **`supabase/functions/compare-startups/index.ts`** — lines 38-42
+4. **`supabase/functions/generate-bulk-comparison/index.ts`** — lines 37-41
 
-## Expected Result
-- Top nav will have a "Single Pitch Analysis" button as the first/most prominent action button
-- Clicking it from any page navigates to "/"
-- Clicking it while already on "/" scrolls smoothly to the pitch input form
-- Navigation order: Single Pitch Analysis | Compare | History | Bulk Analysis | Scoring Rubric | Settings | Logout
+Each is the same 3-line fix: rename the destructured variables and change the property path for `userId`.
+
