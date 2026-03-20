@@ -6,6 +6,9 @@ import { corsHeaders, secureJsonResponse, secureErrorResponse, checkRateLimit, r
 
 type Tier = "free" | "pro" | "scale";
 
+const PRO_MONTHLY_FLOOR = 3900; // $39.00 in cents
+const SCALE_MONTHLY_FLOOR = 9900; // $99.00 in cents
+
 const toMonthlyAmount = (price: Stripe.Price | null | undefined): number | null => {
   if (!price?.unit_amount || !price.recurring?.interval) return null;
 
@@ -17,6 +20,43 @@ const toMonthlyAmount = (price: Stripe.Price | null | undefined): number | null 
   if (interval === "year") return amount / (12 * intervalCount);
   if (interval === "week") return amount * (52 / 12) / intervalCount;
   if (interval === "day") return amount * (365 / 12) / intervalCount;
+  return null;
+};
+
+const inferTierFromText = (value: string | null | undefined): Tier | null => {
+  if (!value) return null;
+  const normalized = value.toLowerCase();
+  if (normalized.includes("scale") || normalized.includes("enterprise")) return "scale";
+  if (normalized.includes("pro") || normalized.includes("premium")) return "pro";
+  return null;
+};
+
+const inferTierFromPriceMetadata = async (
+  stripe: Stripe,
+  currentPrice: Stripe.Price | undefined,
+): Promise<Tier | null> => {
+  if (!currentPrice?.id) return null;
+
+  try {
+    const hydrated = await stripe.prices.retrieve(currentPrice.id, { expand: ["product"] });
+    const product = typeof hydrated.product === "object" ? hydrated.product : null;
+
+    const candidates = [
+      hydrated.lookup_key,
+      hydrated.nickname,
+      hydrated.metadata?.tier,
+      product?.name,
+      product?.metadata?.tier,
+    ];
+
+    for (const candidate of candidates) {
+      const tier = inferTierFromText(candidate);
+      if (tier) return tier;
+    }
+  } catch {
+    safeLog("CHECK-SUBSCRIPTION", "Unable to infer tier from Stripe price metadata");
+  }
+
   return null;
 };
 
@@ -33,6 +73,10 @@ const resolveTier = async (
   // Direct ID match first
   if (scalePriceId && currentPrice.id === scalePriceId) return "scale";
   if (proPriceId && currentPrice.id === proPriceId) return "pro";
+
+  // Metadata/name lookup fallback to support legacy or renamed pricing setups
+  const inferredTier = await inferTierFromPriceMetadata(stripe, currentPrice);
+  if (inferredTier) return inferredTier;
 
   // Load configured canonical prices for robust matching (product + amount)
   let proPrice: Stripe.Price | null = null;
@@ -64,6 +108,11 @@ const resolveTier = async (
 
   if (currentMonthly !== null && scaleMonthly !== null && currentMonthly >= scaleMonthly) return "scale";
   if (currentMonthly !== null && proMonthly !== null && currentMonthly >= proMonthly) return "pro";
+
+  // Plan-floor fallback (independent from configured Stripe price IDs)
+  // Prevents misclassification when env price IDs are outdated or point to legacy prices.
+  if (currentMonthly !== null && currentMonthly >= SCALE_MONTHLY_FLOOR) return "scale";
+  if (currentMonthly !== null && currentMonthly >= PRO_MONTHLY_FLOOR) return "pro";
 
   // Final fallback: preserve stored tier if already elevated
   const { data: existingSub } = await supabaseAdmin
@@ -193,6 +242,16 @@ serve(async (req) => {
     const tier = best?.tier ?? "free";
     const selectedSubscription = best?.subscription ?? activeSubscriptions[0];
 
+    const { data: existingSubscription } = await supabaseAdmin
+      .from("subscriptions")
+      .select("tier")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const existingTier = (existingSubscription?.tier as Tier | undefined) ?? "free";
+    const persistedTier =
+      tierRank[existingTier] > tierRank[tier] ? existingTier : tier;
+
     // Safe date conversion: handle both unix timestamps and ISO strings
     const safeDateConvert = (val: unknown): string | null => {
       try {
@@ -206,10 +265,13 @@ serve(async (req) => {
     const subscriptionEnd = safeDateConvert(selectedSubscription.current_period_end);
     const subscriptionStart = safeDateConvert(selectedSubscription.current_period_start);
 
-    safeLog("CHECK-SUBSCRIPTION", "Active subscription found", { tier });
+    safeLog("CHECK-SUBSCRIPTION", "Active subscription found", {
+      resolvedTier: tier,
+      persistedTier,
+    });
 
     await supabaseAdmin.from("subscriptions").update({
-      tier,
+      tier: persistedTier,
       status: "active",
       current_period_start: subscriptionStart,
       current_period_end: subscriptionEnd,
@@ -217,7 +279,7 @@ serve(async (req) => {
 
     return secureJsonResponse({
       subscribed: true,
-      tier,
+      tier: persistedTier,
       subscription_end: subscriptionEnd,
     });
   } catch (error) {
