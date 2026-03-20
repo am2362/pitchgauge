@@ -4,6 +4,79 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { sanitizeErrorMessage } from '../_shared/validation.ts';
 import { corsHeaders, secureJsonResponse, secureErrorResponse, checkRateLimit, recordRateLimitEvent, safeLog } from '../_shared/security.ts';
 
+type Tier = "free" | "pro" | "scale";
+
+const toMonthlyAmount = (price: Stripe.Price | null | undefined): number | null => {
+  if (!price?.unit_amount || !price.recurring?.interval) return null;
+
+  const amount = price.unit_amount;
+  const interval = price.recurring.interval;
+  const intervalCount = price.recurring.interval_count || 1;
+
+  if (interval === "month") return amount / intervalCount;
+  if (interval === "year") return amount / (12 * intervalCount);
+  if (interval === "week") return amount * (52 / 12) / intervalCount;
+  if (interval === "day") return amount * (365 / 12) / intervalCount;
+  return null;
+};
+
+const resolveTier = async (
+  stripe: Stripe,
+  currentPrice: Stripe.Price | undefined,
+  proPriceId: string | undefined,
+  scalePriceId: string | undefined,
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<Tier> => {
+  if (!currentPrice?.id) return "free";
+
+  // Direct ID match first
+  if (scalePriceId && currentPrice.id === scalePriceId) return "scale";
+  if (proPriceId && currentPrice.id === proPriceId) return "pro";
+
+  // Load configured canonical prices for robust matching (product + amount)
+  let proPrice: Stripe.Price | null = null;
+  let scalePrice: Stripe.Price | null = null;
+
+  try {
+    const [proResult, scaleResult] = await Promise.all([
+      proPriceId ? stripe.prices.retrieve(proPriceId) : Promise.resolve(null),
+      scalePriceId ? stripe.prices.retrieve(scalePriceId) : Promise.resolve(null),
+    ]);
+    proPrice = proResult;
+    scalePrice = scaleResult;
+  } catch {
+    safeLog("CHECK-SUBSCRIPTION", "Failed to load canonical Stripe prices");
+  }
+
+  const currentProduct = typeof currentPrice.product === "string" ? currentPrice.product : null;
+  const proProduct = proPrice && typeof proPrice.product === "string" ? proPrice.product : null;
+  const scaleProduct = scalePrice && typeof scalePrice.product === "string" ? scalePrice.product : null;
+
+  // Product-level match handles multiple price IDs (monthly/annual/legacy) for same tier
+  if (scaleProduct && currentProduct && currentProduct === scaleProduct) return "scale";
+  if (proProduct && currentProduct && currentProduct === proProduct) return "pro";
+
+  // Amount fallback (normalized to monthly) for legacy or migrated products
+  const currentMonthly = toMonthlyAmount(currentPrice);
+  const scaleMonthly = toMonthlyAmount(scalePrice);
+  const proMonthly = toMonthlyAmount(proPrice);
+
+  if (currentMonthly !== null && scaleMonthly !== null && currentMonthly >= scaleMonthly) return "scale";
+  if (currentMonthly !== null && proMonthly !== null && currentMonthly >= proMonthly) return "pro";
+
+  // Final fallback: preserve stored tier if already elevated
+  const { data: existingSub } = await supabaseAdmin
+    .from("subscriptions")
+    .select("tier")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (existingSub?.tier === "scale") return "scale";
+  if (existingSub?.tier === "pro") return "pro";
+  return "pro";
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -48,7 +121,7 @@ serve(async (req) => {
     await recordRateLimitEvent(user.id, 'check_subscription', SUPABASE_URL, SERVICE_ROLE_KEY);
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    const customers = await stripe.customers.list({ email: user.email, limit: 100 });
 
     if (customers.data.length === 0) {
       safeLog("CHECK-SUBSCRIPTION", "No Stripe customer found, setting free tier");
@@ -62,16 +135,21 @@ serve(async (req) => {
       return secureJsonResponse({ subscribed: false, tier: "free" });
     }
 
-    const customerId = customers.data[0].id;
-    safeLog("CHECK-SUBSCRIPTION", "Found Stripe customer");
+    safeLog("CHECK-SUBSCRIPTION", "Found Stripe customers", { customerCount: customers.data.length });
 
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "active",
-      limit: 1,
-    });
+    const subscriptionLists = await Promise.all(
+      customers.data.map((customer) =>
+        stripe.subscriptions.list({
+          customer: customer.id,
+          status: "active",
+          limit: 10,
+        }),
+      ),
+    );
 
-    if (subscriptions.data.length === 0) {
+    const activeSubscriptions = subscriptionLists.flatMap((entry) => entry.data);
+
+    if (activeSubscriptions.length === 0) {
       safeLog("CHECK-SUBSCRIPTION", "No active subscription, setting free tier");
       await supabaseAdmin.from("subscriptions").update({
         tier: "free",
@@ -83,12 +161,37 @@ serve(async (req) => {
       return secureJsonResponse({ subscribed: false, tier: "free" });
     }
 
-    const subscription = subscriptions.data[0];
-    const currentPriceId = subscription.items.data[0]?.price?.id;
-    let tier = "free";
-    if (currentPriceId === proPriceId) tier = "pro";
-    else if (currentPriceId === scalePriceId) tier = "scale";
-    else tier = "pro"; // fallback for unknown price
+    const tierRank: Record<Tier, number> = { free: 0, pro: 1, scale: 2 };
+    let best: { tier: Tier; subscription: Stripe.Subscription } | null = null;
+
+    for (const subscription of activeSubscriptions) {
+      const currentPrice = subscription.items.data[0]?.price;
+      const resolvedTier = await resolveTier(
+        stripe,
+        currentPrice,
+        proPriceId ?? undefined,
+        scalePriceId ?? undefined,
+        supabaseAdmin,
+        user.id,
+      );
+
+      if (!best) {
+        best = { tier: resolvedTier, subscription };
+        continue;
+      }
+
+      const isHigherTier = tierRank[resolvedTier] > tierRank[best.tier];
+      const isSameTierWithLaterPeriod =
+        tierRank[resolvedTier] === tierRank[best.tier] &&
+        (subscription.current_period_end ?? 0) > (best.subscription.current_period_end ?? 0);
+
+      if (isHigherTier || isSameTierWithLaterPeriod) {
+        best = { tier: resolvedTier, subscription };
+      }
+    }
+
+    const tier = best?.tier ?? "free";
+    const selectedSubscription = best?.subscription ?? activeSubscriptions[0];
 
     // Safe date conversion: handle both unix timestamps and ISO strings
     const safeDateConvert = (val: unknown): string | null => {
@@ -100,8 +203,8 @@ serve(async (req) => {
       } catch { return null; }
     };
 
-    const subscriptionEnd = safeDateConvert(subscription.current_period_end);
-    const subscriptionStart = safeDateConvert(subscription.current_period_start);
+    const subscriptionEnd = safeDateConvert(selectedSubscription.current_period_end);
+    const subscriptionStart = safeDateConvert(selectedSubscription.current_period_start);
 
     safeLog("CHECK-SUBSCRIPTION", "Active subscription found", { tier });
 
