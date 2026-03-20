@@ -35,10 +35,10 @@ serve(async (req) => {
     });
 
     const token = authHeader.replace('Bearer ', '').trim();
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-    const userId = claimsData?.claims?.sub;
+    const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
+    const userId = userData?.user?.id;
 
-    if (claimsError || !userId) {
+    if (userError || !userId) {
       return secureErrorResponse('Unauthorized', 401);
     }
 
