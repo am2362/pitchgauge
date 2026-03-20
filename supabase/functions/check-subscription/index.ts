@@ -4,6 +4,79 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { sanitizeErrorMessage } from '../_shared/validation.ts';
 import { corsHeaders, secureJsonResponse, secureErrorResponse, checkRateLimit, recordRateLimitEvent, safeLog } from '../_shared/security.ts';
 
+type Tier = "free" | "pro" | "scale";
+
+const toMonthlyAmount = (price: Stripe.Price | null | undefined): number | null => {
+  if (!price?.unit_amount || !price.recurring?.interval) return null;
+
+  const amount = price.unit_amount;
+  const interval = price.recurring.interval;
+  const intervalCount = price.recurring.interval_count || 1;
+
+  if (interval === "month") return amount / intervalCount;
+  if (interval === "year") return amount / (12 * intervalCount);
+  if (interval === "week") return amount * (52 / 12) / intervalCount;
+  if (interval === "day") return amount * (365 / 12) / intervalCount;
+  return null;
+};
+
+const resolveTier = async (
+  stripe: Stripe,
+  currentPrice: Stripe.Price | undefined,
+  proPriceId: string | undefined,
+  scalePriceId: string | undefined,
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<Tier> => {
+  if (!currentPrice?.id) return "free";
+
+  // Direct ID match first
+  if (scalePriceId && currentPrice.id === scalePriceId) return "scale";
+  if (proPriceId && currentPrice.id === proPriceId) return "pro";
+
+  // Load configured canonical prices for robust matching (product + amount)
+  let proPrice: Stripe.Price | null = null;
+  let scalePrice: Stripe.Price | null = null;
+
+  try {
+    const [proResult, scaleResult] = await Promise.all([
+      proPriceId ? stripe.prices.retrieve(proPriceId) : Promise.resolve(null),
+      scalePriceId ? stripe.prices.retrieve(scalePriceId) : Promise.resolve(null),
+    ]);
+    proPrice = proResult;
+    scalePrice = scaleResult;
+  } catch {
+    safeLog("CHECK-SUBSCRIPTION", "Failed to load canonical Stripe prices");
+  }
+
+  const currentProduct = typeof currentPrice.product === "string" ? currentPrice.product : null;
+  const proProduct = proPrice && typeof proPrice.product === "string" ? proPrice.product : null;
+  const scaleProduct = scalePrice && typeof scalePrice.product === "string" ? scalePrice.product : null;
+
+  // Product-level match handles multiple price IDs (monthly/annual/legacy) for same tier
+  if (scaleProduct && currentProduct && currentProduct === scaleProduct) return "scale";
+  if (proProduct && currentProduct && currentProduct === proProduct) return "pro";
+
+  // Amount fallback (normalized to monthly) for legacy or migrated products
+  const currentMonthly = toMonthlyAmount(currentPrice);
+  const scaleMonthly = toMonthlyAmount(scalePrice);
+  const proMonthly = toMonthlyAmount(proPrice);
+
+  if (currentMonthly !== null && scaleMonthly !== null && currentMonthly >= scaleMonthly) return "scale";
+  if (currentMonthly !== null && proMonthly !== null && currentMonthly >= proMonthly) return "pro";
+
+  // Final fallback: preserve stored tier if already elevated
+  const { data: existingSub } = await supabaseAdmin
+    .from("subscriptions")
+    .select("tier")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (existingSub?.tier === "scale") return "scale";
+  if (existingSub?.tier === "pro") return "pro";
+  return "pro";
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -84,11 +157,15 @@ serve(async (req) => {
     }
 
     const subscription = subscriptions.data[0];
-    const currentPriceId = subscription.items.data[0]?.price?.id;
-    let tier = "free";
-    if (currentPriceId === proPriceId) tier = "pro";
-    else if (currentPriceId === scalePriceId) tier = "scale";
-    else tier = "pro"; // fallback for unknown price
+    const currentPrice = subscription.items.data[0]?.price;
+    const tier = await resolveTier(
+      stripe,
+      currentPrice,
+      proPriceId ?? undefined,
+      scalePriceId ?? undefined,
+      supabaseAdmin,
+      user.id,
+    );
 
     // Safe date conversion: handle both unix timestamps and ISO strings
     const safeDateConvert = (val: unknown): string | null => {
