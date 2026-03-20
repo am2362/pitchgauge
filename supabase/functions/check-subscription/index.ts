@@ -6,6 +6,9 @@ import { corsHeaders, secureJsonResponse, secureErrorResponse, checkRateLimit, r
 
 type Tier = "free" | "pro" | "scale";
 
+const PRO_MONTHLY_FLOOR = 3900; // $39.00 in cents
+const SCALE_MONTHLY_FLOOR = 9900; // $99.00 in cents
+
 const toMonthlyAmount = (price: Stripe.Price | null | undefined): number | null => {
   if (!price?.unit_amount || !price.recurring?.interval) return null;
 
@@ -64,6 +67,11 @@ const resolveTier = async (
 
   if (currentMonthly !== null && scaleMonthly !== null && currentMonthly >= scaleMonthly) return "scale";
   if (currentMonthly !== null && proMonthly !== null && currentMonthly >= proMonthly) return "pro";
+
+  // Plan-floor fallback (independent from configured Stripe price IDs)
+  // Prevents misclassification when env price IDs are outdated or point to legacy prices.
+  if (currentMonthly !== null && currentMonthly >= SCALE_MONTHLY_FLOOR) return "scale";
+  if (currentMonthly !== null && currentMonthly >= PRO_MONTHLY_FLOOR) return "pro";
 
   // Final fallback: preserve stored tier if already elevated
   const { data: existingSub } = await supabaseAdmin
