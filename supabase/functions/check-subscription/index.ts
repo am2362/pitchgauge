@@ -242,6 +242,16 @@ serve(async (req) => {
     const tier = best?.tier ?? "free";
     const selectedSubscription = best?.subscription ?? activeSubscriptions[0];
 
+    const { data: existingSubscription } = await supabaseAdmin
+      .from("subscriptions")
+      .select("tier")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const existingTier = (existingSubscription?.tier as Tier | undefined) ?? "free";
+    const persistedTier =
+      tierRank[existingTier] > tierRank[tier] ? existingTier : tier;
+
     // Safe date conversion: handle both unix timestamps and ISO strings
     const safeDateConvert = (val: unknown): string | null => {
       try {
@@ -255,10 +265,13 @@ serve(async (req) => {
     const subscriptionEnd = safeDateConvert(selectedSubscription.current_period_end);
     const subscriptionStart = safeDateConvert(selectedSubscription.current_period_start);
 
-    safeLog("CHECK-SUBSCRIPTION", "Active subscription found", { tier });
+    safeLog("CHECK-SUBSCRIPTION", "Active subscription found", {
+      resolvedTier: tier,
+      persistedTier,
+    });
 
     await supabaseAdmin.from("subscriptions").update({
-      tier,
+      tier: persistedTier,
       status: "active",
       current_period_start: subscriptionStart,
       current_period_end: subscriptionEnd,
@@ -266,7 +279,7 @@ serve(async (req) => {
 
     return secureJsonResponse({
       subscribed: true,
-      tier,
+      tier: persistedTier,
       subscription_end: subscriptionEnd,
     });
   } catch (error) {
