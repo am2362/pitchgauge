@@ -23,6 +23,43 @@ const toMonthlyAmount = (price: Stripe.Price | null | undefined): number | null 
   return null;
 };
 
+const inferTierFromText = (value: string | null | undefined): Tier | null => {
+  if (!value) return null;
+  const normalized = value.toLowerCase();
+  if (normalized.includes("scale") || normalized.includes("enterprise")) return "scale";
+  if (normalized.includes("pro") || normalized.includes("premium")) return "pro";
+  return null;
+};
+
+const inferTierFromPriceMetadata = async (
+  stripe: Stripe,
+  currentPrice: Stripe.Price | undefined,
+): Promise<Tier | null> => {
+  if (!currentPrice?.id) return null;
+
+  try {
+    const hydrated = await stripe.prices.retrieve(currentPrice.id, { expand: ["product"] });
+    const product = typeof hydrated.product === "object" ? hydrated.product : null;
+
+    const candidates = [
+      hydrated.lookup_key,
+      hydrated.nickname,
+      hydrated.metadata?.tier,
+      product?.name,
+      product?.metadata?.tier,
+    ];
+
+    for (const candidate of candidates) {
+      const tier = inferTierFromText(candidate);
+      if (tier) return tier;
+    }
+  } catch {
+    safeLog("CHECK-SUBSCRIPTION", "Unable to infer tier from Stripe price metadata");
+  }
+
+  return null;
+};
+
 const resolveTier = async (
   stripe: Stripe,
   currentPrice: Stripe.Price | undefined,
@@ -36,6 +73,10 @@ const resolveTier = async (
   // Direct ID match first
   if (scalePriceId && currentPrice.id === scalePriceId) return "scale";
   if (proPriceId && currentPrice.id === proPriceId) return "pro";
+
+  // Metadata/name lookup fallback to support legacy or renamed pricing setups
+  const inferredTier = await inferTierFromPriceMetadata(stripe, currentPrice);
+  if (inferredTier) return inferredTier;
 
   // Load configured canonical prices for robust matching (product + amount)
   let proPrice: Stripe.Price | null = null;
