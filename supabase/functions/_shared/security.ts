@@ -192,13 +192,24 @@ export async function getUserTier(
 
     const { data, error } = await supabaseAdmin
       .from('subscriptions')
-      .select('tier')
+      .select('tier,status,updated_at')
       .eq('user_id', userId)
-      .eq('status', 'active')
-      .single();
+      .order('updated_at', { ascending: false })
+      .limit(10);
 
-    if (error || !data) return 'free';
-    return data.tier || 'free';
+    if (error || !data || data.length === 0) return 'free';
+
+    const normalizeTier = (value: unknown): 'free' | 'pro' | 'scale' => {
+      if (typeof value !== 'string') return 'free';
+      const normalized = value.trim().toLowerCase();
+      if (normalized === 'scale' || normalized === 'pro' || normalized === 'free') {
+        return normalized;
+      }
+      return 'free';
+    };
+
+    const active = data.find((row) => row.status === 'active');
+    return normalizeTier((active ?? data[0])?.tier);
   } catch {
     return 'free';
   }
