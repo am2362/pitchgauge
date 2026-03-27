@@ -23,8 +23,8 @@ import { usePageMeta } from '@/hooks/usePageMeta';
 // We intentionally run *very* small chunks to avoid per-request timeouts.
 // Longer cooldowns happen *between* requests (frontend), not inside a single backend invocation.
 const CHUNK_SIZE = 1;
-const INITIAL_COOLDOWN_MS = 8000;
-const MIN_COOLDOWN_MS = 6000;
+const INITIAL_COOLDOWN_MS = 10000;
+const MIN_COOLDOWN_MS = 8000;
 const MAX_COOLDOWN_MS = 60000;
 
 function isSuccessfulBulkResult(r: any): boolean {
