@@ -177,9 +177,9 @@ serve(async (req) => {
         }
       }
 
-      // Add a small delay between batches
+      // Add delay between batches to reduce rate-limit pressure
       if (i + batchSize < startups.length) {
-        await new Promise(resolve => setTimeout(resolve, useGeminiDirect ? 200 : 250));
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
 
@@ -197,15 +197,44 @@ serve(async (req) => {
   }
 });
 
-class RateLimitError extends Error {
-  kind = 'rate_limited' as const;
-  status = 429;
-  constructor(message = 'Rate limited') {
-    super(message);
+const MAX_RETRIES = 5;
+const RETRY_BACKOFF_MS = [3000, 6000, 12000, 24000, 48000];
+
+async function analyzeStartup(name: string, pitch: string, apiKey: string, useGeminiDirect = false): Promise<any> {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await attemptAnalysis(name, pitch, apiKey, useGeminiDirect);
+      return result;
+    } catch (error) {
+      const status = (error as any)?.status;
+      const isRetryable = [429, 500, 502, 503].includes(status) ||
+        (error as Error)?.message?.includes('No content') ||
+        (error as Error)?.message?.includes('No valid JSON') ||
+        (error as Error)?.message?.includes('JSON');
+      
+      if (attempt < MAX_RETRIES && isRetryable) {
+        const delay = RETRY_BACKOFF_MS[attempt] || 48000;
+        safeLog("BULK-ANALYSIS", "Retrying", { startup: name, attempt: attempt + 1, delay });
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      // On non-retryable errors or exhausted retries, try Lovable gateway fallback
+      if (useGeminiDirect) {
+        const fallbackKey = Deno.env.get('LOVABLE_API_KEY');
+        if (fallbackKey) {
+          safeLog("BULK-ANALYSIS", "Falling back to Lovable AI gateway");
+          return analyzeStartup(name, pitch, fallbackKey, false);
+        }
+      }
+      
+      throw error;
+    }
   }
+  throw new Error('Max retries exhausted');
 }
 
-async function analyzeStartup(name: string, pitch: string, apiKey: string, useGeminiDirect = false, retryCount = 0): Promise<any> {
+async function attemptAnalysis(name: string, pitch: string, apiKey: string, useGeminiDirect = false): Promise<any> {
   const systemPrompt = `You are a consistent startup evaluation AI. Always apply the same scoring criteria strictly. Do not vary scores based on writing style or tone — evaluate only on substance. A pitch with identical facts must always receive identical scores.
 
 You are analyzing a startup pitch. Extract structured information and be objective, concise, and deterministic.
