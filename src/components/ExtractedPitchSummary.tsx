@@ -28,7 +28,9 @@ const ExtractedPitchSummary = ({ pitchSummary, slides, startupName }: ExtractedP
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', fileName);
+    document.body.appendChild(linkElement);
     linkElement.click();
+    document.body.removeChild(linkElement);
   };
 
   const handleExportPDF = () => {
