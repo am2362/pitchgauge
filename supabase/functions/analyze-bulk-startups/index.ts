@@ -348,28 +348,9 @@ Return ONLY valid JSON with this structure:
   if (!response.ok) {
     const errorStatus = response.status;
     safeLog("BULK-ANALYSIS", "AI API error", { status: errorStatus });
-
-    // Retry with exponential backoff on 429 (rate limit)
-    if (errorStatus === 429) {
-      const retryAttempt = (retryCount ?? 0);
-      if (retryAttempt < 3) {
-        const backoffMs = Math.pow(2, retryAttempt + 1) * 1000;
-        safeLog("BULK-ANALYSIS", "Rate limited, retrying", { attempt: retryAttempt + 1 });
-        await new Promise(resolve => setTimeout(resolve, backoffMs));
-        return analyzeStartup(name, pitch, apiKey, useGeminiDirect, retryAttempt + 1);
-      }
-      throw new RateLimitError('Rate limited after 3 retries');
-    }
-
-    if (useGeminiDirect && (errorStatus === 400 || errorStatus === 401 || errorStatus === 403)) {
-      const fallbackKey = Deno.env.get('LOVABLE_API_KEY');
-      if (fallbackKey) {
-        safeLog("BULK-ANALYSIS", "Falling back to Lovable AI gateway");
-        return analyzeStartup(name, pitch, fallbackKey, false);
-      }
-    }
-    
-    throw new Error('AI service error');
+    const err = new Error(`AI service error: ${errorStatus}`);
+    (err as any).status = errorStatus;
+    throw err;
   }
 
   const data = await response.json();
