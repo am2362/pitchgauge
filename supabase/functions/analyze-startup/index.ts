@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validatePitchInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-import { corsHeaders, secureJsonResponse, secureErrorResponse, checkRateLimit, recordRateLimitEvent, safeLog, getUserTier, getMonthlyUsageCount } from '../_shared/security.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, checkRateLimit, recordRateLimitEvent, safeLog, getUserTier, checkDailyLimit } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -46,17 +46,14 @@ serve(async (req) => {
 
     safeLog("ANALYZE-STARTUP", "User authenticated");
 
-    // Subscription tier enforcement
+    // Subscription tier enforcement + daily limits
     if (SERVICE_ROLE_KEY) {
       const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
-      const FREE_MONTHLY_LIMIT = 3;
-      
-      if (tier === 'free') {
-        const monthlyCount = await getMonthlyUsageCount(userId, 'rate_limit_analyze_startup', SUPABASE_URL!, SERVICE_ROLE_KEY);
-        if (monthlyCount >= FREE_MONTHLY_LIMIT) {
-          safeLog("ANALYZE-STARTUP", "Free tier limit reached");
-          return secureErrorResponse('Monthly analysis limit reached. Please upgrade your plan.', 403);
-        }
+
+      const dailyCheck = await checkDailyLimit(userId, tier, 'single_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!dailyCheck.allowed) {
+        safeLog("ANALYZE-STARTUP", "Daily limit reached", { tier, current: dailyCheck.current, limit: dailyCheck.limit });
+        return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
       }
 
       // Rate limiting

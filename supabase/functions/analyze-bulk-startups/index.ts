@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateBulkAnalysisInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-import { corsHeaders, secureJsonResponse, secureErrorResponse, safeLog, getUserTier } from '../_shared/security.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, safeLog, getUserTier, checkDailyLimit } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -67,9 +67,12 @@ serve(async (req) => {
         return secureErrorResponse('This feature requires a Scale subscription.', 403);
       }
 
-      // Skip per-request rate limiting for bulk analysis — Scale tier check is sufficient.
-      // The frontend sends many small chunks (1 startup each) so the generic 60/hour
-      // limit would block legitimate bulk jobs well before completion.
+      // Check daily bulk analysis limit (3 per day for Scale)
+      const dailyCheck = await checkDailyLimit(userId, tier, 'bulk_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!dailyCheck.allowed) {
+        safeLog("BULK-ANALYSIS", "Daily limit reached", { current: dailyCheck.current, limit: dailyCheck.limit });
+        return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
+      }
     }
 
     // Prefer the Lovable AI gateway for stability

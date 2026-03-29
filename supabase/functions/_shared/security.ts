@@ -246,3 +246,66 @@ export async function getMonthlyUsageCount(
     return 0;
   }
 }
+
+/**
+ * Get daily usage count for a user and action type (server-side).
+ * Counts from midnight UTC of the current day.
+ */
+export async function getDailyUsageCount(
+  userId: string,
+  actionType: string,
+  supabaseUrl: string,
+  serviceRoleKey: string
+): Promise<number> {
+  try {
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+    });
+
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+
+    const { count, error } = await supabaseAdmin
+      .from('usage_tracking')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('action_type', actionType)
+      .gte('created_at', todayStart.toISOString());
+
+    if (error) return 0;
+    return count || 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Daily usage limits per tier per feature.
+ */
+export const DAILY_LIMITS: Record<string, Record<string, number>> = {
+  free:  { single_analysis: 3,   comparison_analysis: 0,  bulk_analysis: 0 },
+  pro:   { single_analysis: 50,  comparison_analysis: 10, bulk_analysis: 0 },
+  scale: { single_analysis: 100, comparison_analysis: 20, bulk_analysis: 3 },
+};
+
+/**
+ * Check if a user has exceeded their daily limit for a given action type.
+ * Returns { allowed, current, limit }.
+ */
+export async function checkDailyLimit(
+  userId: string,
+  tier: string,
+  actionType: string,
+  supabaseUrl: string,
+  serviceRoleKey: string
+): Promise<{ allowed: boolean; current: number; limit: number }> {
+  const tierLimits = DAILY_LIMITS[tier] || DAILY_LIMITS['free'];
+  const limit = tierLimits[actionType] ?? 0;
+
+  if (limit === 0) {
+    return { allowed: false, current: 0, limit: 0 };
+  }
+
+  const current = await getDailyUsageCount(userId, actionType, supabaseUrl, serviceRoleKey);
+  return { allowed: current < limit, current, limit };
+}
