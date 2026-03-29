@@ -162,7 +162,7 @@ const Index = () => {
   const [extractedSlides, setExtractedSlides] = useState<SlideContent[] | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { tier, canAnalyze, remainingAnalyses, recordUsage, isLoading: isSubLoading } = useSubscription();
+  const { tier, canAnalyze, remainingAnalyses, dailyAnalysisLimitReached, dailyUsage, dailyLimits, recordUsage, isLoading: isSubLoading } = useSubscription();
 
 
   // Extract startup name from pitch text (first line if it looks like a name)
@@ -574,11 +574,11 @@ const Index = () => {
           <p className="text-muted-foreground">
             AI-Powered Comprehensive Startup Pitch Analysis
           </p>
-          {tier === "free" && (
-            <p className="text-sm text-muted-foreground">
-              {remainingAnalyses} analyses left this month
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            {dailyAnalysisLimitReached
+              ? "Daily limit reached. Resets at midnight UTC."
+              : `${remainingAnalyses} of ${dailyLimits.single_analysis} analyses remaining today`}
+          </p>
         </header>
 
         <div className="grid lg:grid-cols-2 gap-8">
