@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Crown, Zap, CreditCard, Loader2, CheckCircle } from "lucide-react";
 import AppNavbar from "@/components/AppNavbar";
 import { supabase } from "@/lib/supabase-external";
-import { useSubscription } from "@/hooks/useSubscription";
+import { useSubscription, DAILY_LIMITS } from "@/hooks/useSubscription";
 import { useToast } from "@/hooks/use-toast";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
@@ -18,6 +18,7 @@ const Billing = () => {
   const {
     tier, isLoading, monthlyAnalysisCount, remainingAnalyses,
     canCompare, canBulkAnalyze, subscriptionEnd,
+    dailyUsage, dailyLimits,
     startCheckout, openCustomerPortal, refresh,
   } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
@@ -89,21 +90,39 @@ const Billing = () => {
                     </div>
                   )}
 
-                  {tier === "free" && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Monthly Analyses Used</span>
-                        <span className="font-medium">{monthlyAnalysisCount} / 3</span>
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Daily Usage</h4>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Single Analyses</span>
+                          <span className="font-medium">{dailyUsage.single_analysis} / {dailyLimits.single_analysis}</span>
+                        </div>
+                        <Progress value={(dailyUsage.single_analysis / dailyLimits.single_analysis) * 100} className="h-2" />
                       </div>
-                      <Progress value={(monthlyAnalysisCount / 3) * 100} className="h-2" />
+                      {dailyLimits.comparison_analysis > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Comparisons</span>
+                            <span className="font-medium">{dailyUsage.comparison_analysis} / {dailyLimits.comparison_analysis}</span>
+                          </div>
+                          <Progress value={(dailyUsage.comparison_analysis / dailyLimits.comparison_analysis) * 100} className="h-2" />
+                        </div>
+                      )}
+                      {dailyLimits.bulk_analysis > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Bulk Jobs</span>
+                            <span className="font-medium">{dailyUsage.bulk_analysis} / {dailyLimits.bulk_analysis}</span>
+                          </div>
+                          <Progress value={(dailyUsage.bulk_analysis / dailyLimits.bulk_analysis) * 100} className="h-2" />
+                        </div>
+                      )}
                     </div>
-                  )}
+                    <p className="text-xs text-muted-foreground mt-1">Resets daily at midnight UTC</p>
+                  </div>
 
                   <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Single Analyses</span>
-                      <span>{tier === "free" ? `${remainingAnalyses} remaining this month` : "Unlimited"}</span>
-                    </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Comparison Mode</span>
                       <span className="flex items-center gap-1">
