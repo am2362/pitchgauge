@@ -56,6 +56,15 @@ serve(async (req) => {
         return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
       }
 
+      // Record single_analysis usage for daily limit tracking
+      const supabaseAdmin = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY, {
+        auth: { persistSession: false },
+      });
+      await supabaseAdmin.from('usage_tracking').insert({
+        user_id: userId,
+        action_type: 'single_analysis',
+      });
+
       // Rate limiting
       const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
       if (!rateCheck.allowed) {
