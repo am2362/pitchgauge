@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateBulkComparisonInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, safeLog, getUserTier } from '../_shared/security.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, safeLog, getUserTier } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,10 +11,15 @@ serve(async (req) => {
   try {
     safeLog("BULK-COMPARISON", "Function started");
 
-    // Check payload size
+    // Bulk comparison payloads can be large (100 results with full metrics).
+    // Use a generous 2MB limit instead of the default 50KB.
+    const MAX_COMPARISON_PAYLOAD = 2 * 1024 * 1024;
     const contentLength = req.headers.get("content-length");
-    if (isPayloadTooLarge(contentLength)) {
-      return secureErrorResponse("Request payload too large", 413);
+    if (contentLength) {
+      const size = parseInt(contentLength, 10);
+      if (!isNaN(size) && size > MAX_COMPARISON_PAYLOAD) {
+        return secureErrorResponse("Request payload too large", 413);
+      }
     }
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -59,7 +64,7 @@ serve(async (req) => {
 
     // Parse and validate input using schema validation
     const bodyText = await req.text();
-    if (isPayloadTooLarge(null, bodyText)) {
+    if (bodyText.length > MAX_COMPARISON_PAYLOAD) {
       return secureErrorResponse("Request payload too large", 413);
     }
 
