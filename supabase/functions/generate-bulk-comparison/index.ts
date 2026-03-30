@@ -11,10 +11,15 @@ serve(async (req) => {
   try {
     safeLog("BULK-COMPARISON", "Function started");
 
-    // Check payload size
+    // Bulk comparison payloads can be large (100 results with full metrics).
+    // Use a generous 2MB limit instead of the default 50KB.
+    const MAX_COMPARISON_PAYLOAD = 2 * 1024 * 1024;
     const contentLength = req.headers.get("content-length");
-    if (isPayloadTooLarge(contentLength)) {
-      return secureErrorResponse("Request payload too large", 413);
+    if (contentLength) {
+      const size = parseInt(contentLength, 10);
+      if (!isNaN(size) && size > MAX_COMPARISON_PAYLOAD) {
+        return secureErrorResponse("Request payload too large", 413);
+      }
     }
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
