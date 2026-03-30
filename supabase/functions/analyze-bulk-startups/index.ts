@@ -67,12 +67,9 @@ serve(async (req) => {
         return secureErrorResponse('This feature requires a Scale subscription.', 403);
       }
 
-      // Check daily bulk analysis limit (3 per day for Scale)
-      const dailyCheck = await checkDailyLimit(userId, tier, 'bulk_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
-      if (!dailyCheck.allowed) {
-        safeLog("BULK-ANALYSIS", "Daily limit reached", { current: dailyCheck.current, limit: dailyCheck.limit });
-        return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
-      }
+      // Parse body early to determine if this is a new batch or a continuation chunk.
+      // We peek at appendResults — daily limit only applies to NEW batch starts (first chunk).
+      // This prevents the limit from triggering 50+ times within a single batch run.
     }
 
     // Prefer the Lovable AI gateway for stability
@@ -91,6 +88,26 @@ serve(async (req) => {
     }
 
     const { batchId, startups, batchSize = useGeminiDirect ? 3 : 1, appendResults = false } = validation.data!;
+
+    // Daily limit check: only for the FIRST chunk of a new batch (appendResults=false).
+    // Continuation chunks (appendResults=true) are part of an already-counted job.
+    if (!appendResults && SERVICE_ROLE_KEY) {
+      const dailyCheck = await checkDailyLimit(userId, 'scale', 'bulk_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!dailyCheck.allowed) {
+        safeLog("BULK-ANALYSIS", "Daily limit reached", { current: dailyCheck.current, limit: dailyCheck.limit });
+        return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
+      }
+
+      // Record this bulk job as one usage event (only on first chunk)
+      const supabaseAdmin = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY, {
+        auth: { persistSession: false },
+      });
+      await supabaseAdmin.from('usage_tracking').insert({
+        user_id: userId,
+        action_type: 'bulk_analysis',
+      });
+      safeLog("BULK-ANALYSIS", "Recorded bulk_analysis usage");
+    }
 
     // Verify batch ownership before processing
     let existingResults: any[] = [];
