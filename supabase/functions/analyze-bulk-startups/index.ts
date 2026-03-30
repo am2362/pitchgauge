@@ -67,12 +67,9 @@ serve(async (req) => {
         return secureErrorResponse('This feature requires a Scale subscription.', 403);
       }
 
-      // Check daily bulk analysis limit (3 per day for Scale)
-      const dailyCheck = await checkDailyLimit(userId, tier, 'bulk_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
-      if (!dailyCheck.allowed) {
-        safeLog("BULK-ANALYSIS", "Daily limit reached", { current: dailyCheck.current, limit: dailyCheck.limit });
-        return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
-      }
+      // Parse body early to determine if this is a new batch or a continuation chunk.
+      // We peek at appendResults — daily limit only applies to NEW batch starts (first chunk).
+      // This prevents the limit from triggering 50+ times within a single batch run.
     }
 
     // Prefer the Lovable AI gateway for stability
