@@ -178,6 +178,11 @@ export function validateBulkAnalysisInput(
     }
     result.batchSize = obj.batchSize;
   }
+
+  // Optional appendResults flag
+  if (obj.appendResults === true) {
+    result.appendResults = true;
+  }
   
   return { success: true, data: result };
 }
