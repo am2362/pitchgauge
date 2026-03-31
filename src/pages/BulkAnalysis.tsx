@@ -373,13 +373,68 @@ export default function BulkAnalysis() {
         }
       }
 
-      // Final status update (results already persisted incrementally by the backend RPC).
+      // === Auto-retry any failed startups (up to 2 passes) ===
+      const MAX_AUTO_RETRY_PASSES = 2;
+      for (let retryPass = 0; retryPass < MAX_AUTO_RETRY_PASSES; retryPass++) {
+        const failedIndices: number[] = [];
+        allResults.forEach((r, idx) => {
+          if (!isSuccessfulBulkResult(r)) failedIndices.push(idx);
+        });
+
+        if (failedIndices.length === 0) break;
+
+        console.log(`Auto-retry pass ${retryPass + 1}: retrying ${failedIndices.length} failed startups`);
+
+        // Wait before retrying to let rate limits cool down
+        await new Promise(resolve => setTimeout(resolve, 15000));
+
+        for (let fi = 0; fi < failedIndices.length; fi++) {
+          const idx = failedIndices[fi];
+          const original = startups[idx];
+
+          // Refresh session
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (!sessionData.session) break;
+
+          try {
+            let retryData: any = null;
+            for (let attempt = 0; attempt < 3; attempt++) {
+              const { data, error } = await supabase.functions.invoke('analyze-bulk-startups', {
+                body: {
+                  batchId: batch.id,
+                  startups: [original],
+                  batchSize: 1,
+                  appendResults: true
+                }
+              });
+              if (!error && data?.results?.[0]) {
+                retryData = data.results[0];
+                break;
+              }
+              await new Promise(resolve => setTimeout(resolve, 3000 * (attempt + 1)));
+            }
+
+            if (retryData && isSuccessfulBulkResult(retryData)) {
+              allResults[idx] = retryData;
+              setCurrentAnalysis(prev => prev ? { ...prev, results: [...allResults] } : null);
+            }
+          } catch (e) {
+            console.warn(`Auto-retry failed for startup ${idx}`, e);
+          }
+
+          // Cooldown between retries
+          if (fi < failedIndices.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 10000 + Math.round(Math.random() * 2000)));
+          }
+        }
+      }
+
+      // Final status update
       await supabase
         .from('bulk_analyses')
         .update({ status: 'completed' })
         .eq('id', batch.id);
 
-      // Update local state to completed
       setCurrentAnalysis(prev => prev ? {
         ...prev,
         status: 'completed',
@@ -387,29 +442,27 @@ export default function BulkAnalysis() {
         results: allResults
       } : null);
 
-      // Show completion toast
       const successfulCount = allResults.filter(isSuccessfulBulkResult).length;
       const failedCount = startups.length - successfulCount;
       if (successfulCount === 0) {
         toast({
           title: "No Successful Analyses",
-          description: "All startups failed to analyze (usually due to rate limits/timeouts). Try again in a few minutes or with fewer startups per run.",
+          description: "All startups failed. Try again in a few minutes or with fewer startups.",
           variant: "destructive"
         });
-      } else if (hasError || failedCount > 0) {
+      } else if (failedCount > 0) {
         toast({
           title: "Analysis Complete",
-          description: `Successfully analyzed ${successfulCount} of ${startups.length} startups. ${failedCount} failed (likely rate limits).`,
+          description: `Successfully analyzed ${successfulCount} of ${startups.length} startups. ${failedCount} still failed.`,
           variant: "default"
         });
       } else {
         toast({
           title: "Analysis Complete",
-          description: `Successfully analyzed ${successfulCount} startups.`
+          description: `All ${successfulCount} startups analyzed successfully!`
         });
       }
 
-      // Generate comparison report
       if (successfulCount > 0) {
         await generateComparison(batch.id);
       }
