@@ -48,30 +48,36 @@ serve(async (req) => {
 
     // Subscription tier enforcement + daily limits
     if (SERVICE_ROLE_KEY) {
-      const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      // Admin users bypass all limits
+      const admin = await isAdminUser(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!admin) {
+        const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
 
-      const dailyCheck = await checkDailyLimit(userId, tier, 'single_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
-      if (!dailyCheck.allowed) {
-        safeLog("ANALYZE-STARTUP", "Daily limit reached", { tier, current: dailyCheck.current, limit: dailyCheck.limit });
-        return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
+        const dailyCheck = await checkDailyLimit(userId, tier, 'single_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
+        if (!dailyCheck.allowed) {
+          safeLog("ANALYZE-STARTUP", "Daily limit reached", { tier, current: dailyCheck.current, limit: dailyCheck.limit });
+          return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
+        }
+
+        // Record single_analysis usage for daily limit tracking
+        const supabaseAdmin = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY, {
+          auth: { persistSession: false },
+        });
+        await supabaseAdmin.from('usage_tracking').insert({
+          user_id: userId,
+          action_type: 'single_analysis',
+        });
+
+        // Rate limiting
+        const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+        if (!rateCheck.allowed) {
+          safeLog("ANALYZE-STARTUP", "Rate limit exceeded");
+          return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
+        }
+        await recordRateLimitEvent(userId, 'analyze_startup', SUPABASE_URL!, SERVICE_ROLE_KEY);
+      } else {
+        safeLog("ANALYZE-STARTUP", "Admin user - bypassing all limits");
       }
-
-      // Record single_analysis usage for daily limit tracking
-      const supabaseAdmin = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY, {
-        auth: { persistSession: false },
-      });
-      await supabaseAdmin.from('usage_tracking').insert({
-        user_id: userId,
-        action_type: 'single_analysis',
-      });
-
-      // Rate limiting
-      const rateCheck = await checkRateLimit(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
-      if (!rateCheck.allowed) {
-        safeLog("ANALYZE-STARTUP", "Rate limit exceeded");
-        return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
-      }
-      await recordRateLimitEvent(userId, 'analyze_startup', SUPABASE_URL!, SERVICE_ROLE_KEY);
     }
 
     if (!AI_GATEWAY_KEY) {

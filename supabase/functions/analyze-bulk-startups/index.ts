@@ -40,31 +40,36 @@ serve(async (req) => {
 
     // Subscription tier enforcement - bulk analysis requires scale tier
     if (SERVICE_ROLE_KEY) {
-      let tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      const admin = await isAdminUser(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!admin) {
+        let tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
 
-      // Fallback to authenticated lookup to avoid false 403s from admin-side lookup edge cases.
-      if (tier !== 'scale') {
-        const { data: ownSubscription } = await supabaseAuth
-          .from('subscriptions')
-          .select('tier, status, updated_at')
-          .eq('user_id', userId)
-          .eq('status', 'active')
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        // Fallback to authenticated lookup to avoid false 403s from admin-side lookup edge cases.
+        if (tier !== 'scale') {
+          const { data: ownSubscription } = await supabaseAuth
+            .from('subscriptions')
+            .select('tier, status, updated_at')
+            .eq('user_id', userId)
+            .eq('status', 'active')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-        const authTier = typeof ownSubscription?.tier === 'string'
-          ? ownSubscription.tier.trim().toLowerCase()
-          : 'free';
+          const authTier = typeof ownSubscription?.tier === 'string'
+            ? ownSubscription.tier.trim().toLowerCase()
+            : 'free';
 
-        if (authTier === 'scale') {
-          tier = 'scale';
+          if (authTier === 'scale') {
+            tier = 'scale';
+          }
         }
-      }
 
-      if (tier !== 'scale') {
-        safeLog("BULK-ANALYSIS", "Non-scale tier denied");
-        return secureErrorResponse('This feature requires a Scale subscription.', 403);
+        if (tier !== 'scale') {
+          safeLog("BULK-ANALYSIS", "Non-scale tier denied");
+          return secureErrorResponse('This feature requires a Scale subscription.', 403);
+        }
+      } else {
+        safeLog("BULK-ANALYSIS", "Admin user - bypassing tier check");
       }
 
       // Parse body early to determine if this is a new batch or a continuation chunk.
