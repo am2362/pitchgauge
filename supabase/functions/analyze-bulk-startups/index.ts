@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateBulkAnalysisInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-import { corsHeaders, secureJsonResponse, secureErrorResponse, safeLog, getUserTier, checkDailyLimit } from '../_shared/security.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, safeLog, getUserTier, checkDailyLimit, isAdminUser } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -40,31 +40,36 @@ serve(async (req) => {
 
     // Subscription tier enforcement - bulk analysis requires scale tier
     if (SERVICE_ROLE_KEY) {
-      let tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      const admin = await isAdminUser(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!admin) {
+        let tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
 
-      // Fallback to authenticated lookup to avoid false 403s from admin-side lookup edge cases.
-      if (tier !== 'scale') {
-        const { data: ownSubscription } = await supabaseAuth
-          .from('subscriptions')
-          .select('tier, status, updated_at')
-          .eq('user_id', userId)
-          .eq('status', 'active')
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        // Fallback to authenticated lookup to avoid false 403s from admin-side lookup edge cases.
+        if (tier !== 'scale') {
+          const { data: ownSubscription } = await supabaseAuth
+            .from('subscriptions')
+            .select('tier, status, updated_at')
+            .eq('user_id', userId)
+            .eq('status', 'active')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-        const authTier = typeof ownSubscription?.tier === 'string'
-          ? ownSubscription.tier.trim().toLowerCase()
-          : 'free';
+          const authTier = typeof ownSubscription?.tier === 'string'
+            ? ownSubscription.tier.trim().toLowerCase()
+            : 'free';
 
-        if (authTier === 'scale') {
-          tier = 'scale';
+          if (authTier === 'scale') {
+            tier = 'scale';
+          }
         }
-      }
 
-      if (tier !== 'scale') {
-        safeLog("BULK-ANALYSIS", "Non-scale tier denied");
-        return secureErrorResponse('This feature requires a Scale subscription.', 403);
+        if (tier !== 'scale') {
+          safeLog("BULK-ANALYSIS", "Non-scale tier denied");
+          return secureErrorResponse('This feature requires a Scale subscription.', 403);
+        }
+      } else {
+        safeLog("BULK-ANALYSIS", "Admin user - bypassing tier check");
       }
 
       // Parse body early to determine if this is a new batch or a continuation chunk.
@@ -91,22 +96,26 @@ serve(async (req) => {
 
     // Daily limit check: only for the FIRST chunk of a new batch (appendResults=false).
     // Continuation chunks (appendResults=true) are part of an already-counted job.
+    // Admin users bypass daily limits entirely.
     if (!appendResults && SERVICE_ROLE_KEY) {
-      const dailyCheck = await checkDailyLimit(userId, 'scale', 'bulk_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
-      if (!dailyCheck.allowed) {
-        safeLog("BULK-ANALYSIS", "Daily limit reached", { current: dailyCheck.current, limit: dailyCheck.limit });
-        return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
-      }
+      const adminForLimit = await isAdminUser(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!adminForLimit) {
+        const dailyCheck = await checkDailyLimit(userId, 'scale', 'bulk_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
+        if (!dailyCheck.allowed) {
+          safeLog("BULK-ANALYSIS", "Daily limit reached", { current: dailyCheck.current, limit: dailyCheck.limit });
+          return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
+        }
 
-      // Record this bulk job as one usage event (only on first chunk)
-      const supabaseAdmin = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY, {
-        auth: { persistSession: false },
-      });
-      await supabaseAdmin.from('usage_tracking').insert({
-        user_id: userId,
-        action_type: 'bulk_analysis',
-      });
-      safeLog("BULK-ANALYSIS", "Recorded bulk_analysis usage");
+        // Record this bulk job as one usage event (only on first chunk)
+        const supabaseAdminClient = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY, {
+          auth: { persistSession: false },
+        });
+        await supabaseAdminClient.from('usage_tracking').insert({
+          user_id: userId,
+          action_type: 'bulk_analysis',
+        });
+        safeLog("BULK-ANALYSIS", "Recorded bulk_analysis usage");
+      }
     }
 
     // Verify batch ownership before processing

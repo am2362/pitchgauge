@@ -216,6 +216,37 @@ export async function getUserTier(
 }
 
 /**
+ * Check if a user is an admin by looking up their email in the admin_users table.
+ * Uses the service role to bypass RLS.
+ */
+export async function isAdminUser(
+  userId: string,
+  supabaseUrl: string,
+  serviceRoleKey: string
+): Promise<boolean> {
+  try {
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+    });
+
+    // Get user email from auth
+    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (userError || !userData?.user?.email) return false;
+
+    const { data, error } = await supabaseAdmin
+      .from('admin_users')
+      .select('id')
+      .eq('email', userData.user.email)
+      .maybeSingle();
+
+    if (error) return false;
+    return data !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Get monthly usage count for a user and action type (server-side).
  */
 export async function getMonthlyUsageCount(
