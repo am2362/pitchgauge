@@ -96,22 +96,26 @@ serve(async (req) => {
 
     // Daily limit check: only for the FIRST chunk of a new batch (appendResults=false).
     // Continuation chunks (appendResults=true) are part of an already-counted job.
+    // Admin users bypass daily limits entirely.
     if (!appendResults && SERVICE_ROLE_KEY) {
-      const dailyCheck = await checkDailyLimit(userId, 'scale', 'bulk_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
-      if (!dailyCheck.allowed) {
-        safeLog("BULK-ANALYSIS", "Daily limit reached", { current: dailyCheck.current, limit: dailyCheck.limit });
-        return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
-      }
+      const adminForLimit = await isAdminUser(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!adminForLimit) {
+        const dailyCheck = await checkDailyLimit(userId, 'scale', 'bulk_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
+        if (!dailyCheck.allowed) {
+          safeLog("BULK-ANALYSIS", "Daily limit reached", { current: dailyCheck.current, limit: dailyCheck.limit });
+          return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
+        }
 
-      // Record this bulk job as one usage event (only on first chunk)
-      const supabaseAdmin = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY, {
-        auth: { persistSession: false },
-      });
-      await supabaseAdmin.from('usage_tracking').insert({
-        user_id: userId,
-        action_type: 'bulk_analysis',
-      });
-      safeLog("BULK-ANALYSIS", "Recorded bulk_analysis usage");
+        // Record this bulk job as one usage event (only on first chunk)
+        const supabaseAdminClient = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY, {
+          auth: { persistSession: false },
+        });
+        await supabaseAdminClient.from('usage_tracking').insert({
+          user_id: userId,
+          action_type: 'bulk_analysis',
+        });
+        safeLog("BULK-ANALYSIS", "Recorded bulk_analysis usage");
+      }
     }
 
     // Verify batch ownership before processing
