@@ -102,7 +102,19 @@ serve(async (req) => {
 
     return secureJsonResponse({ url: session.url });
   } catch (error) {
-    safeLog("CREATE-CHECKOUT", "Error occurred");
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errType = error?.constructor?.name || 'Unknown';
+    safeLog("CREATE-CHECKOUT", "Error occurred", { type: errType, message: errMsg });
+    
+    // Check for specific Stripe errors
+    if (error && typeof error === 'object' && 'type' in error) {
+      const stripeErr = error as { type: string; code?: string; message?: string };
+      safeLog("CREATE-CHECKOUT", "Stripe error details", { 
+        stripeType: stripeErr.type, 
+        stripeCode: stripeErr.code,
+      });
+    }
+    
     const userMessage = sanitizeErrorMessage(error);
     return secureErrorResponse(userMessage, 500);
   }
