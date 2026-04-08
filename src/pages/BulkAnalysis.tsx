@@ -71,7 +71,7 @@ function createFailedBulkResult(startupName: string, errorType: string, errorMes
 export default function BulkAnalysis() {
   usePageMeta("PitchGauge", "Batch-analyze multiple startup pitches at once with AI scoring.");
   const navigate = useNavigate();
-  const { canBulkAnalyze, tier, recordUsage, startCheckout } = useSubscription();
+  const { canBulkAnalyze, tier, recordUsage, startCheckout, dailyUsage, dailyLimits, dailyBulkLimitReached } = useSubscription();
   const [currentAnalysis, setCurrentAnalysis] = useState<BulkAnalysis | null>(null);
   const [history, setHistory] = useState<BulkAnalysis[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
@@ -719,6 +719,11 @@ export default function BulkAnalysis() {
         <div>
           <h1 className="text-3xl font-bold">Bulk Startup Analysis</h1>
           <p className="text-muted-foreground">Analyze up to 100 startup pitches at once</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {dailyBulkLimitReached
+              ? "Daily limit reached. Resets at midnight UTC."
+              : `${Math.max(0, dailyLimits.bulk_analysis - dailyUsage.bulk_analysis)} of ${dailyLimits.bulk_analysis} bulk jobs remaining today`}
+          </p>
         </div>
 
         {!currentAnalysis && <BulkUploadCard onUploadComplete={handleUploadComplete} />}
