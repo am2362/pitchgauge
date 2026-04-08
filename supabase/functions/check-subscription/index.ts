@@ -161,13 +161,7 @@ serve(async (req) => {
     
     safeLog("CHECK-SUBSCRIPTION", "User authenticated");
 
-    // Rate limiting
-    const rateCheck = await checkRateLimit(user.id, SUPABASE_URL, SERVICE_ROLE_KEY);
-    if (!rateCheck.allowed) {
-      safeLog("CHECK-SUBSCRIPTION", "Rate limit exceeded");
-      return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
-    }
-    await recordRateLimitEvent(user.id, 'check_subscription', SUPABASE_URL, SERVICE_ROLE_KEY);
+    // No rate limiting for check-subscription — it's a read-only polling endpoint
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 100 });

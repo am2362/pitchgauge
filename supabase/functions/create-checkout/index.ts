@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { sanitizeErrorMessage } from '../_shared/validation.ts';
-import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, checkRateLimit, recordRateLimitEvent, safeLog } from '../_shared/security.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, checkRateLimit, recordRateLimitEvent, safeLog, isAdminUser } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -40,13 +40,16 @@ serve(async (req) => {
     
     safeLog("CREATE-CHECKOUT", "User authenticated");
 
-    // Rate limiting
-    const rateCheck = await checkRateLimit(user.id, SUPABASE_URL, SERVICE_ROLE_KEY);
-    if (!rateCheck.allowed) {
-      safeLog("CREATE-CHECKOUT", "Rate limit exceeded");
-      return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
+    // Rate limiting (skip for admins)
+    const admin = await isAdminUser(user.id, SUPABASE_URL, SERVICE_ROLE_KEY);
+    if (!admin) {
+      const rateCheck = await checkRateLimit(user.id, SUPABASE_URL, SERVICE_ROLE_KEY);
+      if (!rateCheck.allowed) {
+        safeLog("CREATE-CHECKOUT", "Rate limit exceeded");
+        return secureErrorResponse('Rate limit exceeded. Please try again later.', 429);
+      }
+      await recordRateLimitEvent(user.id, 'create_checkout', SUPABASE_URL, SERVICE_ROLE_KEY);
     }
-    await recordRateLimitEvent(user.id, 'create_checkout', SUPABASE_URL, SERVICE_ROLE_KEY);
 
     const bodyText = await req.text();
     if (isPayloadTooLarge(null, bodyText)) {

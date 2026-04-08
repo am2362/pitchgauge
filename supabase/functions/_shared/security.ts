@@ -104,7 +104,8 @@ export async function checkRateLimit(
       .from('usage_tracking')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
-      .gte('created_at', oneHourAgo);
+      .gte('created_at', oneHourAgo)
+      .not('action_type', 'like', 'rate_limit_%');
 
     if (error) {
       // On error, allow the request but log
