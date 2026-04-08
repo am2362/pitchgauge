@@ -85,7 +85,7 @@ export default function Compare() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { canCompare, tier, recordUsage, startCheckout } = useSubscription();
+  const { canCompare, tier, recordUsage, startCheckout, dailyUsage, dailyLimits, dailyCompareLimitReached } = useSubscription();
 
   const loadRecentComparisons = async () => {
     if (!user) return;
@@ -655,7 +655,14 @@ export default function Compare() {
       <AppNavbar />
       <div className="container max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Compare Startups</h1>
+          <div>
+            <h1 className="text-3xl font-bold">Compare Startups</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {dailyCompareLimitReached
+                ? "Daily limit reached. Resets at midnight UTC."
+                : `${Math.max(0, dailyLimits.comparison_analysis - dailyUsage.comparison_analysis)} of ${dailyLimits.comparison_analysis} comparisons remaining today`}
+            </p>
+          </div>
           <div className="flex gap-2">
             <Button onClick={handleDownloadTemplate} variant="outline">
               <Download className="h-4 w-4 mr-2" />
