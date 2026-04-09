@@ -426,6 +426,9 @@ export default function Compare() {
 
     setIsGeneratingComparison(true);
     try {
+      // Sync subscription tier from Stripe before comparing to avoid stale DB reads
+      await supabase.functions.invoke("check-subscription");
+
       const { data, error } = await supabase.functions.invoke("compare-startups", {
         body: {
           analyses: analyzed.map(p => p.analysis),
