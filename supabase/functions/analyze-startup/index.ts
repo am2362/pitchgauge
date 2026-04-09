@@ -304,6 +304,12 @@ ALWAYS include reasoning explaining the exact score (e.g., why 5 not 6). Be brut
         sc.competitiveLandscape = sc.defensibility;
         delete sc.defensibility;
       }
+      // Round all scores to whole numbers for consistency
+      for (const key of Object.keys(sc)) {
+        if (sc[key] && typeof sc[key].score === 'number') {
+          sc[key].score = Math.round(sc[key].score);
+        }
+      }
     }
 
     if (!analysisResult.memo || !analysisResult.scorecard) {

@@ -209,7 +209,7 @@ export default function History() {
   const getAverageScore = (scorecard: any) => {
     if (!scorecard) return 0;
     const scores = Object.values(scorecard).map((item: any) => item.score);
-    return (scores.reduce((a: number, b: number) => a + b, 0) / scores.length).toFixed(1);
+    return Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length);
   };
 
   const getScoreColor = (score: number) => {
