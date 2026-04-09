@@ -117,7 +117,7 @@ const DemoCompare = () => {
                   // Calculate rankings mathematically from scorecard averages
                   const calculated = DEMO_COMPARISON_RESULTS.map((r) => {
                     const avg = scorecardKeys.reduce((sum, k) => sum + r.scorecard[k].score, 0) / scorecardKeys.length;
-                    return { name: r.startupName, overallScore: Math.round(avg * 10) / 10 };
+                    return { name: r.startupName, overallScore: Math.round(avg) };
                   });
                   calculated.sort((a, b) => b.overallScore - a.overallScore);
                   return calculated.map((r, idx) => (
@@ -126,7 +126,7 @@ const DemoCompare = () => {
                       <div className="flex-1">
                         <p className="font-semibold text-foreground">{r.name}</p>
                       </div>
-                      <span className={`text-xl font-bold ${getScoreColor(Math.round(r.overallScore))}`}>{r.overallScore.toFixed(1)}/10</span>
+                      <span className={`text-xl font-bold ${getScoreColor(Math.round(r.overallScore))}`}>{Math.round(r.overallScore)}/10</span>
                     </div>
                   ));
                 })()}

@@ -93,7 +93,7 @@ const Landing = () => {
                 <div className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold">Startup Scorecard</span>
-                    <Badge>8.2 / 10</Badge>
+                    <Badge>8 / 10</Badge>
                   </div>
                   {[
                     { label: "Team Quality", score: 9 },
@@ -241,7 +241,7 @@ const Landing = () => {
               {
                 icon: GitCompare,
                 title: "Comparison Mode",
-                desc: "Compare up to 10 startups side-by-side. Get ranked investment recommendations with detailed score breakdowns and key strengths/weaknesses per startup.",
+                desc: "Compare up to 5 startups side-by-side. Get ranked investment recommendations with detailed score breakdowns and key strengths/weaknesses per startup.",
               },
               {
                 icon: Layers,
@@ -287,7 +287,7 @@ const Landing = () => {
                 desc: "For active angel investors",
                 features: [
                   "50 single analyses/day",
-                  "10 comparisons/day (up to 10 startups)",
+                  "10 comparisons/day (up to 5 startups)",
                   "Full download options",
                   "30-day history",
                 ],

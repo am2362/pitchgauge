@@ -88,7 +88,7 @@ serve(async (req) => {
     }
 
     const body = JSON.parse(bodyText);
-    const validation = validateCompareInput(body, 10);
+    const validation = validateCompareInput(body, 5);
     
     if (!validation.success) {
       return secureErrorResponse(validation.error || 'Invalid input', 400);
@@ -106,7 +106,7 @@ serve(async (req) => {
     const scoreKeys = ['team', 'marketSize', 'traction', 'productDifferentiation', 'businessModel', 'competitiveLandscape'];
     const startupScores = analyses.map((analysis: any, idx: number) => {
       const avg = scoreKeys.reduce((sum, key) => sum + (analysis.scorecard[key]?.score || 0), 0) / scoreKeys.length;
-      return { name: startupNames[idx], avg: Math.round(avg * 10) / 10 };
+      return { name: startupNames[idx], avg: Math.round(avg) };
     });
     startupScores.sort((a: any, b: any) => b.avg - a.avg);
 

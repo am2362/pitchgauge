@@ -154,8 +154,8 @@ export default function Compare() {
   }, [user]);
 
   const addPitch = () => {
-    if (pitches.length >= 10) {
-      toast({ title: "Maximum 10 startups allowed", description: "You've reached the comparison limit.", variant: "destructive" });
+    if (pitches.length >= 5) {
+      toast({ title: "Maximum 5 startups allowed", description: "You've reached the comparison limit.", variant: "destructive" });
       return;
     }
     setPitches([...pitches, {
@@ -439,7 +439,7 @@ export default function Compare() {
       const scoreKeys: Array<keyof Scorecard> = ['team', 'marketSize', 'traction', 'productDifferentiation', 'businessModel', 'competitiveLandscape'];
       const calculatedRankings = analyzed.map(p => {
         const avg = scoreKeys.reduce((sum, k) => sum + p.analysis!.scorecard[k].score, 0) / scoreKeys.length;
-        return { startupName: p.name, overallScore: Math.round(avg * 10) / 10 };
+        return { startupName: p.name, overallScore: Math.round(avg) };
       });
       calculatedRankings.sort((a, b) => b.overallScore - a.overallScore);
       const rankedData = {
@@ -686,9 +686,9 @@ export default function Compare() {
               onChange={handleFileUpload}
               className="hidden"
             />
-            <Button onClick={addPitch} variant="outline" disabled={pitches.length >= 10}>
+            <Button onClick={addPitch} variant="outline" disabled={pitches.length >= 5}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Startup ({pitches.length}/10)
+              Add Startup ({pitches.length}/5)
             </Button>
             {allAnalyzed && pitches.some(p => p.analysis) && (
               <>
@@ -728,7 +728,7 @@ export default function Compare() {
                         <p className="font-semibold text-foreground">{ranking.startupName}</p>
                         <p className="text-xs text-muted-foreground">{ranking.reasoning}</p>
                       </div>
-                      <span className={`text-xl font-bold ${getScoreColor(Math.round(ranking.overallScore))}`}>{ranking.overallScore.toFixed(1)}/10</span>
+                      <span className={`text-xl font-bold ${getScoreColor(Math.round(ranking.overallScore))}`}>{Math.round(ranking.overallScore)}/10</span>
                     </div>
                   ))}
                 </div>
@@ -800,7 +800,7 @@ export default function Compare() {
           </div>
         )}
         
-        {comparisons && comparisons.length > 0 && !comparisonInsights && (
+        {comparisons && comparisons.length > 0 && !comparisonInsights && allAnalyzed && (
           <Card className="p-6 mb-6 bg-accent/10 border-accent">
             <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
@@ -934,7 +934,7 @@ export default function Compare() {
                             <p className="text-xs text-muted-foreground">{ranking.reasoning}</p>
                           </div>
                           {avg !== null && (
-                            <span className={`text-xl font-bold ${getScoreColor(Math.round(avg))}`}>{avg.toFixed(1)}/10</span>
+                            <span className={`text-xl font-bold ${getScoreColor(Math.round(avg))}`}>{Math.round(avg)}/10</span>
                           )}
                         </div>
                       );

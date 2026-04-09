@@ -209,7 +209,7 @@ export default function History() {
   const getAverageScore = (scorecard: any) => {
     if (!scorecard) return 0;
     const scores = Object.values(scorecard).map((item: any) => item.score);
-    return (scores.reduce((a: number, b: number) => a + b, 0) / scores.length).toFixed(1);
+    return Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length);
   };
 
   const getScoreColor = (score: number) => {
@@ -736,7 +736,7 @@ function ComparisonDetailView({ comparison, getScoreColor }: { comparison: Compa
                     return (
                       <td key={i} className="text-center p-2">
                         <span className={`text-xl font-bold ${getScoreColor(Math.round(avg))} ${avg === maxAvg && allAvgs.filter(a => a === maxAvg).length === 1 ? 'underline decoration-2' : ''}`}>
-                          {avg.toFixed(1)}/10
+                          {Math.round(avg)}/10
                         </span>
                       </td>
                     );

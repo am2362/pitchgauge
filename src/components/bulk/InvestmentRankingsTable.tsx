@@ -62,7 +62,7 @@ export function InvestmentRankingsTable({ rankings }: InvestmentRankingsTablePro
                   <TableCell className="font-medium">{ranking.startupName}</TableCell>
                   <TableCell>
                     <Badge variant={getScoreBadge(ranking.overallScore)}>
-                      {ranking.overallScore.toFixed(1)}
+                      {Math.round(ranking.overallScore)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm">
