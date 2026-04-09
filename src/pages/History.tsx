@@ -736,7 +736,7 @@ function ComparisonDetailView({ comparison, getScoreColor }: { comparison: Compa
                     return (
                       <td key={i} className="text-center p-2">
                         <span className={`text-xl font-bold ${getScoreColor(Math.round(avg))} ${avg === maxAvg && allAvgs.filter(a => a === maxAvg).length === 1 ? 'underline decoration-2' : ''}`}>
-                          {avg.toFixed(1)}/10
+                          {Math.round(avg)}/10
                         </span>
                       </td>
                     );
