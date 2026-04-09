@@ -245,7 +245,7 @@ export const exportComparisonToPDF = (comparisonData: ComparisonData) => {
     
     const avgScore = scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length;
     
-    addText(`Average Score: ${avgScore.toFixed(1)}/10`, 11, false);
+    addText(`Average Score: ${Math.round(avgScore)}/10`, 11, false);
     
     if (analysis.redFlags && analysis.redFlags.length > 0) {
       addText(`Red Flags: ${analysis.redFlags.length}`, 11, false);
