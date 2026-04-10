@@ -6,6 +6,13 @@ import { corsHeaders, secureJsonResponse, secureErrorResponse, checkRateLimit, r
 
 type Tier = "free" | "pro" | "scale";
 
+type SubscriptionPayload = {
+  tier: Tier;
+  status: string;
+  current_period_start: string | null;
+  current_period_end: string | null;
+};
+
 const PRO_MONTHLY_FLOOR = 3900; // $39.00 in cents
 const SCALE_MONTHLY_FLOOR = 9900; // $99.00 in cents
 
@@ -126,6 +133,29 @@ const resolveTier = async (
   return "pro";
 };
 
+const persistSubscription = async (
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  payload: SubscriptionPayload,
+) => {
+  const { data: updatedRows, error: updateError } = await supabaseAdmin
+    .from("subscriptions")
+    .update(payload)
+    .eq("user_id", userId)
+    .select("id")
+    .limit(1);
+
+  if (updateError) throw updateError;
+  if (updatedRows && updatedRows.length > 0) return;
+
+  const { error: insertError } = await supabaseAdmin.from("subscriptions").insert({
+    user_id: userId,
+    ...payload,
+  });
+
+  if (insertError) throw insertError;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -168,12 +198,12 @@ serve(async (req) => {
 
     if (customers.data.length === 0) {
       safeLog("CHECK-SUBSCRIPTION", "No Stripe customer found, setting free tier");
-      await supabaseAdmin.from("subscriptions").update({
+      await persistSubscription(supabaseAdmin, user.id, {
         tier: "free",
         status: "active",
         current_period_start: null,
         current_period_end: null,
-      }).eq("user_id", user.id);
+      });
 
       return secureJsonResponse({ subscribed: false, tier: "free" });
     }
@@ -194,12 +224,12 @@ serve(async (req) => {
 
     if (activeSubscriptions.length === 0) {
       safeLog("CHECK-SUBSCRIPTION", "No active subscription, setting free tier");
-      await supabaseAdmin.from("subscriptions").update({
+      await persistSubscription(supabaseAdmin, user.id, {
         tier: "free",
         status: "active",
         current_period_start: null,
         current_period_end: null,
-      }).eq("user_id", user.id);
+      });
 
       return secureJsonResponse({ subscribed: false, tier: "free" });
     }
@@ -264,12 +294,12 @@ serve(async (req) => {
       persistedTier,
     });
 
-    await supabaseAdmin.from("subscriptions").update({
+    await persistSubscription(supabaseAdmin, user.id, {
       tier: persistedTier,
       status: "active",
       current_period_start: subscriptionStart,
       current_period_end: subscriptionEnd,
-    }).eq("user_id", user.id);
+    });
 
     return secureJsonResponse({
       subscribed: true,
