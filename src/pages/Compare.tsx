@@ -426,10 +426,22 @@ export default function Compare() {
 
     setIsGeneratingComparison(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        throw new Error("No active session. Please sign in again.");
+      }
+
       // Sync subscription tier from Stripe before comparing to avoid stale DB reads
-      await supabase.functions.invoke("check-subscription");
+      const { error: subscriptionError } = await supabase.functions.invoke("check-subscription", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (subscriptionError) throw subscriptionError;
 
       const { data, error } = await supabase.functions.invoke("compare-startups", {
+        headers: { Authorization: `Bearer ${accessToken}` },
         body: {
           analyses: analyzed.map(p => p.analysis),
           startupNames: analyzed.map(p => p.name),
