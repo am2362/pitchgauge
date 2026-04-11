@@ -58,9 +58,7 @@ export function useSubscription() {
       }
 
       // Check admin status server-side first
-      const { data: adminData } = await supabase.functions.invoke("check-admin", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      const { data: adminData } = await supabase.functions.invoke("check-admin");
       
       if (adminData?.isAdmin) {
         setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, dailyDemoUsageCount: 0, dailyUsage: { single_analysis: 0, comparison_analysis: 0, bulk_analysis: 0 }, subscriptionEnd: null, isDemoAccount: false });
@@ -77,9 +75,7 @@ export function useSubscription() {
         dailyDemoUsageCount = dailySingle + dailyCompare + dailyBulk;
       }
 
-      const { data, error } = await supabase.functions.invoke("check-subscription", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      const { data, error } = await supabase.functions.invoke("check-subscription");
 
       if (error) {
         console.error("Error checking subscription:", error);
@@ -215,7 +211,6 @@ export function useSubscription() {
 
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { tier },
-        headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
       if (error) throw error;
@@ -233,9 +228,7 @@ export function useSubscription() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
-      const { data, error } = await supabase.functions.invoke("customer-portal", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      const { data, error } = await supabase.functions.invoke("customer-portal");
 
       if (error) throw error;
       if (data?.url) {
