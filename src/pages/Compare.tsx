@@ -354,15 +354,11 @@ export default function Compare() {
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-
-      if (!accessToken) {
+      if (!sessionData.session) {
         throw new Error("No active session. Please sign in again.");
       }
 
-      const { error: subscriptionError } = await supabase.functions.invoke("check-subscription", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const { error: subscriptionError } = await supabase.functions.invoke("check-subscription");
 
       if (subscriptionError) throw subscriptionError;
 
@@ -370,7 +366,6 @@ export default function Compare() {
       const sanitizedText = sanitizeText(pitch.text).slice(0, 10000);
       
       const { data, error } = await supabase.functions.invoke("analyze-startup", {
-        headers: { Authorization: `Bearer ${accessToken}` },
         body: { text: sanitizedText },
       });
 
@@ -441,21 +436,16 @@ export default function Compare() {
     setIsGeneratingComparison(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-
-      if (!accessToken) {
+      if (!sessionData.session) {
         throw new Error("No active session. Please sign in again.");
       }
 
       // Sync subscription tier from Stripe before comparing to avoid stale DB reads
-      const { error: subscriptionError } = await supabase.functions.invoke("check-subscription", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const { error: subscriptionError } = await supabase.functions.invoke("check-subscription");
 
       if (subscriptionError) throw subscriptionError;
 
       const { data, error } = await supabase.functions.invoke("compare-startups", {
-        headers: { Authorization: `Bearer ${accessToken}` },
         body: {
           analyses: analyzed.map(p => p.analysis),
           startupNames: analyzed.map(p => p.name),
