@@ -193,7 +193,7 @@ serve(async (req) => {
 
     // No rate limiting for check-subscription — it's a read-only polling endpoint
 
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    const stripe = new Stripe(stripeKey, { apiVersion: "2025-04-30.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 100 });
 
     if (customers.data.length === 0) {
@@ -307,7 +307,8 @@ serve(async (req) => {
       subscription_end: subscriptionEnd,
     });
   } catch (error) {
-    safeLog("CHECK-SUBSCRIPTION", "Error occurred");
+    const rawMessage = error instanceof Error ? error.message : String(error);
+    safeLog("CHECK-SUBSCRIPTION", "Error occurred", { message: rawMessage });
     const userMessage = sanitizeErrorMessage(error);
     return secureErrorResponse(userMessage, 500);
   }
