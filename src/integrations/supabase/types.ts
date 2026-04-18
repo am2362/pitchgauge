@@ -147,7 +147,7 @@ export type Database = {
           red_flags: Json | null
           scorecard: Json
           startup_name: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           benchmarking?: Json | null
@@ -161,7 +161,7 @@ export type Database = {
           red_flags?: Json | null
           scorecard: Json
           startup_name?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           benchmarking?: Json | null
@@ -175,7 +175,7 @@ export type Database = {
           red_flags?: Json | null
           scorecard?: Json
           startup_name?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
