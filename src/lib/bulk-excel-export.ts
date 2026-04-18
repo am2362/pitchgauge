@@ -61,19 +61,19 @@ export async function exportBulkAnalysisToExcel(
       rank: idx + 1,
       name: r.startupName,
       sector: r.sector,
-      team: r.scores.team,
+      team: Math.round(r.scores.team),
       teamReasoning: r.metrics.team || '',
-      market: r.scores.market,
+      market: Math.round(r.scores.market),
       marketReasoning: r.metrics.market || '',
-      product: r.scores.product,
+      product: Math.round(r.scores.product),
       productReasoning: r.metrics.product || '',
-      traction: r.scores.traction,
+      traction: Math.round(r.scores.traction),
       tractionReasoning: r.metrics.traction || '',
-      businessModel: r.scores.businessModel,
+      businessModel: Math.round(r.scores.businessModel),
       businessModelReasoning: r.metrics.businessModel || '',
-      competitive: r.scores.funding,
+      competitive: Math.round(r.scores.funding),
       competitiveReasoning: r.metrics.funding || '',
-      overall: r.scores.overall,
+      overall: Math.round(r.scores.overall),
     });
   });
 
@@ -86,7 +86,7 @@ export async function exportBulkAnalysisToExcel(
       rankingsSheet.addRow([
         r.rank,
         r.startupName,
-        r.overallScore,
+        Math.round(r.overallScore),
         r.topStrengths.join('; '),
         r.recommendation
       ]);
@@ -101,7 +101,9 @@ export async function exportBulkAnalysisToExcel(
   if (comparisonReport?.scoreComparison) {
     const comparisonSheet = workbook.addWorksheet('Score Comparison');
     comparisonSheet.addRow(comparisonReport.scoreComparison.headers);
-    comparisonReport.scoreComparison.rows.forEach((r) => comparisonSheet.addRow(r));
+    comparisonReport.scoreComparison.rows.forEach((r) =>
+      comparisonSheet.addRow(r.map((v: any) => (typeof v === 'number' ? Math.round(v) : v)))
+    );
 
     comparisonSheet.getColumn(1).width = 20;
     for (let i = 2; i <= 8; i++) comparisonSheet.getColumn(i).width = 12;

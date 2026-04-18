@@ -111,7 +111,7 @@ export const exportAnalysisToPDF = (analysis: AnalysisResult, startupName: strin
 
   Object.entries(categories).forEach(([key, label]) => {
     const item = analysis.scorecard[key as keyof typeof analysis.scorecard];
-    addText(`${label}: ${item.score}/10`, 12, true);
+    addText(`${label}: ${Math.round(item.score)}/10`, 12, true);
     addText(`Reasoning: ${item.reasoning}`, 10, false);
     if (item.detailedExplanation) {
       addText(`Details: ${item.detailedExplanation}`, 10, false);
@@ -366,7 +366,7 @@ export const exportBulkAnalysisToPDF = (
     addText('Investment Rankings', 16, true);
     yPosition += 3;
     comparisonReport.investmentRankings.forEach((ranking) => {
-      addText(`#${ranking.rank}: ${ranking.startupName} (${ranking.overallScore}/10)`, 12, true);
+      addText(`#${ranking.rank}: ${ranking.startupName} (${Math.round(ranking.overallScore)}/10)`, 12, true);
       addText(`Top Strengths: ${ranking.topStrengths.join(', ')}`, 10, false);
       addText(`Recommendation: ${ranking.recommendation}`, 10, false);
       yPosition += 3;
@@ -411,11 +411,11 @@ export const exportBulkAnalysisToPDF = (
   results.forEach((r) => {
     if (r.scores.overall === 0 && r.summary === 'Failed to analyze this startup') return;
     
-    addText(`${r.startupName} — ${r.sector} (${r.scores.overall}/10)`, 12, true);
+    addText(`${r.startupName} — ${r.sector} (${Math.round(r.scores.overall)}/10)`, 12, true);
     addText(r.summary, 10, false);
     
     scoreKeys.forEach((key) => {
-      addText(`  ${scoreLabels[key]}: ${r.scores[key]}/10 — ${r.metrics[key === 'funding' ? 'funding' : key]}`, 9, false);
+      addText(`  ${scoreLabels[key]}: ${Math.round(r.scores[key])}/10 — ${r.metrics[key === 'funding' ? 'funding' : key]}`, 9, false);
     });
     yPosition += 5;
   });
@@ -466,7 +466,7 @@ export const exportDemoAnalysisToPDF = (analysis: AnalysisResult, startupName: s
   };
   Object.entries(categories).forEach(([key, label]) => {
     const item = analysis.scorecard[key as keyof typeof analysis.scorecard];
-    addText(`${label}: ${item.score}/10`, 12, true);
+    addText(`${label}: ${Math.round(item.score)}/10`, 12, true);
     addText(`Reasoning: ${item.reasoning}`, 10, false);
     if (item.detailedExplanation) addText(`Details: ${item.detailedExplanation}`, 10, false);
     yPosition += 3;
@@ -538,7 +538,7 @@ export const exportDemoComparisonToPDF = (
 
   addText('Investment Rankings', 16, true);
   insights.rankings.forEach((r) => {
-    addText(`#${r.rank}: ${r.name} — ${r.overallScore}/10`, 12, true);
+    addText(`#${r.rank}: ${r.name} — ${Math.round(r.overallScore)}/10`, 12, true);
     addText(`Top Strengths: ${r.topStrengths.join(', ')}`, 10, false);
     yPosition += 3;
   });
@@ -554,7 +554,7 @@ export const exportDemoComparisonToPDF = (
     Object.entries(scorecardLabels).forEach(([key, label]) => {
       const entry = r.scorecard[key];
       if (entry) {
-        addText(`${label}: ${entry.score}/10 — ${entry.reasoning}`, 10, false);
+        addText(`${label}: ${Math.round(entry.score)}/10 — ${entry.reasoning}`, 10, false);
       }
     });
     yPosition += 5;
@@ -608,7 +608,7 @@ export const exportDemoBulkToPDF = (
   if (comparisonReport?.investmentRankings) {
     addText('Investment Rankings', 16, true);
     comparisonReport.investmentRankings.forEach((r) => {
-      addText(`#${r.rank}: ${r.startupName} (${r.overallScore}/10)`, 12, true);
+      addText(`#${r.rank}: ${r.startupName} (${Math.round(r.overallScore)}/10)`, 12, true);
       addText(`Strengths: ${r.topStrengths.join(', ')}`, 10, false);
       addText(`Recommendation: ${r.recommendation}`, 10, false);
       yPosition += 3;
