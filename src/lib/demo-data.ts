@@ -339,9 +339,9 @@ export const DEMO_COMPARISON_RESULTS = [
 
 export const DEMO_COMPARISON_INSIGHTS = {
   rankings: [
-    { rank: 1, name: "FinFlow", overallScore: 8.3, topStrengths: ["Exceptional team (Stripe/Plaid alumni)", "Strong traction at $180k MRR", "Scalable transaction-based model"] },
-    { rank: 2, name: "EcoTrack", overallScore: 7.3, topStrengths: ["Massive ESG market tailwind", "Strong business model", "Mid-market positioning"] },
-    { rank: 3, name: "MediSync", overallScore: 6.8, topStrengths: ["Strong IP and clinical validation", "Experienced medical team", "Large addressable market"] },
+    { rank: 1, name: "FinFlow", overallScore: 9, topStrengths: ["Exceptional team (Stripe/Plaid alumni)", "Strong traction at $180k MRR", "Scalable transaction-based model"] },
+    { rank: 2, name: "EcoTrack", overallScore: 7, topStrengths: ["Massive ESG market tailwind", "Strong business model", "Mid-market positioning"] },
+    { rank: 3, name: "MediSync", overallScore: 7, topStrengths: ["Strong IP and clinical validation", "Experienced medical team", "Large addressable market"] },
   ],
   overallRecommendation: "FinFlow presents the strongest investment opportunity with proven traction and a scalable business model. EcoTrack is a high potential watch for next round. MediSync requires regulatory clarity before committing capital.",
   strengthsWeaknesses: {
@@ -364,16 +364,16 @@ export const DEMO_COMPARISON_INSIGHTS = {
 // BULK DEMO DATA
 // ============================================================
 export const DEMO_BULK_RESULTS: BulkAnalysisResult[] = [
-  { startupName: "FinFlow", sector: "Fintech", tags: ["B2B", "Payments", "Infrastructure"], metrics: { team: "Ex-Stripe/Plaid founders", product: "Embedded payments API", market: "$120T B2B payments", traction: "$180k MRR, 120+ customers", funding: "Series A, $10M", businessModel: "Transaction fees + SaaS" }, scores: { team: 9, product: 8, market: 9, traction: 8, funding: 8, businessModel: 9, overall: 8.3 }, summary: "High-traction payments infrastructure with proven team and scalable model." },
-  { startupName: "EcoTrack", sector: "CleanTech", tags: ["B2B", "SaaS", "ESG"], metrics: { team: "Domain experts in sustainability", product: "Carbon tracking platform", market: "$64B carbon accounting", traction: "$12k MRR, 5 pilots", funding: "Series A, $8M", businessModel: "Tiered SaaS" }, scores: { team: 7, product: 7, market: 9, traction: 6, funding: 7, businessModel: 8, overall: 7.4 }, summary: "Strong market thesis with ESG regulatory tailwind. Early traction needs acceleration." },
-  { startupName: "MediSync", sector: "HealthTech", tags: ["AI", "Diagnostics", "B2B"], metrics: { team: "Stanford Medical School researchers", product: "AI radiology diagnostics", market: "$45B AI diagnostics", traction: "3 hospital pilots, pre-revenue", funding: "Series A, $12M", businessModel: "Per-scan SaaS" }, scores: { team: 8, product: 8, market: 8, traction: 5, funding: 7, businessModel: 6, overall: 7.1 }, summary: "Strong IP and clinical validation path but faces regulatory and commercialisation hurdles." },
-  { startupName: "DataPulse", sector: "SaaS Analytics", tags: ["B2B", "Analytics", "Data"], metrics: { team: "Ex-Datadog engineers", product: "Real-time analytics platform", market: "$30B analytics market", traction: "$85k MRR, 60 customers", funding: "Series A, $6M", businessModel: "Usage-based SaaS" }, scores: { team: 7, product: 7, market: 7, traction: 7, funding: 7, businessModel: 6, overall: 6.8 }, summary: "Solid analytics play with decent traction but faces stiff competition from established players." },
-  { startupName: "ShipEase", sector: "Logistics", tags: ["B2B", "Logistics", "Marketplace"], metrics: { team: "Ex-Flexport operators", product: "SMB freight marketplace", market: "$25B SMB freight", traction: "$65k MRR, 200+ shippers", funding: "Series A, $7M", businessModel: "Take rate on transactions" }, scores: { team: 7, product: 6, market: 7, traction: 7, funding: 6, businessModel: 6, overall: 6.5 }, summary: "Growing SMB freight marketplace with good volume but thin margins." },
-  { startupName: "NutriAI", sector: "FoodTech", tags: ["B2C", "AI", "Health"], metrics: { team: "Nutrition PhDs + ML engineers", product: "AI nutrition coaching app", market: "$15B digital health", traction: "50k downloads, $8k MRR", funding: "Seed+, $3M", businessModel: "Subscription" }, scores: { team: 6, product: 7, market: 6, traction: 6, funding: 6, businessModel: 6, overall: 6.2 }, summary: "Interesting B2C AI play but challenging unit economics and high churn risk." },
-  { startupName: "LegalBot", sector: "LegalTech", tags: ["B2B", "AI", "Legal"], metrics: { team: "Ex-BigLaw + NLP researchers", product: "AI contract review tool", market: "$20B legal services", traction: "$30k MRR, 25 law firms", funding: "Series A, $5M", businessModel: "Per-seat SaaS" }, scores: { team: 7, product: 6, market: 6, traction: 6, funding: 6, businessModel: 5, overall: 6.0 }, summary: "Useful product in a notoriously slow-to-adopt industry. Needs to prove faster sales cycles." },
-  { startupName: "BuildSmart", sector: "PropTech", tags: ["B2B", "Construction", "IoT"], metrics: { team: "Construction industry veterans", product: "IoT site monitoring platform", market: "$18B construction tech", traction: "$20k MRR, 12 sites", funding: "Seed, $2.5M", businessModel: "Hardware + SaaS" }, scores: { team: 6, product: 6, market: 6, traction: 5, funding: 6, businessModel: 6, overall: 5.8 }, summary: "Hardware-dependent model adds complexity. Interesting niche but slow adoption." },
-  { startupName: "EduPath", sector: "EdTech", tags: ["B2B2C", "Education", "AI"], metrics: { team: "Former teachers + engineers", product: "AI tutoring platform", market: "$10B EdTech", traction: "2k students, $5k MRR", funding: "Seed, $1.5M", businessModel: "Subscription" }, scores: { team: 5, product: 6, market: 6, traction: 5, funding: 5, businessModel: 6, overall: 5.5 }, summary: "Early-stage EdTech with limited differentiation. Needs to find a sharper wedge." },
-  { startupName: "RetailIQ", sector: "RetailTech", tags: ["B2B", "Retail", "Analytics"], metrics: { team: "Retail consultants", product: "In-store analytics dashboard", market: "$8B retail analytics", traction: "$3k MRR, 8 stores", funding: "Pre-seed, $800k", businessModel: "SaaS" }, scores: { team: 5, product: 5, market: 5, traction: 5, funding: 5, businessModel: 6, overall: 5.2 }, summary: "Very early stage with limited traction. Market is shifting to online — physical retail analytics is niche." },
+  { startupName: "FinFlow", sector: "Fintech", tags: ["B2B", "Payments", "Infrastructure"], metrics: { team: "Ex-Stripe/Plaid founders", product: "Embedded payments API", market: "$120T B2B payments", traction: "$180k MRR, 120+ customers", funding: "Series A, $10M", businessModel: "Transaction fees + SaaS" }, scores: { team: 9, product: 8, market: 9, traction: 8, funding: 8, businessModel: 9, overall: 9 }, summary: "High-traction payments infrastructure with proven team and scalable model." },
+  { startupName: "EcoTrack", sector: "CleanTech", tags: ["B2B", "SaaS", "ESG"], metrics: { team: "Domain experts in sustainability", product: "Carbon tracking platform", market: "$64B carbon accounting", traction: "$12k MRR, 5 pilots", funding: "Series A, $8M", businessModel: "Tiered SaaS" }, scores: { team: 7, product: 7, market: 9, traction: 6, funding: 7, businessModel: 8, overall: 7 }, summary: "Strong market thesis with ESG regulatory tailwind. Early traction needs acceleration." },
+  { startupName: "MediSync", sector: "HealthTech", tags: ["AI", "Diagnostics", "B2B"], metrics: { team: "Stanford Medical School researchers", product: "AI radiology diagnostics", market: "$45B AI diagnostics", traction: "3 hospital pilots, pre-revenue", funding: "Series A, $12M", businessModel: "Per-scan SaaS" }, scores: { team: 8, product: 8, market: 8, traction: 5, funding: 7, businessModel: 6, overall: 7 }, summary: "Strong IP and clinical validation path but faces regulatory and commercialisation hurdles." },
+  { startupName: "DataPulse", sector: "SaaS Analytics", tags: ["B2B", "Analytics", "Data"], metrics: { team: "Ex-Datadog engineers", product: "Real-time analytics platform", market: "$30B analytics market", traction: "$85k MRR, 60 customers", funding: "Series A, $6M", businessModel: "Usage-based SaaS" }, scores: { team: 7, product: 7, market: 7, traction: 7, funding: 7, businessModel: 6, overall: 7 }, summary: "Solid analytics play with decent traction but faces stiff competition from established players." },
+  { startupName: "ShipEase", sector: "Logistics", tags: ["B2B", "Logistics", "Marketplace"], metrics: { team: "Ex-Flexport operators", product: "SMB freight marketplace", market: "$25B SMB freight", traction: "$65k MRR, 200+ shippers", funding: "Series A, $7M", businessModel: "Take rate on transactions" }, scores: { team: 7, product: 6, market: 7, traction: 7, funding: 6, businessModel: 6, overall: 7 }, summary: "Growing SMB freight marketplace with good volume but thin margins." },
+  { startupName: "NutriAI", sector: "FoodTech", tags: ["B2C", "AI", "Health"], metrics: { team: "Nutrition PhDs + ML engineers", product: "AI nutrition coaching app", market: "$15B digital health", traction: "50k downloads, $8k MRR", funding: "Seed+, $3M", businessModel: "Subscription" }, scores: { team: 6, product: 7, market: 6, traction: 6, funding: 6, businessModel: 6, overall: 6 }, summary: "Interesting B2C AI play but challenging unit economics and high churn risk." },
+  { startupName: "LegalBot", sector: "LegalTech", tags: ["B2B", "AI", "Legal"], metrics: { team: "Ex-BigLaw + NLP researchers", product: "AI contract review tool", market: "$20B legal services", traction: "$30k MRR, 25 law firms", funding: "Series A, $5M", businessModel: "Per-seat SaaS" }, scores: { team: 7, product: 6, market: 6, traction: 6, funding: 6, businessModel: 5, overall: 6 }, summary: "Useful product in a notoriously slow-to-adopt industry. Needs to prove faster sales cycles." },
+  { startupName: "BuildSmart", sector: "PropTech", tags: ["B2B", "Construction", "IoT"], metrics: { team: "Construction industry veterans", product: "IoT site monitoring platform", market: "$18B construction tech", traction: "$20k MRR, 12 sites", funding: "Seed, $2.5M", businessModel: "Hardware + SaaS" }, scores: { team: 6, product: 6, market: 6, traction: 5, funding: 6, businessModel: 6, overall: 6 }, summary: "Hardware-dependent model adds complexity. Interesting niche but slow adoption." },
+  { startupName: "EduPath", sector: "EdTech", tags: ["B2B2C", "Education", "AI"], metrics: { team: "Former teachers + engineers", product: "AI tutoring platform", market: "$10B EdTech", traction: "2k students, $5k MRR", funding: "Seed, $1.5M", businessModel: "Subscription" }, scores: { team: 5, product: 6, market: 6, traction: 5, funding: 5, businessModel: 6 , overall: 6 }, summary: "Early-stage EdTech with limited differentiation. Needs to find a sharper wedge." },
+  { startupName: "RetailIQ", sector: "RetailTech", tags: ["B2B", "Retail", "Analytics"], metrics: { team: "Retail consultants", product: "In-store analytics dashboard", market: "$8B retail analytics", traction: "$3k MRR, 8 stores", funding: "Pre-seed, $800k", businessModel: "SaaS" }, scores: { team: 5, product: 5, market: 5, traction: 5, funding: 5, businessModel: 6, overall: 5 }, summary: "Very early stage with limited traction. Market is shifting to online — physical retail analytics is niche." },
 ];
 
 export const DEMO_BULK_SCORE_REASONINGS: Record<string, Record<string, string>> = {
@@ -461,31 +461,31 @@ export const DEMO_BULK_SCORE_REASONINGS: Record<string, Record<string, string>> 
 
 export const DEMO_BULK_COMPARISON_REPORT: ComparisonReport = {
   investmentRankings: [
-    { rank: 1, startupName: "FinFlow", overallScore: 8.3, topStrengths: ["Ex-Stripe/Plaid team", "$180k MRR", "Transaction-based revenue"], recommendation: "Strong invest — proceed to term sheet" },
-    { rank: 2, startupName: "EcoTrack", overallScore: 7.4, topStrengths: ["$64B TAM", "ESG tailwind", "80%+ gross margins"], recommendation: "Watch for next round — monitor traction" },
-    { rank: 3, startupName: "MediSync", overallScore: 7.1, topStrengths: ["Strong IP", "Stanford team", "Clinical validation"], recommendation: "Hold — await FDA clearance" },
-    { rank: 4, startupName: "DataPulse", overallScore: 6.8, topStrengths: ["Ex-Datadog team", "Usage-based model", "60 customers"], recommendation: "Borderline — needs stronger differentiation" },
-    { rank: 5, startupName: "ShipEase", overallScore: 6.5, topStrengths: ["200+ shippers", "Growing marketplace", "Flexport alumni"], recommendation: "Pass — thin margins, capital intensive" },
-    { rank: 6, startupName: "NutriAI", overallScore: 6.2, topStrengths: ["AI-powered", "Growing health market", "50k downloads"], recommendation: "Pass — B2C unit economics challenging" },
-    { rank: 7, startupName: "LegalBot", overallScore: 6.0, topStrengths: ["AI contract review", "25 law firms", "NLP expertise"], recommendation: "Pass — slow industry adoption" },
-    { rank: 8, startupName: "BuildSmart", overallScore: 5.8, topStrengths: ["IoT monitoring", "Construction niche", "Industry veterans"], recommendation: "Pass — hardware dependency risk" },
-    { rank: 9, startupName: "EduPath", overallScore: 5.5, topStrengths: ["AI tutoring", "Mission-driven", "Growing market"], recommendation: "Pass — too early, limited differentiation" },
-    { rank: 10, startupName: "RetailIQ", overallScore: 5.2, topStrengths: ["Analytics dashboard", "Retail focus", "Low-cost entry"], recommendation: "Pass — niche market, limited upside" },
+    { rank: 1, startupName: "FinFlow", overallScore: 9, topStrengths: ["Ex-Stripe/Plaid team", "$180k MRR", "Transaction-based revenue"], recommendation: "Strong invest — proceed to term sheet" },
+    { rank: 2, startupName: "EcoTrack", overallScore: 7, topStrengths: ["$64B TAM", "ESG tailwind", "80%+ gross margins"], recommendation: "Watch for next round — monitor traction" },
+    { rank: 3, startupName: "MediSync", overallScore: 7, topStrengths: ["Strong IP", "Stanford team", "Clinical validation"], recommendation: "Hold — await FDA clearance" },
+    { rank: 4, startupName: "DataPulse", overallScore: 7, topStrengths: ["Ex-Datadog team", "Usage-based model", "60 customers"], recommendation: "Borderline — needs stronger differentiation" },
+    { rank: 5, startupName: "ShipEase", overallScore: 7, topStrengths: ["200+ shippers", "Growing marketplace", "Flexport alumni"], recommendation: "Pass — thin margins, capital intensive" },
+    { rank: 6, startupName: "NutriAI", overallScore: 6, topStrengths: ["AI-powered", "Growing health market", "50k downloads"], recommendation: "Pass — B2C unit economics challenging" },
+    { rank: 7, startupName: "LegalBot", overallScore: 6, topStrengths: ["AI contract review", "25 law firms", "NLP expertise"], recommendation: "Pass — slow industry adoption" },
+    { rank: 8, startupName: "BuildSmart", overallScore: 6, topStrengths: ["IoT monitoring", "Construction niche", "Industry veterans"], recommendation: "Pass — hardware dependency risk" },
+    { rank: 9, startupName: "EduPath", overallScore: 6, topStrengths: ["AI tutoring", "Mission-driven", "Growing market"], recommendation: "Pass — too early, limited differentiation" },
+    { rank: 10, startupName: "RetailIQ", overallScore: 5, topStrengths: ["Analytics dashboard", "Retail focus", "Low-cost entry"], recommendation: "Pass — niche market, limited upside" },
   ],
   overallRecommendation: "FinFlow is the standout investment opportunity in this batch with strong traction, exceptional team, and scalable business model. EcoTrack and MediSync warrant monitoring for future rounds. The remaining startups face significant challenges in their respective markets.",
   scoreComparison: {
     headers: ["Startup", "Team", "Product", "Market", "Traction", "Business Model", "Overall"],
     rows: [
-      ["FinFlow", 9, 8, 9, 8, 9, 8.3],
-      ["EcoTrack", 7, 7, 9, 6, 8, 7.4],
-      ["MediSync", 8, 8, 8, 5, 6, 7.1],
-      ["DataPulse", 7, 7, 7, 7, 6, 6.8],
-      ["ShipEase", 7, 6, 7, 7, 6, 6.5],
-      ["NutriAI", 6, 7, 6, 6, 6, 6.2],
-      ["LegalBot", 7, 6, 6, 6, 5, 6.0],
-      ["BuildSmart", 6, 6, 6, 5, 6, 5.8],
-      ["EduPath", 5, 6, 6, 5, 6, 5.5],
-      ["RetailIQ", 5, 5, 5, 5, 6, 5.2],
+      ["FinFlow", 9, 8, 9, 8, 9, 9],
+      ["EcoTrack", 7, 7, 9, 6, 8, 7],
+      ["MediSync", 8, 8, 8, 5, 6, 7],
+      ["DataPulse", 7, 7, 7, 7, 6, 7],
+      ["ShipEase", 7, 6, 7, 7, 6, 7],
+      ["NutriAI", 6, 7, 6, 6, 6, 6],
+      ["LegalBot", 7, 6, 6, 6, 5, 6],
+      ["BuildSmart", 6, 6, 6, 5, 6, 6],
+      ["EduPath", 5, 6, 6, 5, 6, 6],
+      ["RetailIQ", 5, 5, 5, 5, 6, 5],
     ],
   },
   strengthsAndWeaknesses: {
