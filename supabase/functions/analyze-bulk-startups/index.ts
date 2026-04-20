@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateBulkAnalysisInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-import { corsHeaders, secureJsonResponse, secureErrorResponse, safeLog, getUserTier, checkDailyLimit, isAdminUser } from '../_shared/security.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, safeLog, getUserTier, checkDailyLimit, isAdminUser, isDemoAccountEmail } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -38,10 +38,13 @@ serve(async (req) => {
 
     safeLog("BULK-ANALYSIS", "User authenticated");
 
-    // Subscription tier enforcement - bulk analysis requires scale tier
+    const userEmail = userData?.user?.email;
+    const isDemo = isDemoAccountEmail(userEmail);
+
+    // Subscription tier enforcement - bulk analysis requires scale tier (demo accounts bypass)
     if (SERVICE_ROLE_KEY) {
       const admin = await isAdminUser(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
-      if (!admin) {
+      if (!admin && !isDemo) {
         let tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
 
         // Fallback to authenticated lookup to avoid false 403s from admin-side lookup edge cases.
@@ -69,7 +72,7 @@ serve(async (req) => {
           return secureErrorResponse('This feature requires a Scale subscription.', 403);
         }
       } else {
-        safeLog("BULK-ANALYSIS", "Admin user - bypassing tier check");
+        safeLog("BULK-ANALYSIS", admin ? "Admin user - bypassing tier check" : "Demo user - bypassing tier check");
       }
 
       // Parse body early to determine if this is a new batch or a continuation chunk.
@@ -100,7 +103,7 @@ serve(async (req) => {
     if (!appendResults && SERVICE_ROLE_KEY) {
       const adminForLimit = await isAdminUser(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
       if (!adminForLimit) {
-        const dailyCheck = await checkDailyLimit(userId, 'scale', 'bulk_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
+        const dailyCheck = await checkDailyLimit(userId, 'scale', 'bulk_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY, userEmail);
         if (!dailyCheck.allowed) {
           safeLog("BULK-ANALYSIS", "Daily limit reached", { current: dailyCheck.current, limit: dailyCheck.limit });
           return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);

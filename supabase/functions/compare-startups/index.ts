@@ -2,7 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateCompareInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, checkRateLimit, recordRateLimitEvent, safeLog, getUserTier, checkDailyLimit, isAdminUser } from '../_shared/security.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, isPayloadTooLarge, checkRateLimit, recordRateLimitEvent, safeLog, getUserTier, checkDailyLimit, isAdminUser, isDemoAccountEmail } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -49,12 +49,14 @@ serve(async (req) => {
       const admin = await isAdminUser(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
       if (!admin) {
         const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
-        if (tier === 'free') {
+        const userEmail = userData?.user?.email;
+        const isDemo = isDemoAccountEmail(userEmail);
+        if (tier === 'free' && !isDemo) {
           safeLog("COMPARE-STARTUPS", "Free tier denied");
           return secureErrorResponse('This feature requires a Pro or Scale subscription.', 403);
         }
 
-        const dailyCheck = await checkDailyLimit(userId, tier, 'comparison_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
+        const dailyCheck = await checkDailyLimit(userId, tier, 'comparison_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY, userEmail);
         if (!dailyCheck.allowed) {
           safeLog("COMPARE-STARTUPS", "Daily limit reached", { tier, current: dailyCheck.current, limit: dailyCheck.limit });
           return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);

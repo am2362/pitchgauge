@@ -52,8 +52,9 @@ serve(async (req) => {
       const admin = await isAdminUser(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
       if (!admin) {
         const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+        const userEmail = userData?.user?.email;
 
-        const dailyCheck = await checkDailyLimit(userId, tier, 'single_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
+        const dailyCheck = await checkDailyLimit(userId, tier, 'single_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY, userEmail);
         if (!dailyCheck.allowed) {
           safeLog("ANALYZE-STARTUP", "Daily limit reached", { tier, current: dailyCheck.current, limit: dailyCheck.limit });
           return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
