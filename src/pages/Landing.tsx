@@ -365,7 +365,7 @@ const Landing = () => {
             )}
           </div>
           <Button variant="link" className="gap-1" onClick={() => navigate("/scoring-rubric")}>
-            View Full Scoring Guide <ChevronRight className="h-4 w-4" />
+            View the scoring rubric <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </section>
