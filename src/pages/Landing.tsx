@@ -226,27 +226,27 @@ const Landing = () => {
         <div className="container max-w-6xl mx-auto px-4 py-20 md:py-28">
           <div className="text-center mb-14">
             <Badge variant="secondary" className="mb-4">Features</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Everything You Need to Evaluate Deal Flow</h2>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">A structured workflow for screening deal flow</h2>
             <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
-              PitchGauge gives investors a fast, structured first look at any pitch — so you spend less time on triage and more time on the deals worth pursuing.
+              Three modes covering the full top-of-funnel: individual pitch review, shortlist comparison, and batch screening across an entire pipeline.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
                 icon: BarChart3,
-                title: "Single Pitch Analysis",
-                desc: "Score any pitch across Team, Market, Product, Traction, Business Model, and Competitive Landscape. Get red flags, questions to ask founders, bull/bear thesis, and benchmark percentile.",
+                title: "First-Pass Screening",
+                desc: "Score a single pitch against six criteria — Team, Market, Product, Traction, Business Model, Competitive Landscape. Outputs include red flags, founder questions, bull/bear thesis and a benchmark percentile.",
               },
               {
                 icon: GitCompare,
-                title: "Comparison Mode",
-                desc: "Compare up to 5 startups side-by-side. Get ranked investment recommendations with detailed score breakdowns and key strengths/weaknesses per startup.",
+                title: "Deal Shortlisting",
+                desc: "Compare up to 5 startups side-by-side once they clear first-pass. Ranked output with score breakdowns and key strengths and weaknesses to support the shortlisting discussion.",
               },
               {
                 icon: Layers,
-                title: "Bulk Analysis",
-                desc: "Upload up to 100 startups via Excel. Get top 20 ranked, sector distribution charts, and exportable reports — perfect for batch screening deal flow.",
+                title: "Batch Deal Flow Screening",
+                desc: "Upload up to 100 startups via Excel for batch triage. Returns a ranked top 20, sector distribution, and an exportable report for pipeline review meetings.",
               },
             ].map(({ icon: Icon, title, desc }) => (
               <Card key={title} className="p-6 hover:shadow-elevated transition-shadow border-border bg-card">
