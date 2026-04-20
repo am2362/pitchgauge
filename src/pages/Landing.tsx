@@ -266,8 +266,8 @@ const Landing = () => {
         <div className="container max-w-6xl mx-auto px-4 py-20 md:py-28">
           <div className="text-center mb-14">
             <Badge variant="secondary" className="mb-4">Pricing</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Simple, Transparent Pricing</h2>
-            <p className="text-muted-foreground mt-3">Start free. Upgrade when you need more power.</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Plans by screening volume</h2>
+            <p className="text-muted-foreground mt-3">Pick the tier that matches your inbound deal flow.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {[
@@ -275,8 +275,8 @@ const Landing = () => {
                 name: "Free",
                 price: "$0",
                 period: "/mo",
-                desc: "For casual exploration",
-                features: ["3 single analyses/day", "No comparison mode", "No bulk analysis", "Basic JSON + PDF download"],
+                desc: "For occasional reviews",
+                features: ["3 first-pass screenings/day", "Shortlisting not included", "Batch screening not included", "JSON + PDF export"],
                 cta: "Get Started Free",
                 highlight: false,
               },
@@ -284,11 +284,11 @@ const Landing = () => {
                 name: "Pro",
                 price: "$39",
                 period: "/mo",
-                desc: "For active angel investors",
+                desc: "For active angels and solo investors",
                 features: [
-                  "50 single analyses/day",
-                  "10 comparisons/day (up to 5 startups)",
-                  "Full download options",
+                  "50 first-pass screenings/day",
+                  "10 shortlisting sessions/day (up to 5 startups)",
+                  "Full export options",
                   "30-day history",
                 ],
                 cta: "Start Pro Trial",
@@ -298,12 +298,12 @@ const Landing = () => {
                 name: "Scale",
                 price: "$99",
                 period: "/mo",
-                desc: "For funds & accelerators",
+                desc: "For funds and accelerators",
                 features: [
-                  "100 single analyses/day",
-                  "20 comparisons/day",
-                  "3 bulk jobs/day (up to 100 startups each)",
-                  "Sector charts & Excel export",
+                  "100 first-pass screenings/day",
+                  "20 shortlisting sessions/day",
+                  "3 batch screening jobs/day (up to 100 startups each)",
+                  "Sector breakdown and Excel export",
                   "Unlimited history",
                 ],
                 cta: "Start Scale Trial",
