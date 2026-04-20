@@ -351,9 +351,9 @@ const Landing = () => {
       {/* METRICS TEASER */}
       <section className="bg-muted/30">
         <div className="container max-w-6xl mx-auto px-4 py-16 text-center">
-          <h2 className="text-2xl font-bold mb-2">Know What Every Score Means</h2>
+          <h2 className="text-2xl font-bold mb-2">The scoring framework, documented</h2>
           <p className="text-muted-foreground text-sm mb-6">
-            Our transparent rubric explains exactly how each criterion is evaluated.
+            Each criterion has a defined rubric so scores stay consistent across pitches and across reviewers.
           </p>
           <div className="flex flex-wrap justify-center gap-2 mb-6">
             {["Team Quality", "Market Size", "Product Differentiation", "Traction", "Business Model", "Competitive Landscape"].map(
