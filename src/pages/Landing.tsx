@@ -380,7 +380,7 @@ const Landing = () => {
                 <span className="font-bold">PitchGauge</span>
               </div>
               <p className="text-sm text-muted-foreground max-w-xs">
-                AI-powered pitch intelligence for modern investors.
+                A structured first-pass screening layer for early-stage investors.
               </p>
             </div>
             <div className="flex flex-wrap gap-x-8 gap-y-2 md:justify-end text-sm">
