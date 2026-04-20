@@ -185,26 +185,26 @@ const Landing = () => {
         <div className="container max-w-6xl mx-auto px-4 py-20 md:py-28">
           <div className="text-center mb-14">
             <Badge variant="secondary" className="mb-4">How It Works</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Three Steps to Smarter Investing</h2>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">A three-step screening workflow</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
                 icon: Upload,
-                title: "Upload or Paste Your Pitch",
-                desc: "Add a pitch deck PDF or paste your pitch text directly.",
+                title: "Submit the pitch",
+                desc: "Upload the deck or paste the pitch text into your screening queue.",
                 step: "01",
               },
               {
                 icon: Brain,
-                title: "AI Scores & Analyzes",
-                desc: "Get a full scorecard across 6 investment criteria in seconds.",
+                title: "Score against the framework",
+                desc: "Each pitch is scored across six investment criteria using a consistent rubric.",
                 step: "02",
               },
               {
                 icon: CheckCircle,
-                title: "Decide with Confidence",
-                desc: "Download reports, compare deals, and track your history.",
+                title: "Route the decision",
+                desc: "Triage outputs feed into your pipeline: pass, watchlist, or move to diligence.",
                 step: "03",
               },
             ].map(({ icon: Icon, title, desc, step }) => (
