@@ -142,27 +142,27 @@ const Landing = () => {
         <div className="container max-w-6xl mx-auto px-4 py-20 md:py-28">
           <div className="text-center mb-14">
             <Badge variant="secondary" className="mb-4">The Problem</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">The average VC sees 1,000+ pitches a year.</h2>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">An average fund reviews 1,000+ pitches a year.</h2>
             <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
-              Most get dismissed in minutes. Not because they weren't good — but because there wasn't enough time to look properly.
+              Most are rejected within minutes — not because they lacked merit, but because there was no structured way to triage them at the top of the funnel.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
                 icon: Layers,
-                title: "Deal flow overload",
-                desc: "Hundreds of decks land in your inbox every month. Manually screening each one is slow, inconsistent, and exhausting.",
+                title: "Unstructured deal flow",
+                desc: "Inbound decks accumulate across email, referrals and platforms. Manual triage is slow, inconsistent, and hard to scale across a team.",
               },
               {
                 icon: Users,
-                title: "Inconsistent evaluation",
-                desc: "Different analysts score the same pitch differently. Without a structured framework, good deals slip through the cracks.",
+                title: "Inconsistent first-pass review",
+                desc: "Two analysts looking at the same pitch reach different conclusions. Without a shared framework, scoring drifts and good deals get missed.",
               },
               {
                 icon: Clock,
-                title: "Time spent on the wrong deals",
-                desc: "Hours spent on pitches that could have been ruled out in minutes — time that should go to due diligence on your best prospects.",
+                title: "Diligence time spent on the wrong deals",
+                desc: "Hours of analyst time go into pitches that should have been filtered out earlier — time that should be reserved for your highest-conviction prospects.",
               },
             ].map(({ icon: Icon, title, desc }) => (
               <Card key={title} className="p-6 border-border bg-card">
@@ -175,7 +175,7 @@ const Landing = () => {
             ))}
           </div>
           <p className="text-center text-sm text-muted-foreground mt-10 max-w-2xl mx-auto leading-relaxed">
-            PitchGauge gives you a consistent, structured first pass on every pitch in seconds — so your team focuses only on what deserves a second look.
+            PitchGauge applies a consistent first-pass score to every inbound pitch, so your team only spends diligence time on deals that clear the bar.
           </p>
         </div>
       </section>
