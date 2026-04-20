@@ -4,8 +4,6 @@ import { isDemoAccount } from "@/lib/demo-accounts";
 
 export type SubscriptionTier = "free" | "pro" | "scale";
 
-const DEMO_DAILY_LIMIT = 10;
-
 interface DailyUsageCounts {
   single_analysis: number;
   comparison_analysis: number;
@@ -17,7 +15,6 @@ interface SubscriptionState {
   status: string;
   isLoading: boolean;
   monthlyAnalysisCount: number;
-  dailyDemoUsageCount: number;
   dailyUsage: DailyUsageCounts;
   subscriptionEnd: string | null;
   isDemoAccount: boolean;
@@ -28,6 +25,12 @@ export const DAILY_LIMITS: Record<SubscriptionTier, { single_analysis: number; c
   pro:   { single_analysis: 50,  comparison_analysis: 10, bulk_analysis: 0 },
   scale: { single_analysis: 100, comparison_analysis: 20, bulk_analysis: 3 },
 };
+
+export const DEMO_DAILY_LIMITS = {
+  single_analysis: 20,
+  comparison_analysis: 10,
+  bulk_analysis: 3,
+} as const;
 
 const TIER_LIMITS = {
   free: { monthlyAnalyses: 3, canCompare: false, canBulkAnalyze: false },
@@ -42,7 +45,6 @@ export function useSubscription() {
     status: "active",
     isLoading: true,
     monthlyAnalysisCount: 0,
-    dailyDemoUsageCount: 0,
     dailyUsage: { single_analysis: 0, comparison_analysis: 0, bulk_analysis: 0 },
     subscriptionEnd: null,
     isDemoAccount: false,
@@ -61,19 +63,11 @@ export function useSubscription() {
       const { data: adminData } = await supabase.functions.invoke("check-admin");
       
       if (adminData?.isAdmin) {
-        setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, dailyDemoUsageCount: 0, dailyUsage: { single_analysis: 0, comparison_analysis: 0, bulk_analysis: 0 }, subscriptionEnd: null, isDemoAccount: false });
+        setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, dailyUsage: { single_analysis: 0, comparison_analysis: 0, bulk_analysis: 0 }, subscriptionEnd: null, isDemoAccount: false });
         return;
       }
 
       const isDemo = isDemoAccount(session.user.email);
-      let dailyDemoUsageCount = 0;
-      if (isDemo) {
-        const dailyResult = await supabase.rpc("get_daily_usage_count", { p_action_type: "single_analysis" });
-        const dailySingle = (dailyResult.data as number) || 0;
-        const dailyCompare = ((await supabase.rpc("get_daily_usage_count", { p_action_type: "comparison_analysis" })).data as number) || 0;
-        const dailyBulk = ((await supabase.rpc("get_daily_usage_count", { p_action_type: "bulk_analysis" })).data as number) || 0;
-        dailyDemoUsageCount = dailySingle + dailyCompare + dailyBulk;
-      }
 
       const { data, error } = await supabase.functions.invoke("check-subscription");
 
@@ -101,7 +95,6 @@ export function useSubscription() {
         status: "active",
         isLoading: false,
         monthlyAnalysisCount,
-        dailyDemoUsageCount,
         dailyUsage: {
           single_analysis: (dailySingle.data as number) || 0,
           comparison_analysis: (dailyCompare.data as number) || 0,
@@ -118,11 +111,10 @@ export function useSubscription() {
 
   const loadFromDB = useCallback(async (userId: string, email?: string) => {
     try {
-      // Check admin status first with service role check
       if (email) {
         const { data: adminData } = await supabase.functions.invoke("check-admin");
-      if (adminData?.isAdmin) {
-          setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, dailyDemoUsageCount: 0, dailyUsage: { single_analysis: 0, comparison_analysis: 0, bulk_analysis: 0 }, subscriptionEnd: null, isDemoAccount: false });
+        if (adminData?.isAdmin) {
+          setState({ tier: "scale", status: "active", isLoading: false, monthlyAnalysisCount: 0, dailyUsage: { single_analysis: 0, comparison_analysis: 0, bulk_analysis: 0 }, subscriptionEnd: null, isDemoAccount: false });
           return;
         }
       }
@@ -140,7 +132,7 @@ export function useSubscription() {
       const monthlyAnalysisCount = (usageResult.data as number) || 0;
       const subscriptionEnd = subResult.data?.current_period_end || null;
 
-      setState({ tier, status, isLoading: false, monthlyAnalysisCount, dailyDemoUsageCount: 0, dailyUsage: { single_analysis: 0, comparison_analysis: 0, bulk_analysis: 0 }, subscriptionEnd, isDemoAccount: isDemoAccount(email) });
+      setState({ tier, status, isLoading: false, monthlyAnalysisCount, dailyUsage: { single_analysis: 0, comparison_analysis: 0, bulk_analysis: 0 }, subscriptionEnd, isDemoAccount: isDemoAccount(email) });
     } catch (error) {
       console.error("Error loading subscription from DB:", error);
       setState(s => ({ ...s, isLoading: false }));
@@ -156,19 +148,19 @@ export function useSubscription() {
     };
   }, [syncWithStripe]);
 
-  const limits = TIER_LIMITS[state.tier];
-  const dailyLimits = DAILY_LIMITS[state.tier];
+  const tierLimits = TIER_LIMITS[state.tier];
+  const dailyLimits = state.isDemoAccount ? DEMO_DAILY_LIMITS : DAILY_LIMITS[state.tier];
 
-  const demoLimitReached = state.isDemoAccount && state.dailyDemoUsageCount >= DEMO_DAILY_LIMIT;
-  const demoLimitMessage = "Demo limit reached for today. Sign up for your own account to continue.";
+  const canCompareByEntitlement = state.isDemoAccount ? true : tierLimits.canCompare;
+  const canBulkByEntitlement = state.isDemoAccount ? true : tierLimits.canBulkAnalyze;
 
   const dailyAnalysisLimitReached = state.dailyUsage.single_analysis >= dailyLimits.single_analysis;
   const dailyCompareLimitReached = dailyLimits.comparison_analysis === 0 || state.dailyUsage.comparison_analysis >= dailyLimits.comparison_analysis;
   const dailyBulkLimitReached = dailyLimits.bulk_analysis === 0 || state.dailyUsage.bulk_analysis >= dailyLimits.bulk_analysis;
 
-  const canAnalyze = !demoLimitReached && !dailyAnalysisLimitReached;
-  const canCompare = !demoLimitReached && limits.canCompare && !dailyCompareLimitReached;
-  const canBulkAnalyze = !demoLimitReached && limits.canBulkAnalyze && !dailyBulkLimitReached;
+  const canAnalyze = !dailyAnalysisLimitReached;
+  const canCompare = canCompareByEntitlement && !dailyCompareLimitReached;
+  const canBulkAnalyze = canBulkByEntitlement && !dailyBulkLimitReached;
   const remainingAnalyses = Math.max(0, dailyLimits.single_analysis - state.dailyUsage.single_analysis);
 
   const recordUsage = useCallback(async (actionType: string, metadata?: Record<string, string>) => {
@@ -245,13 +237,13 @@ export function useSubscription() {
     status: state.status,
     isLoading: state.isLoading,
     monthlyAnalysisCount: state.monthlyAnalysisCount,
-    dailyDemoUsageCount: state.dailyDemoUsageCount,
+    dailyDemoUsageCount: 0,
     dailyUsage: state.dailyUsage,
     dailyLimits,
     subscriptionEnd: state.subscriptionEnd,
     isDemoAccount: state.isDemoAccount,
-    demoLimitReached,
-    demoLimitMessage,
+    demoLimitReached: false,
+    demoLimitMessage: "",
     dailyAnalysisLimitReached,
     dailyCompareLimitReached,
     dailyBulkLimitReached,
