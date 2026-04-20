@@ -321,6 +321,22 @@ export const DAILY_LIMITS: Record<string, Record<string, number>> = {
 };
 
 /**
+ * Demo account daily limits — overrides tier limits when user email matches.
+ */
+export const DEMO_DAILY_LIMITS: Record<string, number> = {
+  single_analysis: 20,
+  comparison_analysis: 10,
+  bulk_analysis: 3,
+};
+
+const DEMO_EMAILS = ['c74661985@gmail.com'];
+
+export function isDemoAccountEmail(email: string | undefined | null): boolean {
+  if (!email) return false;
+  return DEMO_EMAILS.includes(email.toLowerCase());
+}
+
+/**
  * Check if a user has exceeded their daily limit for a given action type.
  * Returns { allowed, current, limit }.
  */
@@ -329,10 +345,12 @@ export async function checkDailyLimit(
   tier: string,
   actionType: string,
   supabaseUrl: string,
-  serviceRoleKey: string
+  serviceRoleKey: string,
+  email?: string | null
 ): Promise<{ allowed: boolean; current: number; limit: number }> {
-  const tierLimits = DAILY_LIMITS[tier] || DAILY_LIMITS['free'];
-  const limit = tierLimits[actionType] ?? 0;
+  const isDemo = isDemoAccountEmail(email);
+  const limits = isDemo ? DEMO_DAILY_LIMITS : (DAILY_LIMITS[tier] || DAILY_LIMITS['free']);
+  const limit = limits[actionType] ?? 0;
 
   if (limit === 0) {
     return { allowed: false, current: 0, limit: 0 };

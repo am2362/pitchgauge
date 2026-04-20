@@ -49,12 +49,15 @@ serve(async (req) => {
       const admin = await isAdminUser(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
       if (!admin) {
         const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
-        if (tier === 'free') {
+        const userEmail = userData?.user?.email;
+        const { isDemoAccountEmail } = await import('../_shared/security.ts');
+        const isDemo = isDemoAccountEmail(userEmail);
+        if (tier === 'free' && !isDemo) {
           safeLog("COMPARE-STARTUPS", "Free tier denied");
           return secureErrorResponse('This feature requires a Pro or Scale subscription.', 403);
         }
 
-        const dailyCheck = await checkDailyLimit(userId, tier, 'comparison_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY);
+        const dailyCheck = await checkDailyLimit(userId, tier, 'comparison_analysis', SUPABASE_URL!, SERVICE_ROLE_KEY, userEmail);
         if (!dailyCheck.allowed) {
           safeLog("COMPARE-STARTUPS", "Daily limit reached", { tier, current: dailyCheck.current, limit: dailyCheck.limit });
           return secureErrorResponse('Daily limit reached. Resets at midnight UTC.', 429);
