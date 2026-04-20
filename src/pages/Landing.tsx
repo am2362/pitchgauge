@@ -122,17 +122,17 @@ const Landing = () => {
       <section className="border-y border-border bg-muted/30">
         <div className="container max-w-6xl mx-auto px-4 py-10">
           <p className="text-center text-sm font-semibold text-foreground mb-5">
-            Built for investors who move fast
+            Internal tooling for investors who screen at scale
           </p>
           <div className="flex flex-wrap justify-center gap-3 mb-5">
-            {["VC Deal Flow Screening", "Angel First-Pass Analysis", "Accelerator Batch Shortlisting", "Family Office Deal Review"].map((label) => (
+            {["VC deal flow triage", "Angel first-pass review", "Accelerator batch screening", "Family office pipeline review"].map((label) => (
               <Badge key={label} variant="secondary" className="text-xs px-4 py-2">
                 {label}
               </Badge>
             ))}
           </div>
           <p className="text-center text-xs text-muted-foreground">
-            Single pitch scoring · Multi-startup comparison · Bulk screening up to 100 startups
+            First-pass screening · Deal shortlisting · Batch deal flow screening up to 100 startups
           </p>
         </div>
       </section>
