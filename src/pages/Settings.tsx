@@ -333,7 +333,9 @@ const Settings = () => {
                 <CardTitle>Change Email</CardTitle>
               </div>
               <CardDescription>
-                Update your email address. A confirmation link will be sent to both your current and new email addresses.
+                {isDemoAccount
+                  ? "Email changes are disabled for the demo account."
+                  : "Update your email address. A confirmation link will be sent to both your current and new email addresses."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -345,11 +347,12 @@ const Settings = () => {
                   placeholder="Enter new email address"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
+                  disabled={isDemoAccount}
                 />
               </div>
               <Button 
                 onClick={handleUpdateEmail} 
-                disabled={isUpdatingEmail || !newEmail.trim()}
+                disabled={isDemoAccount || isUpdatingEmail || !newEmail.trim()}
                 className="w-full sm:w-auto"
               >
                 {isUpdatingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -366,7 +369,9 @@ const Settings = () => {
                 <CardTitle>Change Password</CardTitle>
               </div>
               <CardDescription>
-                Create or update your password. Must be at least 6 characters.
+                {isDemoAccount
+                  ? "Password changes are disabled for the demo account."
+                  : "Create or update your password. Must be at least 6 characters."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -378,6 +383,7 @@ const Settings = () => {
                   placeholder="Enter new password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  disabled={isDemoAccount}
                 />
               </div>
               <div className="space-y-2">
@@ -388,11 +394,12 @@ const Settings = () => {
                   placeholder="Confirm new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={isDemoAccount}
                 />
               </div>
               <Button 
                 onClick={handleUpdatePassword} 
-                disabled={isUpdatingPassword || !newPassword || !confirmPassword}
+                disabled={isDemoAccount || isUpdatingPassword || !newPassword || !confirmPassword}
                 className="w-full sm:w-auto"
               >
                 {isUpdatingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
