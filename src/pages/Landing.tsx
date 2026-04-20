@@ -62,11 +62,11 @@ const Landing = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
-                Analyze, Compare & Bulk Screen Startup Pitches{" "}
-                <span className="text-primary">with AI</span>
+                A structured triage system for{" "}
+                <span className="text-primary">early-stage deal flow</span>
               </h1>
               <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
-                Your AI-powered first layer of startup screening. Instantly triage deal flow, surface the signals that matter, and focus your attention where it counts — before your analysts dive deeper.
+                PitchGauge is an internal screening tool for angels, micro-VCs and accelerators. Run a consistent first pass on every inbound pitch, filter against a structured scoring framework, and decide which startups warrant deeper diligence — before your team spends time on them.
               </p>
               <div className="flex flex-wrap gap-3 pt-2">
                 <Button size="lg" className="gap-2" onClick={() => navigate("/auth")}>
@@ -77,7 +77,7 @@ const Landing = () => {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground/70 italic max-w-md">
-                PitchGauge is designed as an initial screening tool to support — not replace — human investment judgement.
+                A first-pass screening layer designed to support — not replace — the judgement of your investment team.
               </p>
             </div>
 
@@ -122,17 +122,17 @@ const Landing = () => {
       <section className="border-y border-border bg-muted/30">
         <div className="container max-w-6xl mx-auto px-4 py-10">
           <p className="text-center text-sm font-semibold text-foreground mb-5">
-            Built for investors who move fast
+            Internal tooling for investors who screen at scale
           </p>
           <div className="flex flex-wrap justify-center gap-3 mb-5">
-            {["VC Deal Flow Screening", "Angel First-Pass Analysis", "Accelerator Batch Shortlisting", "Family Office Deal Review"].map((label) => (
+            {["VC deal flow triage", "Angel first-pass review", "Accelerator batch screening", "Family office pipeline review"].map((label) => (
               <Badge key={label} variant="secondary" className="text-xs px-4 py-2">
                 {label}
               </Badge>
             ))}
           </div>
           <p className="text-center text-xs text-muted-foreground">
-            Single pitch scoring · Multi-startup comparison · Bulk screening up to 100 startups
+            First-pass screening · Deal shortlisting · Batch deal flow screening up to 100 startups
           </p>
         </div>
       </section>
@@ -142,27 +142,27 @@ const Landing = () => {
         <div className="container max-w-6xl mx-auto px-4 py-20 md:py-28">
           <div className="text-center mb-14">
             <Badge variant="secondary" className="mb-4">The Problem</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">The average VC sees 1,000+ pitches a year.</h2>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">An average fund reviews 1,000+ pitches a year.</h2>
             <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
-              Most get dismissed in minutes. Not because they weren't good — but because there wasn't enough time to look properly.
+              Most are rejected within minutes — not because they lacked merit, but because there was no structured way to triage them at the top of the funnel.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
                 icon: Layers,
-                title: "Deal flow overload",
-                desc: "Hundreds of decks land in your inbox every month. Manually screening each one is slow, inconsistent, and exhausting.",
+                title: "Unstructured deal flow",
+                desc: "Inbound decks accumulate across email, referrals and platforms. Manual triage is slow, inconsistent, and hard to scale across a team.",
               },
               {
                 icon: Users,
-                title: "Inconsistent evaluation",
-                desc: "Different analysts score the same pitch differently. Without a structured framework, good deals slip through the cracks.",
+                title: "Inconsistent first-pass review",
+                desc: "Two analysts looking at the same pitch reach different conclusions. Without a shared framework, scoring drifts and good deals get missed.",
               },
               {
                 icon: Clock,
-                title: "Time spent on the wrong deals",
-                desc: "Hours spent on pitches that could have been ruled out in minutes — time that should go to due diligence on your best prospects.",
+                title: "Diligence time spent on the wrong deals",
+                desc: "Hours of analyst time go into pitches that should have been filtered out earlier — time that should be reserved for your highest-conviction prospects.",
               },
             ].map(({ icon: Icon, title, desc }) => (
               <Card key={title} className="p-6 border-border bg-card">
@@ -175,7 +175,7 @@ const Landing = () => {
             ))}
           </div>
           <p className="text-center text-sm text-muted-foreground mt-10 max-w-2xl mx-auto leading-relaxed">
-            PitchGauge gives you a consistent, structured first pass on every pitch in seconds — so your team focuses only on what deserves a second look.
+            PitchGauge applies a consistent first-pass score to every inbound pitch, so your team only spends diligence time on deals that clear the bar.
           </p>
         </div>
       </section>
@@ -185,26 +185,26 @@ const Landing = () => {
         <div className="container max-w-6xl mx-auto px-4 py-20 md:py-28">
           <div className="text-center mb-14">
             <Badge variant="secondary" className="mb-4">How It Works</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Three Steps to Smarter Investing</h2>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">A three-step screening workflow</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
                 icon: Upload,
-                title: "Upload or Paste Your Pitch",
-                desc: "Add a pitch deck PDF or paste your pitch text directly.",
+                title: "Submit the pitch",
+                desc: "Upload the deck or paste the pitch text into your screening queue.",
                 step: "01",
               },
               {
                 icon: Brain,
-                title: "AI Scores & Analyzes",
-                desc: "Get a full scorecard across 6 investment criteria in seconds.",
+                title: "Score against the framework",
+                desc: "Each pitch is scored across six investment criteria using a consistent rubric.",
                 step: "02",
               },
               {
                 icon: CheckCircle,
-                title: "Decide with Confidence",
-                desc: "Download reports, compare deals, and track your history.",
+                title: "Route the decision",
+                desc: "Triage outputs feed into your pipeline: pass, watchlist, or move to diligence.",
                 step: "03",
               },
             ].map(({ icon: Icon, title, desc, step }) => (
@@ -226,27 +226,27 @@ const Landing = () => {
         <div className="container max-w-6xl mx-auto px-4 py-20 md:py-28">
           <div className="text-center mb-14">
             <Badge variant="secondary" className="mb-4">Features</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Everything You Need to Evaluate Deal Flow</h2>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">A structured workflow for screening deal flow</h2>
             <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
-              PitchGauge gives investors a fast, structured first look at any pitch — so you spend less time on triage and more time on the deals worth pursuing.
+              Three modes covering the full top-of-funnel: individual pitch review, shortlist comparison, and batch screening across an entire pipeline.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
                 icon: BarChart3,
-                title: "Single Pitch Analysis",
-                desc: "Score any pitch across Team, Market, Product, Traction, Business Model, and Competitive Landscape. Get red flags, questions to ask founders, bull/bear thesis, and benchmark percentile.",
+                title: "First-Pass Screening",
+                desc: "Score a single pitch against six criteria — Team, Market, Product, Traction, Business Model, Competitive Landscape. Outputs include red flags, founder questions, bull/bear thesis and a benchmark percentile.",
               },
               {
                 icon: GitCompare,
-                title: "Comparison Mode",
-                desc: "Compare up to 5 startups side-by-side. Get ranked investment recommendations with detailed score breakdowns and key strengths/weaknesses per startup.",
+                title: "Deal Shortlisting",
+                desc: "Compare up to 5 startups side-by-side once they clear first-pass. Ranked output with score breakdowns and key strengths and weaknesses to support the shortlisting discussion.",
               },
               {
                 icon: Layers,
-                title: "Bulk Analysis",
-                desc: "Upload up to 100 startups via Excel. Get top 20 ranked, sector distribution charts, and exportable reports — perfect for batch screening deal flow.",
+                title: "Batch Deal Flow Screening",
+                desc: "Upload up to 100 startups via Excel for batch triage. Returns a ranked top 20, sector distribution, and an exportable report for pipeline review meetings.",
               },
             ].map(({ icon: Icon, title, desc }) => (
               <Card key={title} className="p-6 hover:shadow-elevated transition-shadow border-border bg-card">
@@ -266,8 +266,8 @@ const Landing = () => {
         <div className="container max-w-6xl mx-auto px-4 py-20 md:py-28">
           <div className="text-center mb-14">
             <Badge variant="secondary" className="mb-4">Pricing</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Simple, Transparent Pricing</h2>
-            <p className="text-muted-foreground mt-3">Start free. Upgrade when you need more power.</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Plans by screening volume</h2>
+            <p className="text-muted-foreground mt-3">Pick the tier that matches your inbound deal flow.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {[
@@ -275,8 +275,8 @@ const Landing = () => {
                 name: "Free",
                 price: "$0",
                 period: "/mo",
-                desc: "For casual exploration",
-                features: ["3 single analyses/day", "No comparison mode", "No bulk analysis", "Basic JSON + PDF download"],
+                desc: "For occasional reviews",
+                features: ["3 first-pass screenings/day", "Shortlisting not included", "Batch screening not included", "JSON + PDF export"],
                 cta: "Get Started Free",
                 highlight: false,
               },
@@ -284,11 +284,11 @@ const Landing = () => {
                 name: "Pro",
                 price: "$39",
                 period: "/mo",
-                desc: "For active angel investors",
+                desc: "For active angels and solo investors",
                 features: [
-                  "50 single analyses/day",
-                  "10 comparisons/day (up to 5 startups)",
-                  "Full download options",
+                  "50 first-pass screenings/day",
+                  "10 shortlisting sessions/day (up to 5 startups)",
+                  "Full export options",
                   "30-day history",
                 ],
                 cta: "Start Pro Trial",
@@ -298,12 +298,12 @@ const Landing = () => {
                 name: "Scale",
                 price: "$99",
                 period: "/mo",
-                desc: "For funds & accelerators",
+                desc: "For funds and accelerators",
                 features: [
-                  "100 single analyses/day",
-                  "20 comparisons/day",
-                  "3 bulk jobs/day (up to 100 startups each)",
-                  "Sector charts & Excel export",
+                  "100 first-pass screenings/day",
+                  "20 shortlisting sessions/day",
+                  "3 batch screening jobs/day (up to 100 startups each)",
+                  "Sector breakdown and Excel export",
                   "Unlimited history",
                 ],
                 cta: "Start Scale Trial",
@@ -351,9 +351,9 @@ const Landing = () => {
       {/* METRICS TEASER */}
       <section className="bg-muted/30">
         <div className="container max-w-6xl mx-auto px-4 py-16 text-center">
-          <h2 className="text-2xl font-bold mb-2">Know What Every Score Means</h2>
+          <h2 className="text-2xl font-bold mb-2">The scoring framework, documented</h2>
           <p className="text-muted-foreground text-sm mb-6">
-            Our transparent rubric explains exactly how each criterion is evaluated.
+            Each criterion has a defined rubric so scores stay consistent across pitches and across reviewers.
           </p>
           <div className="flex flex-wrap justify-center gap-2 mb-6">
             {["Team Quality", "Market Size", "Product Differentiation", "Traction", "Business Model", "Competitive Landscape"].map(
@@ -365,7 +365,7 @@ const Landing = () => {
             )}
           </div>
           <Button variant="link" className="gap-1" onClick={() => navigate("/scoring-rubric")}>
-            View Full Scoring Guide <ChevronRight className="h-4 w-4" />
+            View the scoring rubric <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </section>
@@ -380,7 +380,7 @@ const Landing = () => {
                 <span className="font-bold">PitchGauge</span>
               </div>
               <p className="text-sm text-muted-foreground max-w-xs">
-                AI-powered pitch intelligence for modern investors.
+                A structured first-pass screening layer for early-stage investors.
               </p>
             </div>
             <div className="flex flex-wrap gap-x-8 gap-y-2 md:justify-end text-sm">
