@@ -25,7 +25,7 @@ const navLinks = [
 export default function AppNavbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { tier } = useSubscription();
+  const { tier, isDemoAccount } = useSubscription();
   const [email, setEmail] = useState("");
 
   useEffect(() => {
@@ -74,8 +74,8 @@ export default function AppNavbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2">
               <User className="h-4 w-4" />
-              <Badge variant={tier === "free" ? "secondary" : "default"} className="capitalize text-xs">
-                {tier}
+              <Badge variant={isDemoAccount ? "default" : tier === "free" ? "secondary" : "default"} className="capitalize text-xs">
+                {isDemoAccount ? "Demo Account" : tier}
               </Badge>
               <ChevronDown className="h-3 w-3" />
             </Button>

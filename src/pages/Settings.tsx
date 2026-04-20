@@ -36,7 +36,7 @@ const Settings = () => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { tier, monthlyAnalysisCount, remainingAnalyses, canCompare, canBulkAnalyze, isLoading: isSubLoading, startCheckout } = useSubscription();
+  const { tier, monthlyAnalysisCount, remainingAnalyses, canCompare, canBulkAnalyze, isLoading: isSubLoading, startCheckout, isDemoAccount } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useCheckoutState<string | null>(null);
 
   useEffect(() => {
@@ -277,8 +277,8 @@ const Settings = () => {
                 <>
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium">Current Plan:</span>
-                    <Badge variant={tier === "free" ? "secondary" : "default"} className="capitalize text-sm">
-                      {tier}
+                    <Badge variant={isDemoAccount ? "default" : tier === "free" ? "secondary" : "default"} className="capitalize text-sm">
+                      {isDemoAccount ? "Demo Account" : tier}
                     </Badge>
                   </div>
 
