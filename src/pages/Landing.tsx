@@ -62,11 +62,11 @@ const Landing = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
-                Analyze, Compare & Bulk Screen Startup Pitches{" "}
-                <span className="text-primary">with AI</span>
+                A structured triage system for{" "}
+                <span className="text-primary">early-stage deal flow</span>
               </h1>
               <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
-                Your AI-powered first layer of startup screening. Instantly triage deal flow, surface the signals that matter, and focus your attention where it counts — before your analysts dive deeper.
+                PitchGauge is an internal screening tool for angels, micro-VCs and accelerators. Run a consistent first pass on every inbound pitch, filter against a structured scoring framework, and decide which startups warrant deeper diligence — before your team spends time on them.
               </p>
               <div className="flex flex-wrap gap-3 pt-2">
                 <Button size="lg" className="gap-2" onClick={() => navigate("/auth")}>
