@@ -26,7 +26,7 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 import logo from "@/assets/logo.png";
 
 const Landing = () => {
-  usePageMeta("PitchGauge", "Score startup pitches with AI. Get detailed scorecards, red flags, and investment theses in seconds.");
+  usePageMeta("PitchGauge", "Deal flow screening for early-stage investors. Triage, score, and shortlist startup pitches before manual review.");
   const navigate = useNavigate();
 
   const scrollTo = (id: string) => {
