@@ -43,10 +43,10 @@ const Landing = () => {
             <span className="text-lg font-bold tracking-tight">PitchGauge</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
-            <button onClick={() => scrollTo("how-it-works")} className="hover:text-foreground transition-colors">How It Works</button>
+            <button onClick={() => scrollTo("how-it-works")} className="hover:text-foreground transition-colors">Workflow</button>
             <button onClick={() => scrollTo("features")} className="hover:text-foreground transition-colors">Features</button>
             <button onClick={() => scrollTo("pricing")} className="hover:text-foreground transition-colors">Pricing</button>
-            <button onClick={() => navigate("/scoring-rubric")} className="hover:text-foreground transition-colors">Scoring Guide</button>
+            <button onClick={() => navigate("/scoring-rubric")} className="hover:text-foreground transition-colors">Rubric</button>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>Log in</Button>
