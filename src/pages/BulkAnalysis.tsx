@@ -868,7 +868,18 @@ export default function BulkAnalysis() {
               </>
             )}
 
-            {!currentAnalysis.comparison_report && (
+            {!currentAnalysis.comparison_report && successfulCount > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Preparing Comparison Report</CardTitle>
+                  <CardDescription>
+                    {successfulCount} successful analyses are available. The comparison report is being generated.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            )}
+
+            {!currentAnalysis.comparison_report && successfulCount === 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>Comparison Report Unavailable</CardTitle>
