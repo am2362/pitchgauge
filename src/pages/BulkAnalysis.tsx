@@ -291,7 +291,10 @@ export default function BulkAnalysis() {
           batch_name: `Batch ${new Date().toLocaleDateString()}`,
           total_startups: startups.length,
           completed_startups: 0,
-          status: 'processing' as const
+          status: 'processing' as const,
+          metadata: {
+            pitches: Object.fromEntries(startups.map(startup => [startup.name, startup.pitch]))
+          }
         })
         .select()
         .single();
@@ -487,7 +490,12 @@ export default function BulkAnalysis() {
       // Final status update
       await supabase
         .from('bulk_analyses')
-        .update({ status: 'completed' })
+        .update({
+          status: 'completed',
+          completed_startups: allResults.length,
+          results: JSON.parse(JSON.stringify(allResults)),
+          comparison_report: null
+        })
         .eq('id', batch.id);
 
       setCurrentAnalysis(prev => prev ? {
