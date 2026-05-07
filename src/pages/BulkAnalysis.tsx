@@ -567,7 +567,7 @@ export default function BulkAnalysis() {
 
       await supabase
         .from('bulk_analyses')
-        .update({ comparison_report: comparisonReport })
+        .update({ comparison_report: JSON.parse(JSON.stringify(comparisonReport)) })
         .eq('id', batchId);
 
       setCurrentAnalysis(prev => prev ? { ...prev, comparison_report: comparisonReport } : null);
@@ -581,7 +581,7 @@ export default function BulkAnalysis() {
       if (fallbackReport) {
         await supabase
           .from('bulk_analyses')
-          .update({ comparison_report: fallbackReport })
+          .update({ comparison_report: JSON.parse(JSON.stringify(fallbackReport)) })
           .eq('id', batchId);
         setCurrentAnalysis(prev => prev ? { ...prev, comparison_report: fallbackReport } : null);
       }
