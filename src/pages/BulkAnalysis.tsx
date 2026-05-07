@@ -187,7 +187,6 @@ export default function BulkAnalysis() {
       !currentAnalysis.comparison_report &&
       !comparisonGenerationRef.current.has(currentAnalysis.id)
     ) {
-      comparisonGenerationRef.current.add(currentAnalysis.id);
       generateComparison(currentAnalysis.id);
     }
   }, [currentAnalysis]);
@@ -556,6 +555,9 @@ export default function BulkAnalysis() {
   };
 
   const generateComparison = async (batchId: string) => {
+    if (comparisonGenerationRef.current.has(batchId)) return;
+    comparisonGenerationRef.current.add(batchId);
+
     try {
       const { data: batch } = await supabase
         .from('bulk_analyses')
