@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateBulkComparisonInput, sanitizeErrorMessage } from '../_shared/validation.ts';
-import { corsHeaders, secureJsonResponse, secureErrorResponse, safeLog, getUserTier, isDemoAccountEmail } from '../_shared/security.ts';
+import { corsHeaders, secureJsonResponse, secureErrorResponse, safeLog, getUserTier, isAdminUser, isDemoAccountEmail } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -48,14 +48,36 @@ serve(async (req) => {
 
     safeLog("BULK-COMPARISON", "User authenticated");
 
-    // Subscription tier enforcement - require Scale tier
+    // Subscription tier enforcement - require Scale tier (admin/demo users bypass)
     if (SERVICE_ROLE_KEY) {
       const userEmail = userData?.user?.email;
-      if (!isDemoAccountEmail(userEmail)) {
-        const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      const admin = await isAdminUser(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+      if (!admin && !isDemoAccountEmail(userEmail)) {
+        let tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+
+        // Fallback to the authenticated lookup used by bulk analysis to avoid false 403s.
+        if (tier !== 'scale') {
+          const { data: ownSubscription } = await supabaseAuth
+            .from('subscriptions')
+            .select('tier, status, updated_at')
+            .eq('user_id', userId)
+            .eq('status', 'active')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          const authTier = typeof ownSubscription?.tier === 'string'
+            ? ownSubscription.tier.trim().toLowerCase()
+            : 'free';
+
+          if (authTier === 'scale') tier = 'scale';
+        }
+
         if (tier !== 'scale') {
           return secureErrorResponse('This feature requires a Scale subscription.', 403);
         }
+      } else {
+        safeLog("BULK-COMPARISON", admin ? "Admin user - bypassing tier check" : "Demo user - bypassing tier check");
       }
 
       // Skip per-request rate limiting for bulk comparison — Scale/demo check is sufficient.

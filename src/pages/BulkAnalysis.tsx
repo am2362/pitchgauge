@@ -68,6 +68,56 @@ function createFailedBulkResult(startupName: string, errorType: string, errorMes
   };
 }
 
+function createLocalComparisonReport(results: BulkAnalysisResult[]): ComparisonReport {
+  const sortedResults = [...results].sort((a, b) => b.scores.overall - a.scores.overall);
+  const sectorBreakdown = results.reduce<Record<string, number>>((acc, result) => {
+    acc[result.sector] = (acc[result.sector] || 0) + 1;
+    return acc;
+  }, {});
+
+  const topStrengths = (result: BulkAnalysisResult) => {
+    const entries = [
+      ['Team', result.scores.team],
+      ['Product', result.scores.product],
+      ['Market', result.scores.market],
+      ['Traction', result.scores.traction],
+      ['Funding', result.scores.funding],
+      ['Business model', result.scores.businessModel],
+    ].sort((a, b) => (b[1] as number) - (a[1] as number));
+
+    return entries.slice(0, 3).map(([label, score]) => `${label}: ${score}/10`);
+  };
+
+  return {
+    investmentRankings: sortedResults.slice(0, 20).map((result, index) => ({
+      rank: index + 1,
+      startupName: result.startupName,
+      overallScore: result.scores.overall,
+      topStrengths: topStrengths(result),
+      recommendation: result.scores.overall >= 7 ? 'Prioritise for review' : result.scores.overall >= 5 ? 'Review if thesis-aligned' : 'Lower priority'
+    })),
+    overallRecommendation: `Bulk analysis complete for ${results.length} startups. Review the ranked list first, then use sector breakdowns and category scores to prioritise follow-up diligence.`,
+    scoreComparison: {
+      headers: ['Startup', 'Team', 'Product', 'Market', 'Traction', 'Funding', 'BizModel', 'Overall'],
+      rows: sortedResults.map(result => [
+        result.startupName,
+        result.scores.team,
+        result.scores.product,
+        result.scores.market,
+        result.scores.traction,
+        result.scores.funding,
+        result.scores.businessModel,
+        result.scores.overall
+      ])
+    },
+    strengthsAndWeaknesses: Object.fromEntries(sortedResults.map(result => [
+      result.startupName,
+      { strengths: topStrengths(result), weaknesses: ['Review detailed category notes before follow-up'] }
+    ])),
+    sectorBreakdown
+  };
+}
+
 export default function BulkAnalysis() {
   usePageMeta("PitchGauge", "Batch-analyze multiple startup pitches at once with AI scoring.");
   const navigate = useNavigate();
@@ -76,6 +126,7 @@ export default function BulkAnalysis() {
   const [history, setHistory] = useState<BulkAnalysis[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isRetrying, setIsRetrying] = useState(false);
+  const comparisonGenerationRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let isActive = true;
@@ -126,6 +177,17 @@ export default function BulkAnalysis() {
         pollAnalysisStatus(currentAnalysis.id);
       }, 3000);
       return () => clearInterval(interval);
+    }
+  }, [currentAnalysis]);
+
+  useEffect(() => {
+    if (
+      currentAnalysis?.status === 'completed' &&
+      currentAnalysis.results?.some(isSuccessfulBulkResult) &&
+      !currentAnalysis.comparison_report &&
+      !comparisonGenerationRef.current.has(currentAnalysis.id)
+    ) {
+      generateComparison(currentAnalysis.id);
     }
   }, [currentAnalysis]);
 
@@ -241,7 +303,10 @@ export default function BulkAnalysis() {
           batch_name: `Batch ${new Date().toLocaleDateString()}`,
           total_startups: startups.length,
           completed_startups: 0,
-          status: 'processing' as const
+          status: 'processing' as const,
+          metadata: {
+            pitches: Object.fromEntries(startups.map(startup => [startup.name, startup.pitch]))
+          }
         })
         .select()
         .single();
@@ -437,7 +502,12 @@ export default function BulkAnalysis() {
       // Final status update
       await supabase
         .from('bulk_analyses')
-        .update({ status: 'completed' })
+        .update({
+          status: 'completed',
+          completed_startups: allResults.length,
+          results: JSON.parse(JSON.stringify(allResults)),
+          comparison_report: null
+        })
         .eq('id', batch.id);
 
       setCurrentAnalysis(prev => prev ? {
@@ -485,6 +555,9 @@ export default function BulkAnalysis() {
   };
 
   const generateComparison = async (batchId: string) => {
+    if (comparisonGenerationRef.current.has(batchId)) return;
+    comparisonGenerationRef.current.add(batchId);
+
     try {
       const { data: batch } = await supabase
         .from('bulk_analyses')
@@ -510,24 +583,31 @@ export default function BulkAnalysis() {
         body: { results: successfulResults }
       });
 
-      if (error) throw error;
-
-      if (data?.comparisonReport) {
-        await supabase
-          .from('bulk_analyses')
-          .update({ comparison_report: data.comparisonReport })
-          .eq('id', batchId);
-
-        setCurrentAnalysis(prev => prev ? { ...prev, comparison_report: data.comparisonReport } : null);
-        loadHistory();
+      const comparisonReport = data?.comparisonReport || createLocalComparisonReport(successfulResults);
+      if (error) {
+        console.warn('Backend comparison failed; using deterministic local report', error);
       }
+
+      await supabase
+        .from('bulk_analyses')
+        .update({ comparison_report: JSON.parse(JSON.stringify(comparisonReport)) })
+        .eq('id', batchId);
+
+      setCurrentAnalysis(prev => prev ? { ...prev, comparison_report: comparisonReport } : null);
+      loadHistory();
     } catch (error) {
       console.error('Error generating comparison:', error);
-      toast({
-        title: "Comparison Failed",
-        description: "Could not generate comparison report",
-        variant: "destructive"
-      });
+      const fallbackReport = currentAnalysis?.results
+        ? createLocalComparisonReport(currentAnalysis.results.filter(isSuccessfulBulkResult))
+        : null;
+
+      if (fallbackReport) {
+        await supabase
+          .from('bulk_analyses')
+          .update({ comparison_report: JSON.parse(JSON.stringify(fallbackReport)) })
+          .eq('id', batchId);
+        setCurrentAnalysis(prev => prev ? { ...prev, comparison_report: fallbackReport } : null);
+      }
     }
   };
 
@@ -600,6 +680,7 @@ export default function BulkAnalysis() {
       setCurrentAnalysis(prev => prev ? { ...prev, results: mergedResults, comparison_report: null } : null);
 
       // Regenerate comparison
+      comparisonGenerationRef.current.delete(currentAnalysis.id);
       await generateComparison(currentAnalysis.id);
 
       const newSuccessful = mergedResults.filter(isSuccessfulBulkResult).length;
@@ -694,6 +775,7 @@ export default function BulkAnalysis() {
       if (data.status === 'completed' && data.results && !data.comparison_report) {
         const successfulCount = (data.results as any[]).filter(isSuccessfulBulkResult).length;
         if (successfulCount > 0) {
+          comparisonGenerationRef.current.delete(batchId);
           await generateComparison(batchId);
         }
       }
@@ -811,7 +893,18 @@ export default function BulkAnalysis() {
               </>
             )}
 
-            {!currentAnalysis.comparison_report && (
+            {!currentAnalysis.comparison_report && successfulCount > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Preparing Comparison Report</CardTitle>
+                  <CardDescription>
+                    {successfulCount} successful analyses are available. The comparison report is being generated.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            )}
+
+            {!currentAnalysis.comparison_report && successfulCount === 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>Comparison Report Unavailable</CardTitle>
