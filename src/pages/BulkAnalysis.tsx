@@ -68,6 +68,56 @@ function createFailedBulkResult(startupName: string, errorType: string, errorMes
   };
 }
 
+function createLocalComparisonReport(results: BulkAnalysisResult[]): ComparisonReport {
+  const sortedResults = [...results].sort((a, b) => b.scores.overall - a.scores.overall);
+  const sectorBreakdown = results.reduce<Record<string, number>>((acc, result) => {
+    acc[result.sector] = (acc[result.sector] || 0) + 1;
+    return acc;
+  }, {});
+
+  const topStrengths = (result: BulkAnalysisResult) => {
+    const entries = [
+      ['Team', result.scores.team],
+      ['Product', result.scores.product],
+      ['Market', result.scores.market],
+      ['Traction', result.scores.traction],
+      ['Funding', result.scores.funding],
+      ['Business model', result.scores.businessModel],
+    ].sort((a, b) => (b[1] as number) - (a[1] as number));
+
+    return entries.slice(0, 3).map(([label, score]) => `${label}: ${score}/10`);
+  };
+
+  return {
+    investmentRankings: sortedResults.slice(0, 20).map((result, index) => ({
+      rank: index + 1,
+      startupName: result.startupName,
+      overallScore: result.scores.overall,
+      topStrengths: topStrengths(result),
+      recommendation: result.scores.overall >= 7 ? 'Prioritise for review' : result.scores.overall >= 5 ? 'Review if thesis-aligned' : 'Lower priority'
+    })),
+    overallRecommendation: `Bulk analysis complete for ${results.length} startups. Review the ranked list first, then use sector breakdowns and category scores to prioritise follow-up diligence.`,
+    scoreComparison: {
+      headers: ['Startup', 'Team', 'Product', 'Market', 'Traction', 'Funding', 'BizModel', 'Overall'],
+      rows: sortedResults.map(result => [
+        result.startupName,
+        result.scores.team,
+        result.scores.product,
+        result.scores.market,
+        result.scores.traction,
+        result.scores.funding,
+        result.scores.businessModel,
+        result.scores.overall
+      ])
+    },
+    strengthsAndWeaknesses: Object.fromEntries(sortedResults.map(result => [
+      result.startupName,
+      { strengths: topStrengths(result), weaknesses: ['Review detailed category notes before follow-up'] }
+    ])),
+    sectorBreakdown
+  };
+}
+
 export default function BulkAnalysis() {
   usePageMeta("PitchGauge", "Batch-analyze multiple startup pitches at once with AI scoring.");
   const navigate = useNavigate();
