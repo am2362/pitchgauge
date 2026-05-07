@@ -373,8 +373,11 @@ export default function BulkAnalysis() {
         }
       }
 
-      // === Auto-retry any failed startups (up to 2 passes) ===
-      const MAX_AUTO_RETRY_PASSES = 2;
+      // === Auto-retry any failed startups ===
+      // We retry persistently so that transient rate-limit failures don't bubble
+      // up to the user as a "X failed" toast. Each pass waits longer than the
+      // previous one to let any sustained AI rate limits fully cool down.
+      const MAX_AUTO_RETRY_PASSES = 6;
       for (let retryPass = 0; retryPass < MAX_AUTO_RETRY_PASSES; retryPass++) {
         const failedIndices: number[] = [];
         allResults.forEach((r, idx) => {
@@ -383,10 +386,11 @@ export default function BulkAnalysis() {
 
         if (failedIndices.length === 0) break;
 
-        console.log(`Auto-retry pass ${retryPass + 1}: retrying ${failedIndices.length} failed startups`);
+        console.log(`Auto-retry pass ${retryPass + 1}/${MAX_AUTO_RETRY_PASSES}: retrying ${failedIndices.length} failed startups`);
 
-        // Wait before retrying to let rate limits cool down
-        await new Promise(resolve => setTimeout(resolve, 15000));
+        // Progressive backoff between passes: 20s, 35s, 50s, 65s, 80s, 95s
+        const passWait = 20000 + retryPass * 15000;
+        await new Promise(resolve => setTimeout(resolve, passWait));
 
         for (let fi = 0; fi < failedIndices.length; fi++) {
           const idx = failedIndices[fi];
@@ -398,7 +402,7 @@ export default function BulkAnalysis() {
 
           try {
             let retryData: any = null;
-            for (let attempt = 0; attempt < 3; attempt++) {
+            for (let attempt = 0; attempt < 4; attempt++) {
               const { data, error } = await supabase.functions.invoke('analyze-bulk-startups', {
                 body: {
                   batchId: batch.id,
@@ -407,11 +411,11 @@ export default function BulkAnalysis() {
                   appendResults: true
                 }
               });
-              if (!error && data?.results?.[0]) {
+              if (!error && data?.results?.[0] && isSuccessfulBulkResult(data.results[0])) {
                 retryData = data.results[0];
                 break;
               }
-              await new Promise(resolve => setTimeout(resolve, 3000 * (attempt + 1)));
+              await new Promise(resolve => setTimeout(resolve, 4000 * (attempt + 1)));
             }
 
             if (retryData && isSuccessfulBulkResult(retryData)) {
@@ -422,9 +426,10 @@ export default function BulkAnalysis() {
             console.warn(`Auto-retry failed for startup ${idx}`, e);
           }
 
-          // Cooldown between retries
+          // Cooldown between individual retries (grows with pass number)
           if (fi < failedIndices.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 10000 + Math.round(Math.random() * 2000)));
+            const itemWait = 10000 + retryPass * 3000 + Math.round(Math.random() * 2000);
+            await new Promise(resolve => setTimeout(resolve, itemWait));
           }
         }
       }
