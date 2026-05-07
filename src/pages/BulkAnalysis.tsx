@@ -680,6 +680,7 @@ export default function BulkAnalysis() {
       setCurrentAnalysis(prev => prev ? { ...prev, results: mergedResults, comparison_report: null } : null);
 
       // Regenerate comparison
+      comparisonGenerationRef.current.delete(currentAnalysis.id);
       await generateComparison(currentAnalysis.id);
 
       const newSuccessful = mergedResults.filter(isSuccessfulBulkResult).length;
@@ -774,6 +775,7 @@ export default function BulkAnalysis() {
       if (data.status === 'completed' && data.results && !data.comparison_report) {
         const successfulCount = (data.results as any[]).filter(isSuccessfulBulkResult).length;
         if (successfulCount > 0) {
+          comparisonGenerationRef.current.delete(batchId);
           await generateComparison(batchId);
         }
       }
