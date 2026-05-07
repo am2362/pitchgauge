@@ -50,12 +50,15 @@ serve(async (req) => {
 
     // Subscription tier enforcement - require Scale tier
     if (SERVICE_ROLE_KEY) {
-      const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
-      if (tier !== 'scale') {
-        return secureErrorResponse('This feature requires a Scale subscription.', 403);
+      const userEmail = userData?.user?.email;
+      if (!isDemoAccountEmail(userEmail)) {
+        const tier = await getUserTier(userId, SUPABASE_URL!, SERVICE_ROLE_KEY);
+        if (tier !== 'scale') {
+          return secureErrorResponse('This feature requires a Scale subscription.', 403);
+        }
       }
 
-      // Skip per-request rate limiting for bulk comparison — Scale tier check is sufficient.
+      // Skip per-request rate limiting for bulk comparison — Scale/demo check is sufficient.
     }
 
     if (!LOVABLE_API_KEY) {
