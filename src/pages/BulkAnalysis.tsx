@@ -560,24 +560,31 @@ export default function BulkAnalysis() {
         body: { results: successfulResults }
       });
 
-      if (error) throw error;
-
-      if (data?.comparisonReport) {
-        await supabase
-          .from('bulk_analyses')
-          .update({ comparison_report: data.comparisonReport })
-          .eq('id', batchId);
-
-        setCurrentAnalysis(prev => prev ? { ...prev, comparison_report: data.comparisonReport } : null);
-        loadHistory();
+      const comparisonReport = data?.comparisonReport || createLocalComparisonReport(successfulResults);
+      if (error) {
+        console.warn('Backend comparison failed; using deterministic local report', error);
       }
+
+      await supabase
+        .from('bulk_analyses')
+        .update({ comparison_report: comparisonReport })
+        .eq('id', batchId);
+
+      setCurrentAnalysis(prev => prev ? { ...prev, comparison_report: comparisonReport } : null);
+      loadHistory();
     } catch (error) {
       console.error('Error generating comparison:', error);
-      toast({
-        title: "Comparison Failed",
-        description: "Could not generate comparison report",
-        variant: "destructive"
-      });
+      const fallbackReport = currentAnalysis?.results
+        ? createLocalComparisonReport(currentAnalysis.results.filter(isSuccessfulBulkResult))
+        : null;
+
+      if (fallbackReport) {
+        await supabase
+          .from('bulk_analyses')
+          .update({ comparison_report: fallbackReport })
+          .eq('id', batchId);
+        setCurrentAnalysis(prev => prev ? { ...prev, comparison_report: fallbackReport } : null);
+      }
     }
   };
 
