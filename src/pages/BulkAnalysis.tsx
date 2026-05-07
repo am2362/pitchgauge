@@ -126,6 +126,7 @@ export default function BulkAnalysis() {
   const [history, setHistory] = useState<BulkAnalysis[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isRetrying, setIsRetrying] = useState(false);
+  const comparisonGenerationRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let isActive = true;
@@ -176,6 +177,18 @@ export default function BulkAnalysis() {
         pollAnalysisStatus(currentAnalysis.id);
       }, 3000);
       return () => clearInterval(interval);
+    }
+  }, [currentAnalysis]);
+
+  useEffect(() => {
+    if (
+      currentAnalysis?.status === 'completed' &&
+      currentAnalysis.results?.some(isSuccessfulBulkResult) &&
+      !currentAnalysis.comparison_report &&
+      !comparisonGenerationRef.current.has(currentAnalysis.id)
+    ) {
+      comparisonGenerationRef.current.add(currentAnalysis.id);
+      generateComparison(currentAnalysis.id);
     }
   }, [currentAnalysis]);
 
