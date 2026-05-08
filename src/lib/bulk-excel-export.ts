@@ -35,8 +35,6 @@ export async function exportBulkAnalysisToExcel(
     { header: 'Rank', key: 'rank', width: 8 },
     { header: 'Startup Name', key: 'name', width: 20 },
     { header: 'Sector', key: 'sector', width: 18 },
-    { header: 'Team Quality', key: 'team', width: 14 },
-    { header: 'Team Reasoning', key: 'teamReasoning', width: 50 },
     { header: 'Market Size', key: 'market', width: 14 },
     { header: 'Market Reasoning', key: 'marketReasoning', width: 50 },
     { header: 'Product Differentiation', key: 'product', width: 22 },
