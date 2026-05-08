@@ -115,7 +115,7 @@ export async function exportBulkAnalysisToExcel(
     const comparisonSheet = workbook.addWorksheet('Score Comparison');
     comparisonSheet.addRow(comparisonReport.scoreComparison.headers);
     comparisonReport.scoreComparison.rows.forEach((r) =>
-      comparisonSheet.addRow(r.map((v: any) => (typeof v === 'number' ? Math.round(v) : v)))
+      comparisonSheet.addRow(r.map((v: string | number) => (typeof v === 'number' ? Math.round(v) : v)))
     );
 
     comparisonSheet.getColumn(1).width = 20;
