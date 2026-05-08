@@ -3,6 +3,13 @@ import { BulkAnalysisResult, ComparisonReport } from '@/types/bulk-analysis';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
+const getOverallScore = (result: BulkAnalysisResult) => result.scores?.overall ?? 0;
+
+const sortByOverallDesc = (a: BulkAnalysisResult, b: BulkAnalysisResult) => {
+  const scoreDiff = getOverallScore(b) - getOverallScore(a);
+  return scoreDiff !== 0 ? scoreDiff : a.startupName.localeCompare(b.startupName);
+};
+
 function toArgb(rgb: string) {
   // ExcelJS uses ARGB (alpha + rgb)
   const cleaned = rgb.replace('#', '').toUpperCase();
@@ -56,7 +63,7 @@ export async function exportBulkAnalysisToExcel(
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B82F6' } };
   });
 
-  const sortedResults = [...results].sort((a, b) => (b.scores?.overall ?? 0) - (a.scores?.overall ?? 0));
+  const sortedResults = [...results].sort(sortByOverallDesc);
   sortedResults.forEach((r, idx) => {
     resultsSheet.addRow({
       rank: idx + 1,
@@ -83,13 +90,18 @@ export async function exportBulkAnalysisToExcel(
     const rankingsSheet = workbook.addWorksheet('Investment Rankings');
     rankingsSheet.addRow(['Rank', 'Startup Name', 'Overall Score', 'Top Strengths', 'Recommendation']);
 
-    comparisonReport.investmentRankings.forEach((r) => {
+    const rankingDetailsByName = new Map(
+      comparisonReport.investmentRankings.map((ranking) => [ranking.startupName, ranking])
+    );
+
+    sortedResults.forEach((result, index) => {
+      const rankingDetails = rankingDetailsByName.get(result.startupName);
       rankingsSheet.addRow([
-        r.rank,
-        r.startupName,
-        Math.round(r.overallScore),
-        r.topStrengths.join('; '),
-        r.recommendation
+        index + 1,
+        result.startupName,
+        Math.round(getOverallScore(result)),
+        rankingDetails?.topStrengths.join('; ') || '',
+        rankingDetails?.recommendation || ''
       ]);
     });
 
