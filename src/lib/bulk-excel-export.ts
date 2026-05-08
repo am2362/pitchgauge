@@ -3,12 +3,37 @@ import { BulkAnalysisResult, ComparisonReport } from '@/types/bulk-analysis';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-const getOverallScore = (result: BulkAnalysisResult) => result.scores?.overall ?? 0;
+const getOverallScore = (result: BulkAnalysisResult) => {
+  const score = Number(result.scores?.overall ?? 0);
+  return Number.isFinite(score) ? score : 0;
+};
 
 const sortByOverallDesc = (a: BulkAnalysisResult, b: BulkAnalysisResult) => {
-  const scoreDiff = getOverallScore(b) - getOverallScore(a);
-  return scoreDiff !== 0 ? scoreDiff : a.startupName.localeCompare(b.startupName);
+  const roundedScoreDiff = Math.round(getOverallScore(b)) - Math.round(getOverallScore(a));
+  if (roundedScoreDiff !== 0) return roundedScoreDiff;
+
+  const exactScoreDiff = getOverallScore(b) - getOverallScore(a);
+  return exactScoreDiff !== 0 ? exactScoreDiff : a.startupName.localeCompare(b.startupName);
 };
+
+const toStartupRankingRow = (result: BulkAnalysisResult, index: number) => [
+  index + 1,
+  result.startupName,
+  result.sector,
+  Math.round(result.scores?.market ?? 0),
+  result.metrics?.market || '',
+  Math.round(result.scores?.product ?? 0),
+  result.metrics?.product || '',
+  Math.round(result.scores?.traction ?? 0),
+  result.metrics?.traction || '',
+  Math.round(result.scores?.businessModel ?? 0),
+  result.metrics?.businessModel || '',
+  Math.round(result.scores?.funding ?? 0),
+  result.metrics?.funding || '',
+  Math.round(result.scores?.team ?? 0),
+  result.metrics?.team || '',
+  Math.round(getOverallScore(result)),
+];
 
 function toArgb(rgb: string) {
   // ExcelJS uses ARGB (alpha + rgb)
@@ -64,25 +89,8 @@ export async function exportBulkAnalysisToExcel(
   });
 
   const sortedResults = [...results].sort(sortByOverallDesc);
-  sortedResults.forEach((r, idx) => {
-    resultsSheet.addRow({
-      rank: idx + 1,
-      name: r.startupName,
-      sector: r.sector,
-      team: Math.round(r.scores.team),
-      teamReasoning: r.metrics.team || '',
-      market: Math.round(r.scores.market),
-      marketReasoning: r.metrics.market || '',
-      product: Math.round(r.scores.product),
-      productReasoning: r.metrics.product || '',
-      traction: Math.round(r.scores.traction),
-      tractionReasoning: r.metrics.traction || '',
-      businessModel: Math.round(r.scores.businessModel),
-      businessModelReasoning: r.metrics.businessModel || '',
-      competitive: Math.round(r.scores.funding),
-      competitiveReasoning: r.metrics.funding || '',
-      overall: Math.round(r.scores.overall),
-    });
+  sortedResults.forEach((result, index) => {
+    resultsSheet.addRow(toStartupRankingRow(result, index));
   });
 
   // Sheet 2: Investment Rankings (if comparison report exists)
