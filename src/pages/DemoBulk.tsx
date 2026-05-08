@@ -101,8 +101,6 @@ const DemoBulk = () => {
       { header: "Rank", key: "rank", width: 8 },
       { header: "Startup Name", key: "name", width: 20 },
       { header: "Sector", key: "sector", width: 18 },
-      { header: "Team Quality", key: "team", width: 14 },
-      { header: "Team Reasoning", key: "teamReasoning", width: 50 },
       { header: "Market Size", key: "market", width: 14 },
       { header: "Market Reasoning", key: "marketReasoning", width: 50 },
       { header: "Product Differentiation", key: "product", width: 22 },
@@ -113,6 +111,8 @@ const DemoBulk = () => {
       { header: "Business Model Reasoning", key: "businessModelReasoning", width: 50 },
       { header: "Competitive Landscape", key: "competitive", width: 22 },
       { header: "Competitive Reasoning", key: "competitiveReasoning", width: 50 },
+      { header: "Team Quality", key: "team", width: 14 },
+      { header: "Team Reasoning", key: "teamReasoning", width: 50 },
       { header: "Overall Score", key: "overall", width: 14 },
     ];
 
@@ -121,7 +121,12 @@ const DemoBulk = () => {
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF3B82F6" } };
     });
 
-    DEMO_BULK_RESULTS.forEach((r, idx) => {
+    const sortedResults = [...DEMO_BULK_RESULTS].sort((a, b) => {
+      const scoreDiff = (b.scores?.overall ?? 0) - (a.scores?.overall ?? 0);
+      return scoreDiff !== 0 ? scoreDiff : a.startupName.localeCompare(b.startupName);
+    });
+
+    sortedResults.forEach((r, idx) => {
       const reasonings = DEMO_BULK_SCORE_REASONINGS[r.startupName] || {};
       sheet.addRow({
         rank: idx + 1,
