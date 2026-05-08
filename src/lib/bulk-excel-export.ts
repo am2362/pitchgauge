@@ -56,7 +56,8 @@ export async function exportBulkAnalysisToExcel(
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B82F6' } };
   });
 
-  results.forEach((r, idx) => {
+  const sortedResults = [...results].sort((a, b) => (b.scores?.overall ?? 0) - (a.scores?.overall ?? 0));
+  sortedResults.forEach((r, idx) => {
     resultsSheet.addRow({
       rank: idx + 1,
       name: r.startupName,
