@@ -45,6 +45,8 @@ export async function exportBulkAnalysisToExcel(
     { header: 'Business Model Reasoning', key: 'businessModelReasoning', width: 50 },
     { header: 'Competitive Landscape', key: 'competitive', width: 22 },
     { header: 'Competitive Reasoning', key: 'competitiveReasoning', width: 50 },
+    { header: 'Team Quality', key: 'team', width: 14 },
+    { header: 'Team Reasoning', key: 'teamReasoning', width: 50 },
     { header: 'Overall Score', key: 'overall', width: 14 },
   ];
 
