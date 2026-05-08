@@ -33,6 +33,19 @@ const METRIC_LABELS: Record<string, string> = {
   funding: "Competitive Landscape",
 };
 
+const getDemoOverallScore = (result: (typeof DEMO_BULK_RESULTS)[number]) => {
+  const score = Number(result.scores?.overall ?? 0);
+  return Number.isFinite(score) ? score : 0;
+};
+
+const sortDemoByOverallDesc = (a: (typeof DEMO_BULK_RESULTS)[number], b: (typeof DEMO_BULK_RESULTS)[number]) => {
+  const roundedScoreDiff = Math.round(getDemoOverallScore(b)) - Math.round(getDemoOverallScore(a));
+  if (roundedScoreDiff !== 0) return roundedScoreDiff;
+
+  const exactScoreDiff = getDemoOverallScore(b) - getDemoOverallScore(a);
+  return exactScoreDiff !== 0 ? exactScoreDiff : a.startupName.localeCompare(b.startupName);
+};
+
 
 const DemoBulk = () => {
   usePageMeta("PitchGauge", "Try PitchGauge's bulk startup analysis with sample data.");
@@ -121,31 +134,28 @@ const DemoBulk = () => {
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF3B82F6" } };
     });
 
-    const sortedResults = [...DEMO_BULK_RESULTS].sort((a, b) => {
-      const scoreDiff = (b.scores?.overall ?? 0) - (a.scores?.overall ?? 0);
-      return scoreDiff !== 0 ? scoreDiff : a.startupName.localeCompare(b.startupName);
-    });
+    const sortedResults = [...DEMO_BULK_RESULTS].sort(sortDemoByOverallDesc);
 
     sortedResults.forEach((r, idx) => {
       const reasonings = DEMO_BULK_SCORE_REASONINGS[r.startupName] || {};
-      sheet.addRow({
-        rank: idx + 1,
-        name: r.startupName,
-        sector: r.sector,
-        team: Math.round(r.scores.team),
-        teamReasoning: reasonings.team || "",
-        market: Math.round(r.scores.market),
-        marketReasoning: reasonings.market || "",
-        product: Math.round(r.scores.product),
-        productReasoning: reasonings.product || "",
-        traction: Math.round(r.scores.traction),
-        tractionReasoning: reasonings.traction || "",
-        businessModel: Math.round(r.scores.businessModel),
-        businessModelReasoning: reasonings.businessModel || "",
-        competitive: Math.round(r.scores.funding),
-        competitiveReasoning: reasonings.funding || "",
-        overall: Math.round(r.scores.overall),
-      });
+      sheet.addRow([
+        idx + 1,
+        r.startupName,
+        r.sector,
+        Math.round(r.scores.market),
+        reasonings.market || "",
+        Math.round(r.scores.product),
+        reasonings.product || "",
+        Math.round(r.scores.traction),
+        reasonings.traction || "",
+        Math.round(r.scores.businessModel),
+        reasonings.businessModel || "",
+        Math.round(r.scores.funding),
+        reasonings.funding || "",
+        Math.round(r.scores.team),
+        reasonings.team || "",
+        Math.round(getDemoOverallScore(r)),
+      ]);
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
