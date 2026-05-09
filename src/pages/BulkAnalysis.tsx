@@ -68,7 +68,15 @@ function createFailedBulkResult(startupName: string, errorType: string, errorMes
   };
 }
 
+function computeOverall(scores: BulkAnalysisResult['scores']): number {
+  const vals = [scores.market, scores.product, scores.traction, scores.businessModel, scores.funding]
+    .map((v) => Math.round(Number(v) || 0));
+  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+}
+
 function createLocalComparisonReport(results: BulkAnalysisResult[]): ComparisonReport {
+  // Normalize overall score before sorting/reporting
+  results.forEach((r) => { if (r?.scores) r.scores.overall = computeOverall(r.scores); });
   const sortedResults = [...results].sort((a, b) => b.scores.overall - a.scores.overall);
   const sectorBreakdown = results.reduce<Record<string, number>>((acc, result) => {
     acc[result.sector] = (acc[result.sector] || 0) + 1;
