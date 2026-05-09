@@ -264,6 +264,7 @@ Provide:
     return data.choices?.[0]?.message?.content || 'Analysis complete. Review top-ranked startups for investment opportunities.';
   } catch (error) {
     safeLog("BULK-COMPARISON", "Error generating recommendation");
-    return `Analysis of ${topRankings.length} startups complete. Top performers show strong potential across ${Object.keys(sectorBreakdown).length} sectors. Focus on highest-ranked startups for detailed due diligence.`;
+    const totalStartups = Object.values(sectorBreakdown).reduce((a: number, b: number) => a + b, 0);
+    return `Analysis of ${totalStartups} startups complete. Top performers show strong potential across ${Object.keys(sectorBreakdown).length} sectors. Focus on highest-ranked startups for detailed due diligence.`;
   }
 }
