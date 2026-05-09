@@ -409,6 +409,15 @@ Return ONLY valid JSON with this structure:
   
   // Ensure startupName matches input
   result.startupName = name;
-  
+
+  // Compute overall as average of the 5 displayed integer metric scores
+  // (market, product, traction, businessModel, funding) — keep consistent everywhere.
+  if (result?.scores) {
+    const s = result.scores;
+    const vals = [s.market, s.product, s.traction, s.businessModel, s.funding]
+      .map((v: any) => Math.round(Number(v) || 0));
+    s.overall = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+  }
+
   return result;
 }
