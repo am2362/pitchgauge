@@ -124,8 +124,6 @@ const DemoBulk = () => {
       { header: "Business Model Reasoning", key: "businessModelReasoning", width: 50 },
       { header: "Competitive Landscape", key: "competitive", width: 22 },
       { header: "Competitive Reasoning", key: "competitiveReasoning", width: 50 },
-      { header: "Team Quality", key: "team", width: 14 },
-      { header: "Team Reasoning", key: "teamReasoning", width: 50 },
       { header: "Overall Score", key: "overall", width: 14 },
     ];
 
@@ -152,8 +150,6 @@ const DemoBulk = () => {
         reasonings.businessModel || "",
         Math.round(r.scores.funding),
         reasonings.funding || "",
-        Math.round(r.scores.team),
-        reasonings.team || "",
         Math.round(getDemoOverallScore(r)),
       ]);
     });
