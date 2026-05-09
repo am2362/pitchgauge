@@ -896,7 +896,6 @@ export default function BulkAnalysis() {
                   </CardContent>
                 </Card>
 
-                <InvestmentRankingsTable rankings={currentAnalysis.comparison_report.investmentRankings} />
                 <SectorBreakdownChart sectorBreakdown={currentAnalysis.comparison_report.sectorBreakdown} />
               </>
             )}
