@@ -34,8 +34,11 @@ const METRIC_LABELS: Record<string, string> = {
 };
 
 const getDemoOverallScore = (result: (typeof DEMO_BULK_RESULTS)[number]) => {
-  const score = Number(result.scores?.overall ?? 0);
-  return Number.isFinite(score) ? score : 0;
+  const s = result.scores;
+  if (!s) return 0;
+  const vals = [s.market, s.product, s.traction, s.businessModel, s.funding]
+    .map((v) => Math.round(Number(v) || 0));
+  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
 };
 
 const sortDemoByOverallDesc = (a: (typeof DEMO_BULK_RESULTS)[number], b: (typeof DEMO_BULK_RESULTS)[number]) => {
