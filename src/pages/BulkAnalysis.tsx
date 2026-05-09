@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BulkUploadCard } from '@/components/bulk/BulkUploadCard';
 import { AnalysisProgressBar } from '@/components/bulk/AnalysisProgressBar';
-import { InvestmentRankingsTable } from '@/components/bulk/InvestmentRankingsTable';
+
 import { SectorBreakdownChart } from '@/components/bulk/SectorBreakdownChart';
 import { supabase } from '@/lib/supabase-external';
 import { toast } from '@/hooks/use-toast';
