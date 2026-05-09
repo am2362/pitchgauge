@@ -4,8 +4,11 @@ import { BulkAnalysisResult, ComparisonReport } from '@/types/bulk-analysis';
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 const getOverallScore = (result: BulkAnalysisResult) => {
-  const score = Number(result.scores?.overall ?? 0);
-  return Number.isFinite(score) ? score : 0;
+  const s = result.scores;
+  if (!s) return 0;
+  const vals = [s.market, s.product, s.traction, s.businessModel, s.funding]
+    .map((v) => Math.round(Number(v) || 0));
+  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
 };
 
 const sortByOverallDesc = (a: BulkAnalysisResult, b: BulkAnalysisResult) => {
