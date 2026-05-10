@@ -158,7 +158,7 @@ serve(async (req) => {
 
     // Generate overall recommendation using AI
     const overallRecommendation = await generateOverallRecommendation(
-      investmentRankings.slice(0, 10),
+      investmentRankings,
       sectorBreakdown,
       LOVABLE_API_KEY
     );
@@ -224,9 +224,10 @@ async function generateOverallRecommendation(
   sectorBreakdown: Record<string, number>,
   apiKey: string
 ): Promise<string> {
-  const prompt = `Based on this startup analysis data, provide a concise overall investment recommendation (3-5 sentences):
+  const totalCount = topRankings.length;
+  const prompt = `Based on this startup analysis data, provide a concise overall investment recommendation (3-5 sentences). Refer to the batch as "all ${totalCount} startups" (never "top 10"):
 
-Top 10 Startups:
+All ${totalCount} Startups (ranked by overall score):
 ${topRankings.map(r => `${r.rank}. ${r.startupName} (Score: ${r.overallScore}/10)`).join('\n')}
 
 Sector Distribution:
