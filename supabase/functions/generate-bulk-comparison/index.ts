@@ -224,18 +224,20 @@ async function generateOverallRecommendation(
   sectorBreakdown: Record<string, number>,
   apiKey: string
 ): Promise<string> {
-  const totalCount = topRankings.length;
-  const prompt = `Based on this startup analysis data, provide a concise overall investment recommendation (3-5 sentences). Refer to the batch as "all ${totalCount} startups" (never "top 10"):
+  const scores = topRankings.map(r => Number(r.overallScore) || 0);
+  const highest = scores.length ? Math.max(...scores) : 0;
+  const lowest = scores.length ? Math.min(...scores) : 0;
+  const prompt = `Based on this startup analysis data, provide a concise overall investment recommendation (3-5 sentences). Do NOT mention the number of startups in the batch. Instead, refer to the highest score (${highest}/10) and lowest score (${lowest}/10) when describing the batch.
 
-All ${totalCount} Startups (ranked by overall score):
+Startups (ranked by overall score):
 ${topRankings.map(r => `${r.rank}. ${r.startupName} (Score: ${r.overallScore}/10)`).join('\n')}
 
 Sector Distribution:
 ${Object.entries(sectorBreakdown).map(([sector, count]) => `${sector}: ${count} startups`).join('\n')}
 
-Provide: 
+Provide:
 1. Which startups show the most promise
-2. Key patterns or trends across the batch
+2. Key patterns or trends across the batch (reference the highest/lowest scores, not the count)
 3. Investment focus recommendation`;
 
   try {
