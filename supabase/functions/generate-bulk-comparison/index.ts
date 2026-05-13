@@ -102,11 +102,11 @@ serve(async (req) => {
 
     const { results } = validation.data!;
 
-    // Normalize overall score to be the average of the 5 displayed integer metric scores
+    // Normalize overall score to be the average of all 6 metric scores
     results.forEach((r: any) => {
       if (r?.scores) {
         const s = r.scores;
-        const vals = [s.market, s.product, s.traction, s.businessModel, s.funding]
+        const vals = [s.team, s.market, s.product, s.traction, s.businessModel, s.funding]
           .map((v: any) => Math.round(Number(v) || 0));
         s.overall = Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length);
       }
