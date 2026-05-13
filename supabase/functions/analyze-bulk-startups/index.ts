@@ -293,13 +293,13 @@ General Scale:
 - 7-8: Strong / good evidence (attractive, competitive)
 - 9-10: Outstanding / exceptional (top decile, clear advantage)
 
-Category-Specific Anchoring:
-- Team: 1-3 no info/inexperienced/red flags; 4-6 some experience but gaps; 7/10 requires at minimum 2 founders with relevant domain experience and one prior startup or notable company background; 5/10 means founders have general business experience but no direct domain expertise or startup track record; 9-10 exceptional track record (serial founders with exits, deep domain authority)
-- Product: 1-3 generic/no moat; 4-6 some features, easily replicable; 7/10 requires a clearly articulated unique value proposition with some form of defensibility (IP, data moat, network effects); 5/10 means the product solves a real problem but could be easily replicated; 9-10 defensible moat (patents, strong network effects, proprietary data)
-- Market: 1-3 tiny TAM (<$500M)/shrinking; 4-6 decent but slow growth; 7/10 requires explicit mention of TAM >$10B with evidence of growth; 5/10 means market is $1B-$10B with no strong growth signals; 9-10 massive ($50B+ with tailwinds)
-- Traction: 1-3 none/anecdotal; 4-6 early signals, not scaling; 7/10 requires demonstrated revenue or significant user growth with specific numbers; 5/10 means some early users or pilots but no clear growth trajectory; 9-10 explosive/validated PMF with strong unit economics
-- Funding: 1-3 no funding/unclear use; 4-6 some funding but concerns; 7-8 well-funded with clear plan; 9-10 strong investors, efficient capital use
-- Business Model: 1-3 unclear/unsustainable; 4-6 viable but thin margins; 7/10 requires a clearly scalable monetization strategy with evidence of unit economics; 5/10 means monetization path exists but margins or scalability are unproven; 9-10 proven, recurring, capital-efficient
+Category-Specific Anchoring (apply STRICTLY — same facts must always produce the same score):
+- Team Quality: 1-3 no info, inexperienced, or red flags (e.g., solo founder with no relevant background); 4-6 basic info, some experience but gaps (e.g., technical but no business/sales); 7-8 proven founders (prior exits, domain expertise, complementary skills); 9-10 exceptional track record (successful exits, top-tier network)
+- Market Size: 1-3 tiny/niche TAM (<$500M), shrinking, or undefined; 4-6 decent but limited ($1B-$10B), slow growth or unclear path; 7-8 large/growing ($10B+ TAM, strong trends); 9-10 massive/expansive ($50B+ with tailwinds)
+- Product Differentiation: 1-3 generic/commodity, no moat; 4-6 some features but easily replicable; 7-8 clear unique value/tech/IP/brand; 9-10 defensible moat (patents, network effects, first-mover)
+- Traction: 1-3 none or anecdotal; 4-6 early signals (small users/revenue, but not scaling); 7-8 strong metrics (growing revenue/users, retention); 9-10 explosive/validated PMF
+- Business Model: 1-3 unclear, low-margin, unsustainable; 4-6 viable but thin margins/challenges; 7-8 scalable, high-margin potential; 9-10 proven, recurring, capital-efficient
+- Competitive Landscape (returned in JSON as the "funding" field): 1-3 saturated, no barriers; 4-6 competitive but some edge; 7-8 differentiated position; 9-10 minimal direct competition or dominant potential
 
 MISSING DATA RULE: If the pitch provides NO information about a category, score it 1 with reasoning "No information provided in pitch." Do NOT infer, assume, or guess. Only score based on what is explicitly stated.
 
