@@ -884,20 +884,7 @@ export default function BulkAnalysis() {
             )}
 
             {currentAnalysis.comparison_report && (
-              <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Overall Recommendation</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground whitespace-pre-wrap">
-                      {currentAnalysis.comparison_report.overallRecommendation}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <SectorBreakdownChart sectorBreakdown={currentAnalysis.comparison_report.sectorBreakdown} />
-              </>
+              <SectorBreakdownChart sectorBreakdown={currentAnalysis.comparison_report.sectorBreakdown} />
             )}
 
             {!currentAnalysis.comparison_report && successfulCount > 0 && (
