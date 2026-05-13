@@ -281,9 +281,9 @@ Write 3-5 sentences covering:
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || `Top performer: ${topStartup?.startupName ?? 'n/a'} at ${highest}/10. Lowest: ${bottomStartup?.startupName ?? 'n/a'} at ${lowest}/10. Prioritise the highest-scoring startups for deeper diligence.`;
+    return data.choices?.[0]?.message?.content || `Top performer: ${topStartup?.startupName ?? 'n/a'} at ${highest}/10. Prioritise the highest-scoring startups for deeper diligence.`;
   } catch (error) {
     safeLog("BULK-COMPARISON", "Error generating recommendation");
-    return `Top performer: ${topStartup?.startupName ?? 'n/a'} at ${highest}/10. Lowest: ${bottomStartup?.startupName ?? 'n/a'} at ${lowest}/10. Focus diligence on the highest-ranked startups across ${Object.keys(sectorBreakdown).length} sector(s).`;
+    return `Top performer: ${topStartup?.startupName ?? 'n/a'} at ${highest}/10. Focus diligence on the highest-ranked startups across ${Object.keys(sectorBreakdown).length} sector(s).`;
   }
 }
