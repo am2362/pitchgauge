@@ -69,7 +69,7 @@ function createFailedBulkResult(startupName: string, errorType: string, errorMes
 }
 
 function computeOverall(scores: BulkAnalysisResult['scores']): number {
-  const vals = [scores.market, scores.product, scores.traction, scores.businessModel, scores.funding]
+  const vals = [scores.team, scores.market, scores.product, scores.traction, scores.businessModel, scores.funding]
     .map((v) => Math.round(Number(v) || 0));
   return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
 }
