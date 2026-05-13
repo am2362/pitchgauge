@@ -236,7 +236,6 @@ async function generateOverallRecommendation(
 
 FACTS (the only source of truth):
 - Highest overall score: ${highest}/10 (${topStartup?.startupName ?? 'n/a'})
-- Lowest overall score: ${lowest}/10 (${bottomStartup?.startupName ?? 'n/a'})
 - Distinct overall scores in this batch: [${uniqueScores.sort((a,b)=>b-a).join(', ')}]
 - Scores are uniform across all startups: ${allSame ? 'YES' : 'NO'}
 
@@ -248,7 +247,8 @@ ${Object.entries(sectorBreakdown).map(([sector, count]) => `${sector}: ${count}`
 
 STRICT RULES:
 - Do NOT mention the number of startups in the batch.
-- Reference the highest and lowest scores explicitly (e.g., "the top score of ${highest}/10" and "the lowest of ${lowest}/10").
+- Do NOT mention the lowest score or the lowest-scoring startup.
+- Reference the highest score explicitly (e.g., "the top score of ${highest}/10").
 - ${allSame ? 'All startups truly share the same score — you may say so.' : 'Scores VARY — never claim startups achieved the same score, never claim uniformity.'}
 - Be factually accurate. If unsure, omit rather than fabricate.
 
