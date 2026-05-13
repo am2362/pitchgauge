@@ -33,6 +33,8 @@ const toStartupRankingRow = (result: BulkAnalysisResult, index: number) => [
   result.metrics?.businessModel || '',
   Math.round(result.scores?.funding ?? 0),
   result.metrics?.funding || '',
+  Math.round(result.scores?.team ?? 0),
+  result.metrics?.team || '',
   Math.round(getOverallScore(result)),
 ];
 
