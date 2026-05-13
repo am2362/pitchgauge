@@ -36,7 +36,7 @@ const METRIC_LABELS: Record<string, string> = {
 const getDemoOverallScore = (result: (typeof DEMO_BULK_RESULTS)[number]) => {
   const s = result.scores;
   if (!s) return 0;
-  const vals = [s.market, s.product, s.traction, s.businessModel, s.funding]
+  const vals = [s.team, s.market, s.product, s.traction, s.businessModel, s.funding]
     .map((v) => Math.round(Number(v) || 0));
   return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
 };
