@@ -227,17 +227,34 @@ async function generateOverallRecommendation(
   const scores = topRankings.map(r => Number(r.overallScore) || 0);
   const highest = scores.length ? Math.max(...scores) : 0;
   const lowest = scores.length ? Math.min(...scores) : 0;
-  const prompt = `Based on this startup analysis data, provide a concise overall investment recommendation (3-5 sentences). Do NOT mention the number of startups in the batch. Instead, refer to the highest score (${highest}/10) and lowest score (${lowest}/10) when describing the batch.
+  const uniqueScores = Array.from(new Set(scores));
+  const allSame = uniqueScores.length === 1;
+  const topStartup = topRankings.find(r => Number(r.overallScore) === highest);
+  const bottomStartup = [...topRankings].reverse().find(r => Number(r.overallScore) === lowest);
 
-Startups (ranked by overall score):
-${topRankings.map(r => `${r.rank}. ${r.startupName} (Score: ${r.overallScore}/10)`).join('\n')}
+  const prompt = `You are writing a factual investment recommendation. You MUST use ONLY the data below — do not invent scores, do not claim startups share the same score unless they actually do.
 
-Sector Distribution:
-${Object.entries(sectorBreakdown).map(([sector, count]) => `${sector}: ${count} startups`).join('\n')}
+FACTS (the only source of truth):
+- Highest overall score: ${highest}/10 (${topStartup?.startupName ?? 'n/a'})
+- Lowest overall score: ${lowest}/10 (${bottomStartup?.startupName ?? 'n/a'})
+- Distinct overall scores in this batch: [${uniqueScores.sort((a,b)=>b-a).join(', ')}]
+- Scores are uniform across all startups: ${allSame ? 'YES' : 'NO'}
 
-Provide:
-1. Which startups show the most promise
-2. Key patterns or trends across the batch (reference the highest/lowest scores, not the count)
+Full ranked list (ranked by overall score, descending):
+${topRankings.map(r => `${r.rank}. ${r.startupName} — ${r.overallScore}/10`).join('\n')}
+
+Sector distribution:
+${Object.entries(sectorBreakdown).map(([sector, count]) => `${sector}: ${count}`).join('\n')}
+
+STRICT RULES:
+- Do NOT mention the number of startups in the batch.
+- Reference the highest and lowest scores explicitly (e.g., "the top score of ${highest}/10" and "the lowest of ${lowest}/10").
+- ${allSame ? 'All startups truly share the same score — you may say so.' : 'Scores VARY — never claim startups achieved the same score, never claim uniformity.'}
+- Be factually accurate. If unsure, omit rather than fabricate.
+
+Write 3-5 sentences covering:
+1. Which startups show the most promise (name them)
+2. The score spread / pattern across the batch
 3. Investment focus recommendation`;
 
   try {
@@ -250,10 +267,10 @@ Provide:
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: 'You are an investment analyst providing concise recommendations.' },
+          { role: 'system', content: 'You are an investment analyst. You write only factually accurate recommendations using the exact data provided. You never invent or generalise scores.' },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.3,
+        temperature: 0.2,
         max_tokens: 500
       }),
     });
@@ -264,9 +281,9 @@ Provide:
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || 'Analysis complete. Review top-ranked startups for investment opportunities.';
+    return data.choices?.[0]?.message?.content || `Top performer: ${topStartup?.startupName ?? 'n/a'} at ${highest}/10. Lowest: ${bottomStartup?.startupName ?? 'n/a'} at ${lowest}/10. Prioritise the highest-scoring startups for deeper diligence.`;
   } catch (error) {
     safeLog("BULK-COMPARISON", "Error generating recommendation");
-    return `Analysis of ${topRankings.length} startups complete. Top performers show strong potential across ${Object.keys(sectorBreakdown).length} sectors. Focus on highest-ranked startups for detailed due diligence.`;
+    return `Top performer: ${topStartup?.startupName ?? 'n/a'} at ${highest}/10. Lowest: ${bottomStartup?.startupName ?? 'n/a'} at ${lowest}/10. Focus diligence on the highest-ranked startups across ${Object.keys(sectorBreakdown).length} sector(s).`;
   }
 }
