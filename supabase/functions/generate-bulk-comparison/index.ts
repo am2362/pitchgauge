@@ -236,7 +236,6 @@ async function generateOverallRecommendation(
 
 FACTS (the only source of truth):
 - Highest overall score: ${highest}/10 (${topStartup?.startupName ?? 'n/a'})
-- Lowest overall score: ${lowest}/10 (${bottomStartup?.startupName ?? 'n/a'})
 - Distinct overall scores in this batch: [${uniqueScores.sort((a,b)=>b-a).join(', ')}]
 - Scores are uniform across all startups: ${allSame ? 'YES' : 'NO'}
 
@@ -248,7 +247,8 @@ ${Object.entries(sectorBreakdown).map(([sector, count]) => `${sector}: ${count}`
 
 STRICT RULES:
 - Do NOT mention the number of startups in the batch.
-- Reference the highest and lowest scores explicitly (e.g., "the top score of ${highest}/10" and "the lowest of ${lowest}/10").
+- Do NOT mention the lowest score or the lowest-scoring startup.
+- Reference the highest score explicitly (e.g., "the top score of ${highest}/10").
 - ${allSame ? 'All startups truly share the same score — you may say so.' : 'Scores VARY — never claim startups achieved the same score, never claim uniformity.'}
 - Be factually accurate. If unsure, omit rather than fabricate.
 
@@ -281,9 +281,9 @@ Write 3-5 sentences covering:
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || `Top performer: ${topStartup?.startupName ?? 'n/a'} at ${highest}/10. Lowest: ${bottomStartup?.startupName ?? 'n/a'} at ${lowest}/10. Prioritise the highest-scoring startups for deeper diligence.`;
+    return data.choices?.[0]?.message?.content || `Top performer: ${topStartup?.startupName ?? 'n/a'} at ${highest}/10. Prioritise the highest-scoring startups for deeper diligence.`;
   } catch (error) {
     safeLog("BULK-COMPARISON", "Error generating recommendation");
-    return `Top performer: ${topStartup?.startupName ?? 'n/a'} at ${highest}/10. Lowest: ${bottomStartup?.startupName ?? 'n/a'} at ${lowest}/10. Focus diligence on the highest-ranked startups across ${Object.keys(sectorBreakdown).length} sector(s).`;
+    return `Top performer: ${topStartup?.startupName ?? 'n/a'} at ${highest}/10. Focus diligence on the highest-ranked startups across ${Object.keys(sectorBreakdown).length} sector(s).`;
   }
 }
