@@ -271,11 +271,8 @@ const DemoBulk = () => {
             {/* Sector chart */}
             <SectorBreakdownChart sectorBreakdown={DEMO_BULK_COMPARISON_REPORT.sectorBreakdown} />
 
-            {/* Recommendation */}
-            <Card className="p-6 border-primary/30 bg-primary/5">
-              <h2 className="text-xl font-bold mb-3 text-foreground">Overall Recommendation</h2>
-              <p className="text-muted-foreground leading-relaxed">{DEMO_BULK_COMPARISON_REPORT.overallRecommendation}</p>
-            </Card>
+
+
 
             {/* Bottom CTA */}
             <Card className="p-8 text-center border-primary/30 bg-primary/5">
