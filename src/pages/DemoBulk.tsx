@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { DEMO_BULK_RESULTS, DEMO_BULK_COMPARISON_REPORT, DEMO_BULK_SCORE_REASONINGS } from "@/lib/demo-data";
 import { DemoBanner } from "@/components/DemoBanner";
 import { DemoNav } from "@/components/DemoNav";
-import { InvestmentRankingsTable } from "@/components/bulk/InvestmentRankingsTable";
 import { SectorBreakdownChart } from "@/components/bulk/SectorBreakdownChart";
 import ExcelJS from "exceljs";
 import { usePageMeta } from "@/hooks/usePageMeta";
