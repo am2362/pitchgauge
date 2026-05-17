@@ -263,10 +263,6 @@ const DemoBulk = () => {
               </Button>
             </div>
 
-            {/* Rankings */}
-            <InvestmentRankingsTable rankings={DEMO_BULK_COMPARISON_REPORT.investmentRankings} />
-
-
             {/* Sector chart */}
             <SectorBreakdownChart sectorBreakdown={DEMO_BULK_COMPARISON_REPORT.sectorBreakdown} />
 
