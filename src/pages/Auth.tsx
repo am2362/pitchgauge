@@ -46,7 +46,7 @@ export default function Auth() {
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+        options: { emailRedirectTo: redirectUrl },
       });
 
       if (signUpError) {
@@ -58,18 +58,18 @@ export default function Auth() {
       // Demo accounts bypass verification
       if (isDemoAccount(email)) {
         setLoading(false);
-        navigate("/dashboard");
+        navigate(nextPath);
         return;
       }
 
       // Send verification OTP
       await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+        options: { emailRedirectTo: redirectUrl },
       });
 
       setLoading(false);
-      navigate("/verify-email", { state: { email } });
+      navigate("/verify-email", { state: { email, next: nextPath } });
     } else {
       // Sign in
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -78,7 +78,7 @@ export default function Auth() {
       if (error) {
         toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
       } else {
-        navigate("/dashboard");
+        navigate(nextPath);
       }
     }
   };
@@ -89,7 +89,7 @@ export default function Auth() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+      options: { emailRedirectTo: redirectUrl },
     });
     setLoading(false);
     if (error) {
@@ -117,7 +117,7 @@ export default function Auth() {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: redirectUrl,
     });
     setGoogleLoading(false);
     if (error) {
