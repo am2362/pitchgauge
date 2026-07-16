@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase-external";
 import { lovable } from "@/integrations/lovable/index";
 import { isDemoAccount } from "@/lib/demo-accounts";
@@ -23,13 +23,19 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+
+  // Only allow same-origin relative paths for `next`.
+  const rawNext = searchParams.get("next") ?? "";
+  const nextPath = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
+  const redirectUrl = `${window.location.origin}${nextPath}`;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate("/dashboard");
+      if (session) navigate(nextPath);
     });
-  }, [navigate]);
+  }, [navigate, nextPath]);
 
   const handlePasswordAuth = async (e: React.FormEvent) => {
     e.preventDefault();
