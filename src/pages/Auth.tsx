@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase-external";
 import { lovable } from "@/integrations/lovable/index";
 import { isDemoAccount } from "@/lib/demo-accounts";
@@ -23,13 +23,19 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+
+  // Only allow same-origin relative paths for `next`.
+  const rawNext = searchParams.get("next") ?? "";
+  const nextPath = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
+  const redirectUrl = `${window.location.origin}${nextPath}`;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate("/dashboard");
+      if (session) navigate(nextPath);
     });
-  }, [navigate]);
+  }, [navigate, nextPath]);
 
   const handlePasswordAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +46,7 @@ export default function Auth() {
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+        options: { emailRedirectTo: redirectUrl },
       });
 
       if (signUpError) {
@@ -52,18 +58,18 @@ export default function Auth() {
       // Demo accounts bypass verification
       if (isDemoAccount(email)) {
         setLoading(false);
-        navigate("/dashboard");
+        navigate(nextPath);
         return;
       }
 
       // Send verification OTP
       await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+        options: { emailRedirectTo: redirectUrl },
       });
 
       setLoading(false);
-      navigate("/verify-email", { state: { email } });
+      navigate("/verify-email", { state: { email, next: nextPath } });
     } else {
       // Sign in
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -72,7 +78,7 @@ export default function Auth() {
       if (error) {
         toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
       } else {
-        navigate("/dashboard");
+        navigate(nextPath);
       }
     }
   };
@@ -83,7 +89,7 @@ export default function Auth() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+      options: { emailRedirectTo: redirectUrl },
     });
     setLoading(false);
     if (error) {
@@ -111,7 +117,7 @@ export default function Auth() {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: redirectUrl,
     });
     setGoogleLoading(false);
     if (error) {
