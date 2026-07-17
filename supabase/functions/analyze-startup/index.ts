@@ -221,12 +221,7 @@ RULES: factual, no invention, no emojis, no bullets, no scores.`;
 
     const [checklistRuns, qualitativeResult] = await Promise.all([
       Promise.all(Array.from({ length: RUNS_PER_PITCH }, runChecklist)),
-      runQualitative().catch((e) => {
-        const s = (e as any)?.status;
-        if (s === 429) throw Object.assign(new Error('rate'), { __status: 429 });
-        if (s === 402) throw Object.assign(new Error('credits'), { __status: 402 });
-        throw e;
-      }),
+      runQualitative(),
     ]);
 
     const successfulRuns = checklistRuns.filter((r): r is PerMetricResponse => r !== null);
