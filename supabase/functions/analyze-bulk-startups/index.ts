@@ -2,6 +2,16 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateBulkAnalysisInput, sanitizeErrorMessage } from '../_shared/validation.ts';
 import { corsHeaders, secureJsonResponse, secureErrorResponse, safeLog, getUserTier, checkDailyLimit, isAdminUser, isDemoAccountEmail } from '../_shared/security.ts';
+import {
+  CHECKLIST_SYSTEM_INSTRUCTION,
+  METRIC_KEYS,
+  aggregateRuns,
+  extractJson,
+  normalizeRun,
+  reasoningFromAggregate,
+  scoresFromAggregate,
+  type PerMetricResponse,
+} from '../_shared/scoring-checklist.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -231,192 +241,150 @@ serve(async (req) => {
 
 const MAX_RETRIES = 5;
 const RETRY_BACKOFF_MS = [3000, 6000, 12000, 24000, 48000];
+const RUNS_PER_PITCH = 3;
+
+const BULK_META_INSTRUCTION = `You are also extracting minimal metadata about the pitch. In addition to the checklist JSON, include these top-level fields:
+- "sector": primary sector (e.g., "FinTech", "HealthTech", "SaaS")
+- "tags": array of 1-4 short technology/segment tags
+- "summary": 1-3 sentence factual summary (what they do, target market, key differentiator)
+
+Return ONLY one JSON object combining the checklist output and these metadata fields.`;
 
 async function analyzeStartup(name: string, pitch: string, apiKey: string, useGeminiDirect = false): Promise<any> {
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const result = await attemptAnalysis(name, pitch, apiKey, useGeminiDirect);
-      return result;
-    } catch (error) {
-      const status = (error as any)?.status;
-      const isRetryable = [429, 500, 502, 503].includes(status) ||
-        (error as Error)?.message?.includes('No content') ||
-        (error as Error)?.message?.includes('No valid JSON') ||
-        (error as Error)?.message?.includes('JSON');
-      
-      if (attempt < MAX_RETRIES && isRetryable) {
-        const delay = RETRY_BACKOFF_MS[attempt] || 48000;
-        safeLog("BULK-ANALYSIS", "Retrying", { startup: name, attempt: attempt + 1, delay });
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
-      }
-      
-      // On non-retryable errors or exhausted retries, try Lovable gateway fallback
-      if (useGeminiDirect) {
-        const fallbackKey = Deno.env.get('LOVABLE_API_KEY');
-        if (fallbackKey) {
-          safeLog("BULK-ANALYSIS", "Falling back to Lovable AI gateway");
-          return analyzeStartup(name, pitch, fallbackKey, false);
-        }
-      }
-      
-      throw error;
-    }
+  // Fire RUNS_PER_PITCH parallel runs; aggregate checklists by median.
+  const runPromises = Array.from({ length: RUNS_PER_PITCH }, () =>
+    attemptAnalysis(name, pitch, apiKey, useGeminiDirect).catch((e) => ({ __error: e })),
+  );
+  const settled = await Promise.all(runPromises);
+
+  const successful = settled.filter((r: any) => r && !r.__error);
+  if (successful.length === 0) {
+    // All failed — retry the first one with backoff to trigger existing retry policy.
+    throw (settled[0] as any)?.__error ?? new Error('All scoring runs failed');
   }
-  throw new Error('Max retries exhausted');
+
+  const runs: PerMetricResponse[] = successful.map((r: any) => r.perMetric);
+  const aggregate = aggregateRuns(runs);
+  const scoresByKey = scoresFromAggregate(aggregate);
+  const reasoningByKey = reasoningFromAggregate(aggregate);
+
+  // Take metadata from the first successful run.
+  const first: any = successful[0];
+
+  // Map internal metric keys → bulk output shape (funding = competitiveLandscape).
+  const scores = {
+    team: scoresByKey.team,
+    market: scoresByKey.marketSize,
+    product: scoresByKey.productDifferentiation,
+    traction: scoresByKey.traction,
+    businessModel: scoresByKey.businessModel,
+    funding: scoresByKey.competitiveLandscape,
+    overall: 0,
+  };
+  const vals = [scores.team, scores.market, scores.product, scores.traction, scores.businessModel, scores.funding];
+  scores.overall = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+
+  const metrics = {
+    team: reasoningByKey.team,
+    market: reasoningByKey.marketSize,
+    product: reasoningByKey.productDifferentiation,
+    traction: reasoningByKey.traction,
+    businessModel: reasoningByKey.businessModel,
+    funding: reasoningByKey.competitiveLandscape,
+  };
+
+  return {
+    startupName: name,
+    sector: typeof first.sector === 'string' && first.sector.trim() ? first.sector.trim() : 'Unknown',
+    tags: Array.isArray(first.tags) ? first.tags.slice(0, 4).map((t: any) => String(t)) : [],
+    metrics,
+    scores,
+    summary: typeof first.summary === 'string' ? first.summary : '',
+  };
 }
 
 async function attemptAnalysis(name: string, pitch: string, apiKey: string, useGeminiDirect = false): Promise<any> {
-  const systemPrompt = `You are a consistent startup evaluation AI. Always apply the same scoring criteria strictly. Do not vary scores based on writing style or tone — evaluate only on substance. A pitch with identical facts must always receive identical scores.
+  const systemPrompt = `${CHECKLIST_SYSTEM_INSTRUCTION}\n\n${BULK_META_INSTRUCTION}`;
 
-You are analyzing a startup pitch. Extract structured information and be objective, concise, and deterministic.
+  let response: Response | null = null;
+  let lastError: any = null;
 
-EXTRACT:
-1. KEY METRICS (be specific and factual):
-   - Team: background, experience, relevant expertise
-   - Product: stage, uniqueness, problem solved
-   - Market: target size, TAM/SAM, growth potential
-   - Traction: users, revenue, partnerships, growth metrics
-   - Funding: amounts raised, investors, runway
-   - Business Model: monetization strategy, pricing, scalability
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (useGeminiDirect) {
+        const prompt = `${systemPrompt}\n\nStartup Name: ${name}\n\nPitch:\n${pitch}`;
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0, topP: 1 },
+          }),
+        });
+      } else {
+        response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash-lite',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: `Startup Name: ${name}\n\nPitch:\n${pitch}` },
+            ],
+            max_tokens: 2500,
+            temperature: 0,
+            top_p: 1,
+          }),
+        });
+      }
 
-2. SECTOR IDENTIFICATION:
-   - Primary sector (FinTech, HealthTech, EdTech, E-commerce, SaaS, etc.)
-   - Sub-sector/technology tags (AI, B2B, Mobile, Blockchain, etc.)
+      if (!response.ok) {
+        const status = response.status;
+        const err = new Error(`AI service error: ${status}`);
+        (err as any).status = status;
+        (err as any).kind = status === 429 ? 'rate_limited' : 'ai_error';
+        throw err;
+      }
 
-3. SCORES (1-10 integer, apply consistently):
+      const data = await response.json();
+      const content = useGeminiDirect
+        ? data.candidates?.[0]?.content?.parts?.[0]?.text
+        : data.choices?.[0]?.message?.content;
 
-SCORING RUBRIC:
-General Scale:
-- 1-3: Critical weakness / missing / fatal flaw (high risk of failure)
-- 4-6: Mediocre / average / partial (uncompelling; needs major fixes)
-- 7-8: Strong / good evidence (attractive, competitive)
-- 9-10: Outstanding / exceptional (top decile, clear advantage)
+      if (!content) throw new Error('No content in AI response');
 
-Category-Specific Anchoring (apply STRICTLY — same facts must always produce the same score):
-- Team Quality: 1-3 no info, inexperienced, or red flags (e.g., solo founder with no relevant background); 4-6 basic info, some experience but gaps (e.g., technical but no business/sales); 7-8 proven founders (prior exits, domain expertise, complementary skills); 9-10 exceptional track record (successful exits, top-tier network)
-- Market Size: 1-3 tiny/niche TAM (<$500M), shrinking, or undefined; 4-6 decent but limited ($1B-$10B), slow growth or unclear path; 7-8 large/growing ($10B+ TAM, strong trends); 9-10 massive/expansive ($50B+ with tailwinds)
-- Product Differentiation: 1-3 generic/commodity, no moat; 4-6 some features but easily replicable; 7-8 clear unique value/tech/IP/brand; 9-10 defensible moat (patents, network effects, first-mover)
-- Traction: 1-3 none or anecdotal; 4-6 early signals (small users/revenue, but not scaling); 7-8 strong metrics (growing revenue/users, retention); 9-10 explosive/validated PMF
-- Business Model: 1-3 unclear, low-margin, unsustainable; 4-6 viable but thin margins/challenges; 7-8 scalable, high-margin potential; 9-10 proven, recurring, capital-efficient
-- Competitive Landscape (returned in JSON as the "funding" field): 1-3 saturated, no barriers; 4-6 competitive but some edge; 7-8 differentiated position; 9-10 minimal direct competition or dominant potential
+      const parsed = extractJson(content);
+      const perMetric = normalizeRun(parsed);
 
-MISSING DATA RULE: If the pitch provides NO information about a category, score it 1 with reasoning "No information provided in pitch." Do NOT infer, assume, or guess. Only score based on what is explicitly stated.
+      // Sanity: require at least one metric to have parsed checklist bits.
+      const hasAny = METRIC_KEYS.some((k) => perMetric[k].checklist.length === 12);
+      if (!hasAny) throw new Error('No valid checklist in response');
 
-ALWAYS include reasoning explaining the exact score (e.g., why 5 not 6). Be brutally honest.
+      return {
+        perMetric,
+        sector: parsed.sector,
+        tags: parsed.tags,
+        summary: parsed.summary,
+      };
+    } catch (error) {
+      lastError = error;
+      const status = (error as any)?.status;
+      const isRetryable = [429, 500, 502, 503].includes(status) ||
+        (error as Error)?.message?.includes('No content') ||
+        (error as Error)?.message?.includes('JSON') ||
+        (error as Error)?.message?.includes('checklist');
 
-4. SUMMARY (1-3 sentences):
-   - What they do + problem solved
-   - Target market/users
-   - Key differentiator
-
-Return ONLY valid JSON with this structure:
-{
-  "startupName": "string",
-  "sector": "string",
-  "tags": ["tag1", "tag2"],
-  "metrics": {
-    "team": "string",
-    "product": "string",
-    "market": "string",
-    "traction": "string",
-    "funding": "string",
-    "businessModel": "string"
-  },
-  "scores": {
-    "team": 0-10,
-    "product": 0-10,
-    "market": 0-10,
-    "traction": 0-10,
-    "funding": 0-10,
-    "businessModel": 0-10,
-    "overall": 0-10
-  },
-  "summary": "1-3 sentence summary"
-}`;
-
-  let response;
-  
-  if (useGeminiDirect) {
-    // Direct Google Gemini API call
-    const prompt = `${systemPrompt}\n\nStartup Name: ${name}\n\nPitch:\n${pitch}`;
-    
-    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.1,
-          topP: 1,
-        }
-      }),
-    });
-  } else {
-    // Lovable AI Gateway (fallback)
-    response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Startup Name: ${name}\n\nPitch:\n${pitch}` }
-        ],
-        max_tokens: 2000,
-        temperature: 0.1,
-        top_p: 1
-      }),
-    });
+      if (attempt < MAX_RETRIES && isRetryable) {
+        const delay = RETRY_BACKOFF_MS[attempt] || 48000;
+        safeLog("BULK-ANALYSIS", "Retrying", { startup: name, attempt: attempt + 1, delay });
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      throw error;
+    }
   }
-
-  if (!response.ok) {
-    const errorStatus = response.status;
-    safeLog("BULK-ANALYSIS", "AI API error", { status: errorStatus });
-    const err = new Error(`AI service error: ${errorStatus}`);
-    (err as any).status = errorStatus;
-    throw err;
-  }
-
-  const data = await response.json();
-  
-  // Parse response based on API type
-  let content: string;
-  if (useGeminiDirect) {
-    content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  } else {
-    content = data.choices?.[0]?.message?.content;
-  }
-
-  if (!content) {
-    throw new Error('No content in AI response');
-  }
-
-  // Parse JSON from response
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('No valid JSON found in response');
-  }
-
-  const result = JSON.parse(jsonMatch[0]);
-  
-  // Ensure startupName matches input
-  result.startupName = name;
-
-  // Compute overall as average of all 6 metric scores (team, market, product, traction, businessModel, funding/competitive)
-  if (result?.scores) {
-    const s = result.scores;
-    const vals = [s.team, s.market, s.product, s.traction, s.businessModel, s.funding]
-      .map((v: any) => Math.round(Number(v) || 0));
-    s.overall = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
-  }
-
-  return result;
+  throw lastError ?? new Error('Max retries exhausted');
 }
