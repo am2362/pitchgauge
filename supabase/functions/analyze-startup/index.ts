@@ -272,10 +272,10 @@ RULES: factual, no invention, no emojis, no bullets, no scores.`;
 
   } catch (error) {
     safeLog("ANALYZE-STARTUP", "Error occurred");
-    
-    // Sanitize error message before returning to client
+    const status = (error as any)?.status;
+    if (status === 429) return secureErrorResponse('Rate limit exceeded. Please try again in a moment.', 429);
+    if (status === 402) return secureErrorResponse('AI usage limit reached. Please try again later.', 402);
     const userMessage = sanitizeErrorMessage(error);
-    
     return secureErrorResponse(userMessage, 500);
   }
 });
