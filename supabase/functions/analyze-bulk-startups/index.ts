@@ -2,6 +2,16 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { validateBulkAnalysisInput, sanitizeErrorMessage } from '../_shared/validation.ts';
 import { corsHeaders, secureJsonResponse, secureErrorResponse, safeLog, getUserTier, checkDailyLimit, isAdminUser, isDemoAccountEmail } from '../_shared/security.ts';
+import {
+  CHECKLIST_SYSTEM_INSTRUCTION,
+  METRIC_KEYS,
+  aggregateRuns,
+  extractJson,
+  normalizeRun,
+  reasoningFromAggregate,
+  scoresFromAggregate,
+  type PerMetricResponse,
+} from '../_shared/scoring-checklist.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
