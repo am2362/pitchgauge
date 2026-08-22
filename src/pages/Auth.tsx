@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase-external";
-import { lovable } from "@/integrations/lovable/index";
 import { isDemoAccount } from "@/lib/demo-accounts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -247,17 +246,6 @@ export default function Auth() {
             {isSignUp ? "Create account" : "Sign in"}
           </Button>
         </form>
-
-        <div className="flex items-center gap-3">
-          <Separator className="flex-1" />
-          <span className="text-xs text-muted-foreground">or</span>
-          <Separator className="flex-1" />
-        </div>
-
-        <Button variant="ghost" className="w-full text-sm" onClick={() => setMode("magic")}>
-          <Mail className="mr-2 h-4 w-4" />
-          Send me a magic link instead
-        </Button>
 
         <p className="text-center text-sm text-muted-foreground">
           {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}

@@ -99,7 +99,7 @@ var get_subscription_default = defineTool3({
 });
 
 // src/lib/mcp/index.ts
-var projectRef = "rxppdvnzcnfnbpjyscti";
+var projectRef = "ytrngpgdkjzqowgnsxap";
 var mcp_default = defineMcp({
   name: "pitchgauge-mcp",
   title: "PitchGauge",
