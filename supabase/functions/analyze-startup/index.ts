@@ -89,7 +89,7 @@ serve(async (req) => {
       }
     }
 
-    if (!AI_GATEWAY_KEY) {
+    if (!GEMINI_API_KEY) {
       throw new Error("Service configuration error");
     }
 
@@ -128,7 +128,7 @@ serve(async (req) => {
 
     const runChecklist = async (): Promise<PerMetricResponse | null> => {
       try {
-        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
            method: "POST",
            headers: { "Content-Type": "application/json" },
            body: JSON.stringify({
@@ -181,7 +181,7 @@ Return this exact JSON shape (do NOT include any score numbers — scoring is ha
 RULES: factual, no invention, no emojis, no bullets, no scores.`;
 
     const runQualitative = async (): Promise<any> => {
-      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
          method: "POST",
          headers: { "Content-Type": "application/json" },
          body: JSON.stringify({

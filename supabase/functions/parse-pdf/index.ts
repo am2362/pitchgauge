@@ -23,18 +23,11 @@ async function cleanExtractedText(rawText: string, apiKey: string): Promise<Clea
   try {
     safeLog("PARSE-PDF", "Starting AI text cleaning");
     
-    const cleaningResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `You are a pitch deck text cleaner. Given raw extracted text from a PDF pitch deck, clean and structure it.
+    const cleaningResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    system_instruction: { parts: [{ text: `You are a pitch deck text cleaner. Given raw extracted text from a PDF pitch deck, clean and structure it.
 
 RULES:
 1. REMOVE NOISE:
@@ -64,17 +57,11 @@ RULES:
      "cleanedText": "All cleaned slide content concatenated with 'Slide X:' markers"
    }
 
-CRITICAL: Return ONLY JSON. No markdown. No code blocks. Start with { and end with }.`
-          },
-          {
-            role: "user",
-            content: `Clean and structure this raw PDF text extraction:\n\n${rawText.slice(0, 15000)}`
-          }
-        ],
-        max_tokens: 4000,
-        temperature: 0.1,
-      }),
-    });
+CRITICAL: Return ONLY JSON. No markdown. No code blocks. Start with { and end with }.` }] },
+    contents: [{ role: "user", parts: [{ text: `Clean and structure this raw PDF text extraction:\n\n${rawText.slice(0, 15000)}` }] }],
+    generationConfig: { temperature: 0.1, maxOutputTokens: 4000 },
+  }),
+});
 
     if (!cleaningResponse.ok) {
       safeLog("PARSE-PDF", "AI cleaning request failed", { status: cleaningResponse.status });
@@ -82,7 +69,7 @@ CRITICAL: Return ONLY JSON. No markdown. No code blocks. Start with { and end wi
     }
 
     const data = await cleaningResponse.json();
-    const content = data.choices?.[0]?.message?.content;
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!content) {
       safeLog("PARSE-PDF", "No content in cleaning response");
@@ -132,10 +119,10 @@ serve(async (req) => {
 
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!LOVABLE_API_KEY) {
+    if (!GEMINI_API_KEY) {
       return secureErrorResponse("AI service not configured", 500);
     }
 
@@ -243,21 +230,14 @@ serve(async (req) => {
       const pdfDataUrl = `data:application/pdf;base64,${base64Pdf}`;
       
       // Use Gemini Vision to extract text from the PDF
-      const visionResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: `You are a document text extractor. Extract ALL text content from this PDF document, including:
+      const visionResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    contents: [{
+      role: "user",
+      parts: [
+        { text: `You are a document text extractor. Extract ALL text content from this PDF document, including:
 - All headings and titles
 - All body text and paragraphs
 - Text in images, graphics, icons, or charts
@@ -269,20 +249,13 @@ Format the output as clean, readable text organized by page. Do not add any comm
 
 If there are charts or graphs, describe what data they show (e.g., "Chart showing revenue growth from $1M to $5M over 2020-2023").
 
-Start with "--- Page 1 ---" for each new page.`
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: pdfDataUrl
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: 8000,
-        }),
-      });
+Start with "--- Page 1 ---" for each new page.` },
+        { inlineData: { mimeType: "application/pdf", data: base64Pdf } }
+      ]
+    }],
+    generationConfig: { maxOutputTokens: 8000 },
+  }),
+});
 
       if (!visionResponse.ok) {
         const errorStatus = visionResponse.status;
@@ -296,7 +269,7 @@ Start with "--- Page 1 ---" for each new page.`
       }
 
       const visionData = await visionResponse.json();
-      rawExtractedText = visionData.choices?.[0]?.message?.content || "";
+      rawExtractedText = visionData.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
       if (!rawExtractedText) {
         return secureErrorResponse("Could not extract any text from the PDF. The document may be empty or unreadable.", 400);
@@ -311,7 +284,7 @@ Start with "--- Page 1 ---" for each new page.`
     const sanitizedRawText = sanitizeText(rawExtractedText, 100000);
 
     // Step 2: AI-powered cleaning and structuring
-    const cleanedResult = await cleanExtractedText(sanitizedRawText, LOVABLE_API_KEY);
+    const cleanedResult = await cleanExtractedText(sanitizedRawText, GEMINI_API_KEY);
     
     if (cleanedResult) {
       safeLog("PARSE-PDF", "Returning cleaned result", { slideCount: cleanedResult.slides.length });
