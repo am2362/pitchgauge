@@ -881,25 +881,6 @@ const Index = () => {
                   </>
                 )}
               </TabsContent>
-
-              <TabsContent value="benchmark" className="space-y-4">
-                {result.benchmarking && (
-                  <>
-                    <Card className="p-6">
-                      <h3 className="text-lg font-semibold mb-2 text-foreground">Overall Percentile</h3>
-                      <p className="text-2xl font-bold text-primary">{result.benchmarking.overallPercentile}</p>
-                    </Card>
-                    <Card className="p-6">
-                      <h3 className="text-lg font-semibold mb-2 text-foreground">Stage Context</h3>
-                      <p className="text-muted-foreground leading-relaxed">{result.benchmarking.stageContext}</p>
-                    </Card>
-                    <Card className="p-6">
-                      <h3 className="text-lg font-semibold mb-2 text-foreground">Comparison Notes</h3>
-                      <p className="text-muted-foreground leading-relaxed">{result.benchmarking.comparisonNotes}</p>
-                    </Card>
-                  </>
-                )}
-              </TabsContent>
             </Tabs>
           </Card>
         )}
