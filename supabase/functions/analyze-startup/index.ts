@@ -128,7 +128,7 @@ serve(async (req) => {
 
     const runChecklist = async (): Promise<PerMetricResponse | null> => {
       try {
-        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
            method: "POST",
            headers: { "Content-Type": "application/json" },
            body: JSON.stringify({
@@ -143,7 +143,9 @@ serve(async (req) => {
           throw err;
         }
         const j = await resp.json();
-        const content = j.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined;
+        const parts = j.candidates?.[0]?.content?.parts || [];
+        const content = parts.find((p: any) => !p.thought)?.text as string | undefined;
+        safeLog("ANALYZE-STARTUP", "Raw content preview", { preview: content?.slice(0, 200) });
         if (!content) return null;
         return normalizeRun(extractJson(content));
       } catch (e) {
@@ -174,14 +176,13 @@ Return this exact JSON shape (do NOT include any score numbers — scoring is ha
     "financials": ["question 1", "question 2"],
     "legal": ["question 1"]
   },
-  "investmentThesis": { "bullCase": "2-3 factual sentences", "bearCase": "2-3 factual sentences" },
-  "benchmarking": { "overallPercentile": "e.g., Top 25%", "stageContext": "1 sentence", "comparisonNotes": "1 sentence" }
+  "investmentThesis": { "bullCase": "2-3 factual sentences", "bearCase": "2-3 factual sentences" }
 }
 
 RULES: factual, no invention, no emojis, no bullets, no scores.`;
 
     const runQualitative = async (): Promise<any> => {
-      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
          method: "POST",
          headers: { "Content-Type": "application/json" },
          body: JSON.stringify({
@@ -196,7 +197,8 @@ RULES: factual, no invention, no emojis, no bullets, no scores.`;
         throw err;
       }
       const j = await resp.json();
-      const content = j.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined;
+      const parts = j.candidates?.[0]?.content?.parts || [];
+      const content = parts.find((p: any) => !p.thought)?.text as string | undefined;
       if (!content) throw new Error("No content in AI response");
       return extractJson(content);
     };
@@ -235,9 +237,6 @@ RULES: factual, no invention, no emojis, no bullets, no scores.`;
         team: [], market: [], product: [], financials: [], legal: [],
       },
       investmentThesis: qualitativeResult?.investmentThesis ?? { bullCase: '', bearCase: '' },
-      benchmarking: qualitativeResult?.benchmarking ?? {
-        overallPercentile: '', stageContext: '', comparisonNotes: '',
-      },
     };
 
     if (!analysisResult.memo || !analysisResult.scorecard) {

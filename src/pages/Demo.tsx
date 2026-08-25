@@ -264,13 +264,13 @@ const Demo = () => {
           </div>
 
           <Tabs defaultValue="scorecard" className="w-full">
-            <TabsList className="grid w-full grid-cols-6 mb-8">
+            <TabsList className="grid w-full grid-cols-5 mb-8">
               <TabsTrigger value="scorecard">Scorecard</TabsTrigger>
               <TabsTrigger value="memo">Summary</TabsTrigger>
               <TabsTrigger value="risks">Red Flags</TabsTrigger>
               <TabsTrigger value="questions">Questions</TabsTrigger>
               <TabsTrigger value="thesis">Thesis</TabsTrigger>
-              <TabsTrigger value="benchmark">Benchmark</TabsTrigger>
+              
             </TabsList>
 
             <TabsContent value="scorecard" className="space-y-6">

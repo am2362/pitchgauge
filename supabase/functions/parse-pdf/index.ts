@@ -23,7 +23,7 @@ async function cleanExtractedText(rawText: string, apiKey: string): Promise<Clea
   try {
     safeLog("PARSE-PDF", "Starting AI text cleaning");
     
-    const cleaningResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    const cleaningResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -138,13 +138,12 @@ serve(async (req) => {
     });
 
     const token = authHeader.replace('Bearer ', '').trim();
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-    const userId = claimsData?.claims?.sub;
-
-    if (claimsError || !userId) {
+    const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
+    const userId = userData?.user?.id;
+    
+    if (userError || !userId) {
       return secureErrorResponse('Unauthorized', 401);
     }
-
     safeLog("PARSE-PDF", "User authenticated");
 
     // Rate limiting
@@ -187,7 +186,7 @@ serve(async (req) => {
     const pdfData = new Uint8Array(arrayBuffer);
 
     // Load PDF to get page count and try text extraction first
-    const doc = await getDocument(pdfData).promise;
+    const doc = await getDocument({ data: pdfData }).promise;
     const numPages = doc.numPages;
     safeLog("PARSE-PDF", "PDF loaded", { pages: numPages });
 
@@ -230,7 +229,7 @@ serve(async (req) => {
       const pdfDataUrl = `data:application/pdf;base64,${base64Pdf}`;
       
       // Use Gemini Vision to extract text from the PDF
-      const visionResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      const visionResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -309,7 +308,7 @@ Start with "--- Page 1 ---" for each new page.` },
     });
 
   } catch (error) {
-    safeLog("PARSE-PDF", "Error occurred");
+    safeLog("PARSE-PDF", "Error occurred", { msg: (error as Error)?.message });
     
     // Check for specific PDF parsing errors
     const errorMessage = error instanceof Error ? error.message : String(error);
