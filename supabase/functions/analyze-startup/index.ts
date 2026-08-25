@@ -28,9 +28,7 @@ serve(async (req) => {
       return secureErrorResponse("Request payload too large", 413);
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    const AI_GATEWAY_KEY = LOVABLE_API_KEY || GEMINI_API_KEY;
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
     const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -130,30 +128,22 @@ serve(async (req) => {
 
     const runChecklist = async (): Promise<PerMetricResponse | null> => {
       try {
-        const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${AI_GATEWAY_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            max_tokens: 3000,
-            temperature: 0,
-            top_p: 1,
-            messages: [
-              { role: "system", content: CHECKLIST_SYSTEM_INSTRUCTION },
-              { role: "user", content: pitchText },
-            ],
-          }),
-        });
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+           method: "POST",
+           headers: { "Content-Type": "application/json" },
+           body: JSON.stringify({
+           system_instruction: { parts: [{ text: CHECKLIST_SYSTEM_INSTRUCTION }] },
+           contents: [{ role: "user", parts: [{ text: pitchText }] }],
+           generationConfig: { temperature: 0, maxOutputTokens: 3000 },
+           }),
+          });
         if (!resp.ok) {
           const err = new Error(`AI service error: ${resp.status}`);
           (err as any).status = resp.status;
           throw err;
         }
         const j = await resp.json();
-        const content = j.choices?.[0]?.message?.content as string | undefined;
+        const content = j.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined;
         if (!content) return null;
         return normalizeRun(extractJson(content));
       } catch (e) {
@@ -191,30 +181,22 @@ Return this exact JSON shape (do NOT include any score numbers — scoring is ha
 RULES: factual, no invention, no emojis, no bullets, no scores.`;
 
     const runQualitative = async (): Promise<any> => {
-      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${AI_GATEWAY_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          max_tokens: 6000,
-          temperature: 0,
-          top_p: 1,
-          messages: [
-            { role: "system", content: qualitativePrompt },
-            { role: "user", content: pitchText },
-          ],
-        }),
-      });
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({
+         system_instruction: { parts: [{ text: qualitativePrompt }] },
+         contents: [{ role: "user", parts: [{ text: pitchText }] }],
+        generationConfig: { temperature: 0, maxOutputTokens: 6000 },
+      }),
+    });
       if (!resp.ok) {
         const err = new Error(`AI service error: ${resp.status}`);
         (err as any).status = resp.status;
         throw err;
       }
       const j = await resp.json();
-      const content = j.choices?.[0]?.message?.content as string | undefined;
+      const content = j.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined;
       if (!content) throw new Error("No content in AI response");
       return extractJson(content);
     };
