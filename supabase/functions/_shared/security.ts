@@ -315,7 +315,7 @@ export async function getDailyUsageCount(
  * Daily usage limits per tier per feature.
  */
 export const DAILY_LIMITS: Record<string, Record<string, number>> = {
-  free:  { single_analysis: 3,   comparison_analysis: 0,  bulk_analysis: 0 },
+  free:  { single_analysis: 10,   comparison_analysis: 2,  bulk_analysis: 0 },
   pro:   { single_analysis: 50,  comparison_analysis: 10, bulk_analysis: 0 },
   scale: { single_analysis: 100, comparison_analysis: 20, bulk_analysis: 3 },
 };
