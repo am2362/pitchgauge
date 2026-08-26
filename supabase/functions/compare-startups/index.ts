@@ -18,7 +18,7 @@ serve(async (req) => {
       return secureErrorResponse("Request payload too large", 413);
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
     const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -98,7 +98,7 @@ serve(async (req) => {
 
     const { analyses, startupNames } = validation.data!;
 
-    if (!LOVABLE_API_KEY) {
+    if (!GEMINI_API_KEY) {
       throw new Error('Service configuration error');
     }
 
@@ -143,18 +143,7 @@ Provide qualitative comparison insights ONLY in the following JSON structure (no
   "investmentRecommendation": "Which startup(s) to invest in and why (3-4 sentences)"
 }`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a consistent startup evaluation AI. Always apply the same scoring criteria strictly. Do not vary scores based on writing style or tone — evaluate only on substance. A pitch with identical facts must always receive identical scores.
+const systemPrompt = `You are a consistent startup evaluation AI. Always apply the same scoring criteria strictly. Do not vary scores based on writing style or tone — evaluate only on substance. A pitch with identical facts must always receive identical scores.
 
 You are a venture capital analyst. Provide comparative analysis in valid JSON format only.
 
@@ -164,34 +153,33 @@ SCORE ANCHORING CONTEXT (use when interpreting and comparing scores):
 - Product Differentiation: 7/10 requires a clearly articulated unique value proposition with some form of defensibility (IP, data moat, network effects). 5/10 means the product solves a real problem but could be easily replicated.
 - Traction: 7/10 requires demonstrated revenue or significant user growth with specific numbers. 5/10 means some early users or pilots but no clear growth trajectory.
 - Business Model: 7/10 requires a clearly scalable monetization strategy with evidence of unit economics. 5/10 means monetization path exists but margins or scalability are unproven.
-- Competitive Landscape: 7/10 requires clear differentiation from named competitors with defensible positioning. 5/10 means some competitive awareness but no strong moat.`
-          },
-          {
-            role: 'user',
-            content: comparisonPrompt
-          }
-        ],
-        temperature: 0.1,
-      }),
-    });
+- Competitive Landscape: 7/10 requires clear differentiation from named competitors with defensible positioning. 5/10 means some competitive awareness but no strong moat.`;
 
-    if (!response.ok) {
-      const errorStatus = response.status;
-      safeLog("COMPARE-STARTUPS", "AI API error", { status: errorStatus });
-      
-      if (errorStatus === 429) {
-        return secureErrorResponse('Rate limit exceeded. Please try again in a moment.', 429);
-      }
-      
-      if (errorStatus === 402) {
-        return secureErrorResponse('AI usage limit reached. Please try again later.', 402);
-      }
-      
-      throw new Error('AI service error');
-    }
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: 'user', parts: [{ text: comparisonPrompt }] }],
+    generationConfig: { temperature: 0.1, maxOutputTokens: 2000 },
+  }),
+});
+
+if (!response.ok) {
+  const errorStatus = response.status;
+  safeLog("COMPARE-STARTUPS", "AI API error", { status: errorStatus });
+  if (errorStatus === 429) {
+    return secureErrorResponse('Rate limit exceeded. Please try again in a moment.', 429);
+  }
+  if (errorStatus === 402) {
+    return secureErrorResponse('AI usage limit reached. Please try again later.', 402);
+  }
+  throw new Error('AI service error');
+}
 
     const data = await response.json();
-    let comparisonText = data.choices?.[0]?.message?.content || '';
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    let comparisonText = parts.find((p: any) => !p.thought)?.text || '';
 
     safeLog("COMPARE-STARTUPS", "AI response received");
 

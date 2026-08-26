@@ -91,7 +91,7 @@ serve(async (req) => {
     }
 
     // Prefer the Lovable AI gateway for stability
-    const useGeminiDirect = false;
+    const useGeminiDirect = true;
     
     if (!useGeminiDirect && !LOVABLE_API_KEY) {
       throw new Error('Service configuration error');
@@ -313,7 +313,7 @@ async function attemptAnalysis(name: string, pitch: string, apiKey: string, useG
     try {
       if (useGeminiDirect) {
         const prompt = `${systemPrompt}\n\nStartup Name: ${name}\n\nPitch:\n${pitch}`;
-        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -350,8 +350,9 @@ async function attemptAnalysis(name: string, pitch: string, apiKey: string, useG
       }
 
       const data = await response.json();
+      const responseParts = useGeminiDirect ? (data.candidates?.[0]?.content?.parts || []) : [];
       const content = useGeminiDirect
-        ? data.candidates?.[0]?.content?.parts?.[0]?.text
+        ? responseParts.find((p: any) => !p.thought)?.text
         : data.choices?.[0]?.message?.content;
 
       if (!content) throw new Error('No content in AI response');

@@ -171,7 +171,10 @@ serve(async (req) => {
     safeLog("CHECK-SUBSCRIPTION", "Function started");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("Service configuration error");
+if (!stripeKey) {
+  safeLog("CHECK-SUBSCRIPTION", "No Stripe key, returning free tier");
+  return secureJsonResponse({ subscribed: false, tier: "free" });
+}
 
     const proPriceId = Deno.env.get("STRIPE_PRO_PRICE_ID");
     const scalePriceId = Deno.env.get("STRIPE_SCALE_PRICE_ID");

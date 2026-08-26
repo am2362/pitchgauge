@@ -22,7 +22,7 @@ serve(async (req) => {
       }
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
     const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -83,7 +83,7 @@ serve(async (req) => {
       // Skip per-request rate limiting for bulk comparison — Scale/demo check is sufficient.
     }
 
-    if (!LOVABLE_API_KEY) {
+    if (!GEMINI_API_KEY) {
       throw new Error('Service configuration error');
     }
 
@@ -160,7 +160,7 @@ serve(async (req) => {
     const overallRecommendation = await generateOverallRecommendation(
       investmentRankings,
       sectorBreakdown,
-      LOVABLE_API_KEY
+      GEMINI_API_KEY
     );
 
     const comparisonReport = {
@@ -258,20 +258,14 @@ Write 3-5 sentences covering:
 3. Investment focus recommendation`;
 
   try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const systemPrompt = 'You are an investment analyst. You write only factually accurate recommendations using the exact data provided. You never invent or generalise scores.';
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: 'You are an investment analyst. You write only factually accurate recommendations using the exact data provided. You never invent or generalise scores.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.2,
-        max_tokens: 500
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 500 },
       }),
     });
 
@@ -281,7 +275,8 @@ Write 3-5 sentences covering:
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || `Top performer: ${topStartup?.startupName ?? 'n/a'} at ${highest}/10. Prioritise the highest-scoring startups for deeper diligence.`;
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    return parts.find((p: any) => !p.thought)?.text || `Top performer: ${topStartup?.startupName ?? 'n/a'} at ${highest}/10. Prioritise the highest-scoring startups for deeper diligence.`;
   } catch (error) {
     safeLog("BULK-COMPARISON", "Error generating recommendation");
     return `Top performer: ${topStartup?.startupName ?? 'n/a'} at ${highest}/10. Focus diligence on the highest-ranked startups across ${Object.keys(sectorBreakdown).length} sector(s).`;
