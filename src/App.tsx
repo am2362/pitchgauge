@@ -19,6 +19,7 @@ import DemoBulk from "./pages/DemoBulk";
 import VerifyEmail from "./pages/VerifyEmail";
 import ResetPassword from "./pages/ResetPassword";
 import OAuthConsent from "./pages/OAuthConsent";
+import Contact from "./pages/Contact";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Contact from "@/pages/Contact";
 
