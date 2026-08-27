@@ -388,6 +388,8 @@ const Landing = () => {
               <button onClick={() => scrollTo("pricing")} className="text-muted-foreground hover:text-foreground transition-colors">Pricing</button>
               <button onClick={() => scrollTo("how-it-works")} className="text-muted-foreground hover:text-foreground transition-colors">Workflow</button>
               <button onClick={() => navigate("/scoring-rubric")} className="text-muted-foreground hover:text-foreground transition-colors">Rubric</button>
+              <button onClick={() => navigate("/terms")} className="text-muted-foreground hover:text-foreground transition-colors">Terms & Privacy</button>
+              <button onClick={() => navigate("/contact")} className="text-muted-foreground hover:text-foreground transition-colors">Contact</button>
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-border text-center text-xs text-muted-foreground">
