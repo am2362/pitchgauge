@@ -8,7 +8,7 @@ import getSubscriptionTool from "./tools/get-subscription";
 const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
 
 export default defineMcp({
-  name: "pitchgauge-mcp",
+  name: "pitchgauge",
   title: "PitchGauge",
   version: "0.1.0",
   instructions:

@@ -101,7 +101,7 @@ var get_subscription_default = defineTool3({
 // src/lib/mcp/index.ts
 var projectRef = "rxppdvnzcnfnbpjyscti";
 var mcp_default = defineMcp({
-  name: "pitchgauge-mcp",
+  name: "pitchgauge",
   title: "PitchGauge",
   version: "0.1.0",
   instructions: "Read-only access to the signed-in PitchGauge user's startup analyses and subscription. Use list_analyses to browse saved analyses, get_analysis for full detail (memo, scorecard, red flags, benchmarking), and get_subscription for the current plan.",
