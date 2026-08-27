@@ -9,7 +9,7 @@ export default function Terms() {
       <div className="max-w-3xl mx-auto prose prose-neutral dark:prose-invert">
 
         <h1 className="text-3xl font-bold text-foreground mb-2">Terms of Service &amp; Privacy Policy</h1>
-        <p className="text-muted-foreground text-sm mb-10">PitchGauge — Last updated: August 2026</p>
+        <p className="text-muted-foreground text-sm mb-10">PitchGauge - Last updated: August 2026</p>
 
         <hr className="my-8 border-border" />
 
