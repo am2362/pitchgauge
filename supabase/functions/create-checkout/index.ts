@@ -79,15 +79,15 @@ serve(async (req) => {
 
     const requestOrigin = req.headers.get("origin");
     const ALLOWED_ORIGINS = [
-      "https://pitchgauge.lovable.app",
+      "https://pitchgauge.vercel.app",
       "https://pitchgauge.com"
     ];
 
-    if (!requestOrigin || (!ALLOWED_ORIGINS.includes(requestOrigin) && !requestOrigin.endsWith(".lovable.app") && !requestOrigin.startsWith("http://localhost:"))) {
+    if (!requestOrigin || (!ALLOWED_ORIGINS.includes(requestOrigin) && !requestOrigin.endsWith(".vercel.app") && !requestOrigin.startsWith("http://localhost:"))) {
       return secureErrorResponse("Forbidden: Invalid Origin", 403);
     }
 
-    const baseUrl = "https://pitchgauge.lovable.app";
+    const baseUrl = "https://pitchgauge.vercel.app";
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
