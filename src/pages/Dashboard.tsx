@@ -885,13 +885,9 @@ const Index = () => {
           </Card>
         )}
       </div>
-    </div>
-  );
-};
-
       <footer className="mt-16 pb-8 text-center">
         <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
-          <span>© PitchGauge 2026</span>
+          <span>PitchGauge 2026</span>
           <button onClick={() => navigate("/terms")} className="hover:text-foreground transition-colors">Terms & Privacy</button>
           <button onClick={() => navigate("/contact")} className="hover:text-foreground transition-colors">Contact</button>
         </div>
@@ -901,3 +897,5 @@ const Index = () => {
 };
 
 export default Index;
+
+        
