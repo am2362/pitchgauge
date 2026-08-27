@@ -393,7 +393,7 @@ const Landing = () => {
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-border text-center text-xs text-muted-foreground">
-            © 2025 PitchGauge. All rights reserved.
+            © 2026 PitchGauge. All rights reserved.
           </div>
         </div>
       </footer>
