@@ -13,11 +13,16 @@ export default function Contact() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleSubmit = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !email.trim() || !message.trim()) return;
-    setSubmitted(true);
-  };
+ const handleSubmit = async (e: React.MouseEvent) => {
+  e.preventDefault();
+  if (!name.trim() || !email.trim() || !message.trim()) return;
+  await fetch("https://formspree.io/f/mwlkezow", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email, message }),
+  });
+  setSubmitted(true);
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30 flex items-center justify-center p-4">
